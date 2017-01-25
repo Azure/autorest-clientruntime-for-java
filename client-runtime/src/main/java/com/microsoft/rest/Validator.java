@@ -1,5 +1,5 @@
 /**
- *
+ * 
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  *
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Validates user provided parameters are not null if they are required.
+ * Validates user provided parameters are not null if they are required. 
  */
 public final class Validator {
     /**

@@ -17,9 +17,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
 import java.util.HashMap;
@@ -46,7 +44,7 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
     private String defaultSubscription;
 
     /**
-     * Initializes a new instance of the UserTokenCredentials.
+     * Initializes a new instance of the ApplicationTokenCredentials.
      *
      * @param clientId the active directory application client id.
      * @param domain the domain or tenant id containing this application.
@@ -61,6 +59,16 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
         this.tokens = new HashMap<>();
     }
 
+    /**
+     * Initializes a new instance of the ApplicationTokenCredentials.
+     *
+     * @param clientId the active directory application client id.
+     * @param domain the domain or tenant id containing this application.
+     * @param certificate the PKCS12 certificate file content
+     * @param password the password to the certificate file
+     * @param environment the Azure environment to authenticate with.
+     *                    If null is provided, AzureEnvironment.AZURE will be used.
+     */
     public ApplicationTokenCredentials(String clientId, String domain, byte[] certificate, String password, AzureEnvironment environment) {
         super(environment, domain);
         this.clientId = clientId;

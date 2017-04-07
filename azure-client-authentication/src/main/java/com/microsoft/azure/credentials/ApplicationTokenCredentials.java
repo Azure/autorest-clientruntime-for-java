@@ -179,7 +179,7 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
                     tenantId,
                     clientKey,
                     new AzureEnvironment(new HashMap<String, String>() {{
-                        put(AzureEnvironment.Endpoint.ACTIVE_DIRECTORY.toString(), authUrl);
+                        put(AzureEnvironment.Endpoint.ACTIVE_DIRECTORY.toString(), authUrl.endsWith("/") ? authUrl : authUrl + "/");
                         put(AzureEnvironment.Endpoint.MANAGEMENT.toString(), mgmtUri);
                         put(AzureEnvironment.Endpoint.RESOURCE_MANAGER.toString(), baseUrl);
                         put(AzureEnvironment.Endpoint.GRAPH.toString(), graphUrl);

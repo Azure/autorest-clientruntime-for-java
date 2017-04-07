@@ -213,17 +213,8 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
      *
      * @return the active directory application client id.
      */
-    public String getClientId() {
+    public String clientId() {
         return clientId;
-    }
-
-    /**
-     * Gets the authentication secret for the application.
-     *
-     * @return the authentication secret for the application.
-     */
-    public String getSecret() {
-        return secret;
     }
 
     @Override
@@ -244,7 +235,7 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
             if (secret != null) {
                 return context.acquireToken(
                         resource,
-                        new ClientCredential(this.getClientId(), this.getSecret()),
+                        new ClientCredential(this.clientId(), secret),
                         null).get();
             } else if (certificate != null) {
                 return context.acquireToken(

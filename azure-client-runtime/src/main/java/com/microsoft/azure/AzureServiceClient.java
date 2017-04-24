@@ -65,15 +65,17 @@ public abstract class AzureServiceClient extends ServiceClient {
                 MAC_ADDRESS_HASH);
     }
 
-    private static final HashCode MAC_ADDRESS_HASH;
+    private static final String MAC_ADDRESS_HASH;
     private static final String OS;
 
     static {
         OS = System.getProperty("os.name") + "/" + System.getProperty("os.version");
+        String macAddress;
         try {
-            MAC_ADDRESS_HASH = Hashing.sha256().hashBytes(NetworkInterface.getByInetAddress(InetAddress.getLocalHost()).getHardwareAddress());
-        } catch (SocketException | UnknownHostException e) {
-            throw new RuntimeException(e);
+            macAddress = Hashing.sha256().hashBytes(NetworkInterface.getByInetAddress(InetAddress.getLocalHost()).getHardwareAddress()).toString();
+        } catch (Exception e) {
+            macAddress = "Unknown";
         }
+        MAC_ADDRESS_HASH = macAddress;
     }
 }

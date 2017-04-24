@@ -6,7 +6,6 @@
 
 package com.microsoft.azure;
 
-import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.microsoft.azure.serializer.AzureJacksonAdapter;
 import com.microsoft.rest.RestClient;
@@ -17,8 +16,6 @@ import retrofit2.Retrofit;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 
 /**
  * ServiceClient is the abstraction for accessing REST operations and their payload data types.

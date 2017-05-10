@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Validates user provided parameters are not null if they are required.
+ * Validates user provided parameters are not null if they are required. 
  */
 public final class Validator {
     /**

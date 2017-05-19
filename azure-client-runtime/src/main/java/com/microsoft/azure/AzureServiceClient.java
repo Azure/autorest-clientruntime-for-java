@@ -70,11 +70,11 @@ public abstract class AzureServiceClient extends ServiceClient {
         String macAddress = "Unknown";
         try {
             Enumeration<NetworkInterface> networks = NetworkInterface.getNetworkInterfaces();
-            while(networks.hasMoreElements()) {
+            while (networks.hasMoreElements()) {
                 NetworkInterface network = networks.nextElement();
                 byte[] mac = network.getHardwareAddress();
 
-                if(mac != null) {
+                if (mac != null) {
                     macAddress = Hashing.sha256().hashBytes(mac).toString();
                     break;
                 }

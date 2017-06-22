@@ -52,7 +52,7 @@ final class CloudErrorDeserializer extends JsonDeserializer<CloudError> {
         if (errorNode == null) {
             return null;
         }
-        if(errorNode.get("error") != null) {
+        if (errorNode.get("error") != null) {
             errorNode = errorNode.get("error");
         }
         JsonParser parser = new JsonFactory().createParser(errorNode.toString());

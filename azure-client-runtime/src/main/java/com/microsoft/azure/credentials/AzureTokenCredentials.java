@@ -12,6 +12,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 
 import java.io.IOException;
+import java.net.Proxy;
 
 /**
  * AzureTokenCredentials represents a credentials object with access to Azure
@@ -21,6 +22,8 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
     private final AzureEnvironment environment;
     private final String domain;
     private String defaultSubscription;
+
+    private Proxy proxy;
 
     /**
      * Initializes a new instance of the AzureTokenCredentials.
@@ -88,6 +91,23 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
      */
     public AzureTokenCredentials withDefaultSubscriptionId(String subscriptionId) {
         this.defaultSubscription = subscriptionId;
+        return this;
+    }
+
+    /**
+     * @return the proxy being used for accessing Active Directory.
+     */
+    public Proxy proxy() {
+        return proxy;
+    }
+
+    /**
+     * Set the proxy used for accessing Active Directory.
+     * @param proxy the proxy to use
+     * @return the credential itself
+     */
+    public AzureTokenCredentials withProxy(Proxy proxy) {
+        this.proxy = proxy;
         return this;
     }
 

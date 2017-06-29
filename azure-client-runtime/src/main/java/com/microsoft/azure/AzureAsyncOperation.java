@@ -112,7 +112,7 @@ final class AzureAsyncOperation {
     }
 
     /**
-     * Async operation in string format
+     * Async operation in string format.
      */
     private String rawString;
 

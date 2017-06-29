@@ -21,7 +21,7 @@ import java.lang.reflect.Type;
  * @param <T> the type of the resource the operation returns.
  */
 public class PollingState<T> {
-    /** The HTTP method used to initiate the long running operation **/
+    /** The HTTP method used to initiate the long running operation. **/
     private String initialHttpMethod;
     /** The polling status. */
     private String status;

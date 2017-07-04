@@ -6,9 +6,21 @@
 
 package com.microsoft.azure;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.microsoft.rest.protocol.SerializerAdapter;
+import com.microsoft.rest.serializer.Base64UrlSerializer;
+import com.microsoft.rest.serializer.ByteArraySerializer;
+import com.microsoft.rest.serializer.DateTimeRfc1123Serializer;
+import com.microsoft.rest.serializer.DateTimeSerializer;
+import com.microsoft.rest.serializer.HeadersSerializer;
 import okhttp3.ResponseBody;
 import retrofit2.Response;
 
@@ -30,14 +42,20 @@ public class PollingState<T> {
     /** The link in 'Location' Header. */
     private String locationHeaderLink;
     /** The default timeout interval between two polling operations. */
-    private final int defaultRetryTimeout;
+    private int defaultRetryTimeout;
     /** The timeout interval between two polling operation. **/
     private int retryTimeout;
     /** The resource uri on which PUT or PATCH operation is applied. **/
     private String putOrPatchResourceUri;
+    /** The logging context **/
+    private String loggingContext;
+
 
     // Non-serializable properties
     //
+    /** The logging context header name **/
+    @JsonIgnore
+    private static final String LOGGING_HEADER = "x-ms-logging-context";
     /** The Retrofit response object. */
     @JsonIgnore
     private Response<ResponseBody> response;
@@ -55,7 +73,13 @@ public class PollingState<T> {
     private SerializerAdapter<?> serializerAdapter;
 
     /**
-     * Initializes an instance of {@link PollingState}.
+     * Default constructor.
+     */
+    PollingState() {
+    }
+
+    /**
+     * Creates a polling state.
      *
      * @param response the response from Retrofit REST call that initiate the long running operation.
      * @param defaultRetryTimeout the long running operation retry timeout.
@@ -63,12 +87,14 @@ public class PollingState<T> {
      * @param serializerAdapter the adapter for the Jackson object mapper
      * @throws IOException thrown by deserialization
      */
-    PollingState(Response<ResponseBody> response, int defaultRetryTimeout, Type resourceType, SerializerAdapter<?> serializerAdapter) throws IOException {
-        this.initialHttpMethod = response.raw().request().method();
-        this.defaultRetryTimeout = defaultRetryTimeout;
-        this.withResponse(response);
-        this.resourceType = resourceType;
-        this.serializerAdapter = serializerAdapter;
+    public static <T> PollingState<T> create(Response<ResponseBody> response, int defaultRetryTimeout, Type resourceType, SerializerAdapter<?> serializerAdapter) throws IOException {
+        PollingState<T> pollingState = new PollingState<>();
+        pollingState.initialHttpMethod = response.raw().request().method();
+        pollingState.defaultRetryTimeout = defaultRetryTimeout;
+        pollingState.withResponse(response);
+        pollingState.resourceType = resourceType;
+        pollingState.serializerAdapter = serializerAdapter;
+        pollingState.loggingContext = response.raw().request().header(LOGGING_HEADER);
 
         String responseContent = null;
         PollingResource resource = null;
@@ -77,25 +103,78 @@ public class PollingState<T> {
             response.body().close();
         }
         if (responseContent != null && !responseContent.isEmpty()) {
-            this.resource = serializerAdapter.deserialize(responseContent, resourceType);
+            pollingState.resource = serializerAdapter.deserialize(responseContent, resourceType);
             resource = serializerAdapter.deserialize(responseContent, PollingResource.class);
         }
         if (resource != null && resource.properties != null
                 && resource.properties.provisioningState != null) {
-            withStatus(resource.properties.provisioningState);
+            pollingState.withStatus(resource.properties.provisioningState);
         } else {
-            switch (this.response.code()) {
+            switch (pollingState.response.code()) {
                 case 202:
-                    withStatus(AzureAsyncOperation.IN_PROGRESS_STATUS);
+                    pollingState.withStatus(AzureAsyncOperation.IN_PROGRESS_STATUS);
                     break;
                 case 204:
                 case 201:
                 case 200:
-                    withStatus(AzureAsyncOperation.SUCCESS_STATUS);
+                    pollingState.withStatus(AzureAsyncOperation.SUCCESS_STATUS);
                     break;
                 default:
-                    withStatus(AzureAsyncOperation.FAILED_STATUS);
+                    pollingState.withStatus(AzureAsyncOperation.FAILED_STATUS);
             }
+        }
+        return pollingState;
+    }
+
+    /**
+     * Creates PollingState from the json string.
+     *
+     * @param serializedPollingState polling state as json string
+     * @param <ResultT> the result that the poll operation produces
+     * @return the polling state
+     */
+    public static <ResultT> PollingState<ResultT> createFromJSONString(String serializedPollingState) {
+        ObjectMapper mapper = initMapper(new ObjectMapper());
+        PollingState<ResultT> pollingState;
+        try {
+            pollingState = mapper.readValue(serializedPollingState, PollingState.class);
+        } catch (IOException exception) {
+            throw new RuntimeException(exception);
+        }
+        return pollingState;
+    }
+
+    /**
+     * Creates PollingState from another polling state.
+     *
+     * @param other other polling state
+     * @param result the final result of the LRO
+     * @param <ResultT> the result that the poll operation produces
+     * @return the polling state
+     */
+    public static <ResultT> PollingState<ResultT> createFromPollingState(PollingState<?> other, ResultT result) {
+        PollingState<ResultT> pollingState = new PollingState<>();
+        pollingState.resource = result;
+        pollingState.initialHttpMethod = other.initialHttpMethod();
+        pollingState.status = other.status();
+        pollingState.azureAsyncOperationHeaderLink = other.azureAsyncOperationHeaderLink();
+        pollingState.locationHeaderLink = other.locationHeaderLink();
+        pollingState.putOrPatchResourceUri = other.putOrPatchResourceUri();
+        pollingState.defaultRetryTimeout = other.defaultRetryTimeout;
+        pollingState.retryTimeout = other.retryTimeout;
+        pollingState.loggingContext = other.loggingContext;
+        return pollingState;
+    }
+
+    /**
+     * @return the polling state in json string format
+     */
+    public String serialize() {
+        ObjectMapper mapper = initMapper(new ObjectMapper());
+        try {
+            return mapper.writeValueAsString(this);
+        } catch (JsonProcessingException exception) {
+            throw new RuntimeException(exception);
         }
     }
 
@@ -132,7 +211,10 @@ public class PollingState<T> {
      * @return the link in the header.
      */
     public String azureAsyncOperationHeaderLink() {
-        return azureAsyncOperationHeaderLink;
+        if (azureAsyncOperationHeaderLink != null && !azureAsyncOperationHeaderLink.isEmpty()) {
+            return azureAsyncOperationHeaderLink;
+        }
+        return null;
     }
 
     /**
@@ -141,7 +223,10 @@ public class PollingState<T> {
      * @return the link in the header.
      */
     public String locationHeaderLink() {
-        return locationHeaderLink;
+        if (locationHeaderLink != null && !locationHeaderLink.isEmpty()) {
+            return locationHeaderLink;
+        }
+        return null;
     }
 
     /**
@@ -246,6 +331,15 @@ public class PollingState<T> {
      */
     boolean isStatusSucceeded() {
         return AzureAsyncOperation.SUCCESS_STATUS.equalsIgnoreCase(this.status());
+    }
+
+    /**
+     * Gets the logging context.
+     *
+     * @return the logging context
+     */
+    String loggingContext() {
+        return loggingContext;
     }
 
     /**
@@ -376,6 +470,33 @@ public class PollingState<T> {
                 throw new CloudException("Async operation failed with provisioning state: " + this.status(), this.response());
             }
         }
+    }
+
+    /**
+     * Initializes an object mapper.
+     *
+     * @param mapper the mapper to initialize
+     * @return the initialized mapper
+     */
+    private static ObjectMapper initMapper(ObjectMapper mapper) {
+        mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+                .configure(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS, true)
+                .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+                .registerModule(new JodaModule())
+                .registerModule(ByteArraySerializer.getModule())
+                .registerModule(Base64UrlSerializer.getModule())
+                .registerModule(DateTimeSerializer.getModule())
+                .registerModule(DateTimeRfc1123Serializer.getModule())
+                .registerModule(HeadersSerializer.getModule());
+        mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
+                .withFieldVisibility(JsonAutoDetect.Visibility.ANY)
+                .withSetterVisibility(JsonAutoDetect.Visibility.NONE)
+                .withGetterVisibility(JsonAutoDetect.Visibility.NONE)
+                .withIsGetterVisibility(JsonAutoDetect.Visibility.NONE));
+        return mapper;
     }
 
     /**

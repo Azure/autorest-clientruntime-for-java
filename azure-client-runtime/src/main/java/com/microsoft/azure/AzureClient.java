@@ -31,8 +31,6 @@ import java.util.concurrent.TimeUnit;
  * retrying for long running operations when accessing Azure resources.
  */
 public final class AzureClient extends AzureServiceClient {
-    private static final String LOGGING_HEADER = "x-ms-logging-context";
-
     /**
      * The interval time between two long running operation polls. Default is 30 seconds.
      */
@@ -164,7 +162,7 @@ public final class AzureClient extends AzureServiceClient {
                     throw  exception;
                 }
                 try {
-                    final PollingState<T> pollingState = new PollingState<>(response, longRunningOperationRetryTimeout(), resourceType, restClient().serializerAdapter());
+                    final PollingState<T> pollingState = PollingState.create(response, longRunningOperationRetryTimeout(), resourceType, restClient().serializerAdapter());
                     pollingState.withPollingUrlFromResponse(response);
                     pollingState.withPollingRetryTimeoutFromResponse(response);
                     pollingState.withPutOrPatchResourceUri(response.raw().request().url().toString());
@@ -377,7 +375,7 @@ public final class AzureClient extends AzureServiceClient {
                     throw  exception;
                 }
                 try {
-                    final PollingState<T> pollingState = new PollingState<>(response, longRunningOperationRetryTimeout(), resourceType, restClient().serializerAdapter());
+                    final PollingState<T> pollingState = PollingState.create(response, longRunningOperationRetryTimeout(), resourceType, restClient().serializerAdapter());
                     pollingState.withPollingUrlFromResponse(response);
                     pollingState.withPollingRetryTimeoutFromResponse(response);
                     return pollingState;
@@ -402,6 +400,11 @@ public final class AzureClient extends AzureServiceClient {
         pollingState.withResourceType(resourceType);
         pollingState.withSerializerAdapter(restClient().serializerAdapter());
         if (pollingState.isStatusTerminal()) {
+            if (pollingState.isStatusSucceeded()
+                    && pollingState.resource() == null
+                    && pollingState.locationHeaderLink() != null) {
+                return updateStateFromLocationHeaderOnPostOrDeleteAsync(pollingState).toSingle();
+            }
             return Single.just(pollingState);
         }
         return postOrDeletePollingDispatcher(pollingState)
@@ -410,6 +413,17 @@ public final class AzureClient extends AzureServiceClient {
                     public PollingState<T> call(PollingState<T> tPollingState) {
                         tPollingState.throwCloudExceptionIfInFailedState();
                         return tPollingState;
+                    }
+                })
+                .flatMap(new Func1<PollingState<T>, Observable<PollingState<T>>>() {
+                    @Override
+                    public Observable<PollingState<T>> call(PollingState<T> tPollingState) {
+                        if (pollingState.isStatusSucceeded()
+                                && pollingState.resource() == null
+                                && pollingState.locationHeaderLink() != null) {
+                            return updateStateFromLocationHeaderOnPostOrDeleteAsync(pollingState);
+                        }
+                        return Observable.just(pollingState);
                     }
                 })
                 .toSingle();
@@ -539,7 +553,7 @@ public final class AzureClient extends AzureServiceClient {
      * @param <T> the return type of the caller.
      */
     private <T> Observable<PollingState<T>> updateStateFromLocationHeaderOnPutAsync(final PollingState<T> pollingState) {
-        return pollAsync(pollingState.locationHeaderLink(), pollingState.response().raw().request().header(LOGGING_HEADER))
+        return pollAsync(pollingState.locationHeaderLink(), pollingState.loggingContext())
                 .flatMap(new Func1<Response<ResponseBody>, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(Response<ResponseBody> response) {
@@ -567,7 +581,7 @@ public final class AzureClient extends AzureServiceClient {
      * @param <T> the return type of the caller.
      */
     private <T> Observable<PollingState<T>> updateStateFromLocationHeaderOnPostOrDeleteAsync(final PollingState<T> pollingState) {
-        return pollAsync(pollingState.locationHeaderLink(), pollingState.response().raw().request().header(LOGGING_HEADER))
+        return pollAsync(pollingState.locationHeaderLink(), pollingState.loggingContext())
                 .flatMap(new Func1<Response<ResponseBody>, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(Response<ResponseBody> response) {
@@ -596,7 +610,7 @@ public final class AzureClient extends AzureServiceClient {
      * @param <T> the return type of the caller.
      */
     private <T> Observable<PollingState<T>> updateStateFromGetResourceOperationAsync(final PollingState<T> pollingState, String url) {
-        return pollAsync(url, pollingState.response().raw().request().header(LOGGING_HEADER))
+        return pollAsync(url, pollingState.loggingContext())
                 .flatMap(new Func1<Response<ResponseBody>, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(Response<ResponseBody> response) {
@@ -618,7 +632,7 @@ public final class AzureClient extends AzureServiceClient {
      * @param <T> the return type of the caller.
      */
     private <T> Observable<PollingState<T>> updateStateFromAzureAsyncOperationHeaderOnPutAsync(final PollingState<T> pollingState) {
-        return pollAsync(pollingState.azureAsyncOperationHeaderLink(), pollingState.response().raw().request().header(LOGGING_HEADER))
+        return pollAsync(pollingState.azureAsyncOperationHeaderLink(), pollingState.loggingContext())
                 .flatMap(new Func1<Response<ResponseBody>, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(Response<ResponseBody> response) {
@@ -645,7 +659,7 @@ public final class AzureClient extends AzureServiceClient {
      * @param <T> the return type of the caller.
      */
     private <T> Observable<PollingState<T>> updateStateFromAzureAsyncOperationHeaderOnPostOrDeleteAsync(final PollingState<T> pollingState) {
-        return pollAsync(pollingState.azureAsyncOperationHeaderLink(), pollingState.response().raw().request().header(LOGGING_HEADER))
+        return pollAsync(pollingState.azureAsyncOperationHeaderLink(), pollingState.loggingContext())
                 .flatMap(new Func1<Response<ResponseBody>, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(Response<ResponseBody> response) {
@@ -683,7 +697,7 @@ public final class AzureClient extends AzureServiceClient {
             return Observable.error(e);
         }
         AsyncService service = restClient().retrofit().create(AsyncService.class);
-        if (!loggingContext.endsWith(" (poll)")) {
+        if (loggingContext != null && !loggingContext.endsWith(" (poll)")) {
             loggingContext += " (poll)";
         }
         return service.get(endpoint.getFile(), serviceClientUserAgent, loggingContext)
@@ -728,11 +742,9 @@ public final class AzureClient extends AzureServiceClient {
     }
 
     private <T> Observable<PollingState<T>> putOrPatchPollingDispatcher(PollingState<T> pollingState, String url) {
-        if (pollingState.azureAsyncOperationHeaderLink() != null
-                && !pollingState.azureAsyncOperationHeaderLink().isEmpty()) {
+        if (pollingState.azureAsyncOperationHeaderLink() != null) {
             return updateStateFromAzureAsyncOperationHeaderOnPutAsync(pollingState);
-        } else if (pollingState.locationHeaderLink() != null
-                && !pollingState.locationHeaderLink().isEmpty()) {
+        } else if (pollingState.locationHeaderLink() != null) {
             return updateStateFromLocationHeaderOnPutAsync(pollingState);
         } else {
             return updateStateFromGetResourceOperationAsync(pollingState, url);
@@ -740,11 +752,9 @@ public final class AzureClient extends AzureServiceClient {
     }
 
     private <T> Observable<PollingState<T>> postOrDeletePollingDispatcher(PollingState<T> pollingState) {
-        if (pollingState.azureAsyncOperationHeaderLink() != null
-                && !pollingState.azureAsyncOperationHeaderLink().isEmpty()) {
+        if (pollingState.azureAsyncOperationHeaderLink() != null) {
             return updateStateFromAzureAsyncOperationHeaderOnPostOrDeleteAsync(pollingState);
-        } else if (pollingState.locationHeaderLink() != null
-                && !pollingState.locationHeaderLink().isEmpty()) {
+        } else if (pollingState.locationHeaderLink() != null) {
             return updateStateFromLocationHeaderOnPostOrDeleteAsync(pollingState);
         } else {
             CloudException exception = new CloudException("Response does not contain an Azure-AsyncOperation or Location header.", pollingState.response(), pollingState.errorBody());

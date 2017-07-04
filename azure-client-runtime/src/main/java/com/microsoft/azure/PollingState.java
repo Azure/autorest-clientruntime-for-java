@@ -47,13 +47,13 @@ public class PollingState<T> {
     private int retryTimeout;
     /** The resource uri on which PUT or PATCH operation is applied. **/
     private String putOrPatchResourceUri;
-    /** The logging context **/
+    /** The logging context. **/
     private String loggingContext;
 
 
     // Non-serializable properties
     //
-    /** The logging context header name **/
+    /** The logging context header name. **/
     @JsonIgnore
     private static final String LOGGING_HEADER = "x-ms-logging-context";
     /** The Retrofit response object. */
@@ -85,6 +85,8 @@ public class PollingState<T> {
      * @param defaultRetryTimeout the long running operation retry timeout.
      * @param resourceType the type of the resource the long running operation returns
      * @param serializerAdapter the adapter for the Jackson object mapper
+     * @param <T> the result type
+     * @return the polling state
      * @throws IOException thrown by deserialization
      */
     public static <T> PollingState<T> create(Response<ResponseBody> response, int defaultRetryTimeout, Type resourceType, SerializerAdapter<?> serializerAdapter) throws IOException {

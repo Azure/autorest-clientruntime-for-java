@@ -15,14 +15,10 @@ import com.microsoft.azure.AzureEnvironment;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -76,46 +72,6 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
     }
 
     /**
-     * Contains the keys of the settings in a Properties file to read credentials from.
-     */
-    private enum CredentialSettings {
-        /** The subscription GUID. */
-        SUBSCRIPTION_ID("subscription"),
-        /** The tenant GUID or domain. */
-        TENANT_ID("tenant"),
-        /** The client id for the client application. */
-        CLIENT_ID("client"),
-        /** The client secret for the service principal. */
-        CLIENT_KEY("key"),
-        /** The client certificate for the service principal. */
-        CLIENT_CERT("certificate"),
-        /** The password for the client certificate for the service principal. */
-        CLIENT_CERT_PASS("certificatePassword"),
-        /** The management endpoint. */
-        MANAGEMENT_URI("managementURI"),
-        /** The base URL to the current Azure environment. */
-        BASE_URL("baseURL"),
-        /** The URL to Active Directory authentication. */
-        AUTH_URL("authURL"),
-        /** The URL to Active Directory Graph. */
-        GRAPH_URL("graphURL"),
-        /** The suffix of Key Vaults. */
-        VAULT_SUFFIX("vaultSuffix");
-
-        /** The name of the key in the properties file. */
-        private final String name;
-
-        CredentialSettings(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public String toString() {
-            return this.name;
-        }
-    }
-
-    /**
      * Initializes the credentials based on the provided credentials file.
      *
      * @param credentialsFile A  file with credentials, using the standard Java properties format.
@@ -127,71 +83,20 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
      *     managementURI=&lt;management-URI&gt;
      *     baseURL=&lt;base-URL&gt;
      *     authURL=&lt;authentication-URL&gt;
+     * or a JSON format and the following keys
+     * {
+     *     "clientId": "&lt;client-id&gt;",
+     *     "clientSecret": "&lt;client-key&gt;",
+     *     "subscriptionId": "&lt;subscription-id&gt;",
+     *     "tenantId": "&lt;tenant-id&gt;",
+     * }
+     * and any custom endpoints listed in {@link AzureEnvironment}.
      *
      * @return The credentials based on the file.
      * @throws IOException exception thrown from file access errors.
      */
     public static ApplicationTokenCredentials fromFile(File credentialsFile) throws IOException {
-        // Set defaults
-        Properties authSettings = new Properties();
-        authSettings.put(CredentialSettings.AUTH_URL.toString(), AzureEnvironment.AZURE.activeDirectoryEndpoint());
-        authSettings.put(CredentialSettings.BASE_URL.toString(), AzureEnvironment.AZURE.resourceManagerEndpoint());
-        authSettings.put(CredentialSettings.MANAGEMENT_URI.toString(), AzureEnvironment.AZURE.managementEndpoint());
-        authSettings.put(CredentialSettings.GRAPH_URL.toString(), AzureEnvironment.AZURE.graphEndpoint());
-        authSettings.put(CredentialSettings.VAULT_SUFFIX.toString(), AzureEnvironment.AZURE.keyVaultDnsSuffix());
-
-        // Load the credentials from the file
-        FileInputStream credentialsFileStream = new FileInputStream(credentialsFile);
-        authSettings.load(credentialsFileStream);
-        credentialsFileStream.close();
-
-        final String clientId = authSettings.getProperty(CredentialSettings.CLIENT_ID.toString());
-        final String tenantId = authSettings.getProperty(CredentialSettings.TENANT_ID.toString());
-        final String clientKey = authSettings.getProperty(CredentialSettings.CLIENT_KEY.toString());
-        final String certificate = authSettings.getProperty(CredentialSettings.CLIENT_CERT.toString());
-        final String certPasswrod = authSettings.getProperty(CredentialSettings.CLIENT_CERT_PASS.toString());
-        final String mgmtUri = authSettings.getProperty(CredentialSettings.MANAGEMENT_URI.toString());
-        final String authUrl = authSettings.getProperty(CredentialSettings.AUTH_URL.toString());
-        final String baseUrl = authSettings.getProperty(CredentialSettings.BASE_URL.toString());
-        final String graphUrl = authSettings.getProperty(CredentialSettings.GRAPH_URL.toString());
-        final String vaultSuffix = authSettings.getProperty(CredentialSettings.VAULT_SUFFIX.toString());
-        final String defaultSubscriptionId = authSettings.getProperty(CredentialSettings.SUBSCRIPTION_ID.toString());
-
-        if (clientKey != null) {
-            return (ApplicationTokenCredentials) new ApplicationTokenCredentials(
-                    clientId,
-                    tenantId,
-                    clientKey,
-                    new AzureEnvironment(new HashMap<String, String>() {{
-                        put(AzureEnvironment.Endpoint.ACTIVE_DIRECTORY.toString(), authUrl.endsWith("/") ? authUrl : authUrl + "/");
-                        put(AzureEnvironment.Endpoint.MANAGEMENT.toString(), mgmtUri);
-                        put(AzureEnvironment.Endpoint.RESOURCE_MANAGER.toString(), baseUrl);
-                        put(AzureEnvironment.Endpoint.GRAPH.toString(), graphUrl);
-                        put(AzureEnvironment.Endpoint.KEYVAULT.toString(), vaultSuffix);
-                    }}
-                    )).withDefaultSubscriptionId(defaultSubscriptionId);
-        } else if (certificate != null) {
-            byte[] certs;
-            if (new File(certificate).exists()) {
-                certs = Files.readAllBytes(Paths.get(certificate));
-            } else {
-                certs = Files.readAllBytes(Paths.get(credentialsFile.getParent(), certificate));
-            }
-            return (ApplicationTokenCredentials) new ApplicationTokenCredentials(
-                    clientId,
-                    tenantId,
-                    certs,
-                    certPasswrod,
-                    new AzureEnvironment(new HashMap<String, String>() {{
-                        put(AzureEnvironment.Endpoint.ACTIVE_DIRECTORY.toString(), authUrl);
-                        put(AzureEnvironment.Endpoint.MANAGEMENT.toString(), mgmtUri);
-                        put(AzureEnvironment.Endpoint.RESOURCE_MANAGER.toString(), baseUrl);
-                        put(AzureEnvironment.Endpoint.GRAPH.toString(), graphUrl);
-                        put(AzureEnvironment.Endpoint.KEYVAULT.toString(), vaultSuffix);
-                    }})).withDefaultSubscriptionId(defaultSubscriptionId);
-        } else {
-            throw new IllegalArgumentException("Please specify either a client key or a client certificate.");
-        }
+        return AuthFile.parse(credentialsFile).generateCredentials();
     }
 
     /**

@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- * This class encloses a Retrofit client that refreshes a token from ADAL.
+ * This class describes the information from a .azureauth file.
  */
 @Beta
 final class AuthFile {
@@ -38,6 +38,12 @@ final class AuthFile {
     private AuthFile() {
     }
 
+    /**
+     * Parses an auth file and read into an AuthFile object.
+     * @param file the auth file to read
+     * @return the AuthFile object created
+     * @throws IOException thrown when the auth file or the certificate file cannot be read or parsed
+     */
     static AuthFile parse(File file) throws IOException {
         String content = Files.toString(file, Charsets.UTF_8).trim();
         String certificatePath = null;
@@ -72,7 +78,7 @@ final class AuthFile {
         } else {
             JacksonAdapter adapter = new JacksonAdapter();
             authFile = adapter.deserialize(content, AuthFile.class);
-            Map<String, String> endpoints = adapter.deserialize(content, new TypeToken<Map<String, String>>() {}.getType());
+            Map<String, String> endpoints = adapter.deserialize(content, new TypeToken<Map<String, String>>() { }.getType());
             authFile.environment.endpoints().putAll(endpoints);
         }
 
@@ -91,6 +97,9 @@ final class AuthFile {
         return content.startsWith("{");
     }
 
+    /**
+     * @return an ApplicationTokenCredentials object from the information in this class
+     */
     ApplicationTokenCredentials generateCredentials() {
         if (clientSecret != null) {
             return (ApplicationTokenCredentials) new ApplicationTokenCredentials(

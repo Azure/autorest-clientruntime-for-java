@@ -22,7 +22,7 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
     private final AzureEnvironment environment;
     private final String domain;
     private String defaultSubscription;
-
+    private final ChallengeCache cache = new ChallengeCache();
     private Proxy proxy;
 
     /**
@@ -42,6 +42,10 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
         String host = request.url().host();
         for (String endpoint : environment().endpoints().values()) {
             if (host.contains(endpoint)) {
+                // key vault is challenge based
+                if (endpoint.equals(environment().keyVaultDnsSuffix())) {
+                    return null;
+                }
                 // Remove leading dots
                 host = endpoint.replaceAll("^\\.*", "");
                 break;
@@ -111,8 +115,14 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
         return this;
     }
 
+    ChallengeCache cache() {
+        return cache;
+    }
+
     @Override
     public void applyCredentialsFilter(OkHttpClient.Builder clientBuilder) {
-        clientBuilder.interceptors().add(new AzureTokenCredentialsInterceptor(this));
+        AzureTokenCredentialsInterceptor interceptor = new AzureTokenCredentialsInterceptor(this);
+        clientBuilder.interceptors().add(interceptor);
+        clientBuilder.authenticator(interceptor);
     }
 }

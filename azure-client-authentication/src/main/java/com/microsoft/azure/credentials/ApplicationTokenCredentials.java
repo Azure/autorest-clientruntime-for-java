@@ -31,11 +31,11 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
     /** The active directory application client id. */
     private String clientId;
     /** The authentication secret for the application. */
-    private String secret;
+    private String clientSecret;
     /** The PKCS12 certificate byte array. */
-    private byte[] certificate;
+    private byte[] clientCertificate;
     /** The certificate password. */
-    private String certPassword;
+    private String clientCertificatePassword;
 
     /**
      * Initializes a new instance of the ApplicationTokenCredentials.
@@ -49,7 +49,7 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
     public ApplicationTokenCredentials(String clientId, String domain, String secret, AzureEnvironment environment) {
         super(environment, domain); // defer token acquisition
         this.clientId = clientId;
-        this.secret = secret;
+        this.clientSecret = secret;
         this.tokens = new HashMap<>();
     }
 
@@ -66,8 +66,8 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
     public ApplicationTokenCredentials(String clientId, String domain, byte[] certificate, String password, AzureEnvironment environment) {
         super(environment, domain);
         this.clientId = clientId;
-        this.certificate = certificate;
-        this.certPassword = password;
+        this.clientCertificate = certificate;
+        this.clientCertificatePassword = password;
         this.tokens = new HashMap<>();
     }
 
@@ -126,15 +126,15 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
             context.setProxy(proxy());
         }
         try {
-            if (secret != null) {
+            if (clientSecret != null) {
                 return context.acquireToken(
                         resource,
-                        new ClientCredential(this.clientId(), secret),
+                        new ClientCredential(this.clientId(), clientSecret),
                         null).get();
-            } else if (certificate != null) {
+            } else if (clientCertificate != null) {
                 return context.acquireToken(
                         resource,
-                        AsymmetricKeyCredential.create(clientId, new ByteArrayInputStream(certificate), certPassword),
+                        AsymmetricKeyCredential.create(clientId, new ByteArrayInputStream(clientCertificate), clientCertificatePassword),
                         null).get();
             }
             throw new AuthenticationException("Please provide either a non-null secret or a non-null certificate.");

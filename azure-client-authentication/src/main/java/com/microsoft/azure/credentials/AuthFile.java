@@ -6,25 +6,28 @@
 
 package com.microsoft.azure.credentials;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.google.common.reflect.TypeToken;
 import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.AzureEnvironment.Endpoint;
 import com.microsoft.azure.management.apigeneration.Beta;
+import com.microsoft.azure.management.apigeneration.Beta.SinceVersion;
 import com.microsoft.rest.serializer.JacksonAdapter;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
 /**
  * This class describes the information from a .azureauth file.
  */
-@Beta
-final class AuthFile {
+@Beta(SinceVersion.V1_1_0)
+public final class AuthFile {
 
     private String clientId;
     private String tenantId;
@@ -33,9 +36,23 @@ final class AuthFile {
     private String clientCertificatePassword;
     private String subscriptionId;
 
-    private AzureEnvironment environment = AzureEnvironment.AZURE;
+    @JsonIgnore
+    private AzureEnvironment environment;
+    @JsonIgnore
+    private static final JacksonAdapter adapter = new JacksonAdapter();
 
     private AuthFile() {
+        environment = new AzureEnvironment(new HashMap<String, String>());
+        environment.endpoints().putAll(AzureEnvironment.AZURE.endpoints());
+    }
+
+    public static AuthFile fromCrendetials(ApplicationTokenCredentials credentials) throws IOException {
+        String content = adapter.serialize(credentials);
+        AuthFile authFile = adapter.deserialize(content, AuthFile.class);
+        authFile.environment.endpoints().putAll(credentials.environment().endpoints());
+        authFile.tenantId = credentials.domain();
+        authFile.subscriptionId = credentials.defaultSubscriptionId();
+        return authFile;
     }
 
     /**
@@ -44,12 +61,16 @@ final class AuthFile {
      * @return the AuthFile object created
      * @throws IOException thrown when the auth file or the certificate file cannot be read or parsed
      */
-    static AuthFile parse(File file) throws IOException {
+    public static AuthFile parse(File file) throws IOException {
         String content = Files.toString(file, Charsets.UTF_8).trim();
         String certificatePath = null;
 
         AuthFile authFile;
-        if (!isJsonBased(content)) {
+        if (isJsonBased(content)) {
+            authFile = adapter.deserialize(content, AuthFile.class);
+            Map<String, String> endpoints = adapter.deserialize(content, new TypeToken<Map<String, String>>() { }.getType());
+            authFile.environment.endpoints().putAll(endpoints);
+        } else {
             // Set defaults
             Properties authSettings = new Properties();
             authSettings.put(CredentialSettings.AUTH_URL.toString(), AzureEnvironment.AZURE.activeDirectoryEndpoint());
@@ -75,11 +96,6 @@ final class AuthFile {
             authFile.environment.endpoints().put(Endpoint.RESOURCE_MANAGER.identifier(), authSettings.getProperty(CredentialSettings.BASE_URL.toString()));
             authFile.environment.endpoints().put(Endpoint.GRAPH.identifier(), authSettings.getProperty(CredentialSettings.GRAPH_URL.toString()));
             authFile.environment.endpoints().put(Endpoint.KEYVAULT.identifier(), authSettings.getProperty(CredentialSettings.VAULT_SUFFIX.toString()));
-        } else {
-            JacksonAdapter adapter = new JacksonAdapter();
-            authFile = adapter.deserialize(content, AuthFile.class);
-            Map<String, String> endpoints = adapter.deserialize(content, new TypeToken<Map<String, String>>() { }.getType());
-            authFile.environment.endpoints().putAll(endpoints);
         }
 
         if (certificatePath != null) {
@@ -100,7 +116,7 @@ final class AuthFile {
     /**
      * @return an ApplicationTokenCredentials object from the information in this class
      */
-    ApplicationTokenCredentials generateCredentials() {
+    public ApplicationTokenCredentials generateCredentials() {
         if (clientSecret != null) {
             return (ApplicationTokenCredentials) new ApplicationTokenCredentials(
                     clientId,
@@ -117,6 +133,13 @@ final class AuthFile {
         } else {
             throw new IllegalArgumentException("Please specify either a client key or a client certificate.");
         }
+    }
+
+    public String generateAuthFileJson() throws IOException {
+        Map<String, String> map = adapter.deserialize(adapter.serialize(this),
+                new TypeToken<Map<String, String>>() { }.getType());
+        map.putAll(environment.endpoints());
+        return adapter.serializer().writerWithDefaultPrettyPrinter().writeValueAsString(map);
     }
 
     /**

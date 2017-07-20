@@ -73,7 +73,7 @@ public class UserTokenCredentials extends AzureTokenCredentials {
     @Override
     public synchronized String getToken(String resource) throws IOException {
         // Find exact match for the resource
-        AuthenticationResult authenticationResult = tokens.get(resource.replaceAll("/$", ""));
+        AuthenticationResult authenticationResult = tokens.get(resource);
         // Return if found and not expired
         if (authenticationResult != null && authenticationResult.getExpiresOnDate().after(new Date())) {
             return authenticationResult.getAccessToken();
@@ -93,7 +93,7 @@ public class UserTokenCredentials extends AzureTokenCredentials {
         if (authenticationResult == null) {
             authenticationResult = acquireNewAccessToken(resource);
         }
-        tokens.put(resource.replaceAll("/$", ""), authenticationResult);
+        tokens.put(resource, authenticationResult);
         return authenticationResult.getAccessToken();
     }
 

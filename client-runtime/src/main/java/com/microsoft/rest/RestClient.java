@@ -155,6 +155,8 @@ public final class RestClient {
     /**
      * Closes the HTTP client, recycles the resources associated, and waits
      * for 60 seconds for all the threads to be recycled.
+     *
+     * @throws InterruptedException thrown when the 60-sec wait is interrupted
      */
     @Beta(SinceVersion.V1_1_0)
     public void closeAndWait() throws InterruptedException {

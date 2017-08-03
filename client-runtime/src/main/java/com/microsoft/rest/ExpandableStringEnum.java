@@ -11,13 +11,13 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  * Base implementation for expandable, single string enums.
  * @param <T> a specific expandable enum type
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "clazz")
 public abstract class ExpandableStringEnum<T extends ExpandableStringEnum<T>> {
     private static ConcurrentMap<String, ? extends ExpandableStringEnum<?>> valuesByName = null;
 
@@ -80,6 +80,7 @@ public abstract class ExpandableStringEnum<T extends ExpandableStringEnum<T>> {
     }
 
     @Override
+    @JsonValue
     public String toString() {
         return this.name;
     }

@@ -400,7 +400,8 @@ public final class AzureClient extends AzureServiceClient {
         pollingState.withResourceType(resourceType);
         pollingState.withSerializerAdapter(restClient().serializerAdapter());
         if (pollingState.isStatusTerminal()) {
-            if (pollingState.isStatusSucceeded()
+            if (pollingState.statusCode() != 204 
+                    && pollingState.isStatusSucceeded()
                     && pollingState.resource() == null
                     && pollingState.locationHeaderLink() != null) {
                 return updateStateFromLocationHeaderOnPostOrDeleteAsync(pollingState).toSingle();
@@ -418,7 +419,8 @@ public final class AzureClient extends AzureServiceClient {
                 .flatMap(new Func1<PollingState<T>, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(PollingState<T> tPollingState) {
-                        if (pollingState.isStatusSucceeded()
+                        if (pollingState.statusCode() != 204
+                                && pollingState.isStatusSucceeded()
                                 && pollingState.resource() == null
                                 && pollingState.locationHeaderLink() != null) {
                             return updateStateFromLocationHeaderOnPostOrDeleteAsync(pollingState);
@@ -560,7 +562,7 @@ public final class AzureClient extends AzureServiceClient {
                         int statusCode = response.code();
                         if (statusCode == 202) {
                             pollingState.withResponse(response);
-                            pollingState.withStatus(AzureAsyncOperation.IN_PROGRESS_STATUS);
+                            pollingState.withStatus(AzureAsyncOperation.IN_PROGRESS_STATUS, statusCode);
                         } else if (statusCode == 200 || statusCode == 201) {
                             try {
                                 pollingState.updateFromResponseOnPutPatch(response);
@@ -588,7 +590,7 @@ public final class AzureClient extends AzureServiceClient {
                         int statusCode = response.code();
                         if (statusCode == 202) {
                             pollingState.withResponse(response);
-                            pollingState.withStatus(AzureAsyncOperation.IN_PROGRESS_STATUS);
+                            pollingState.withStatus(AzureAsyncOperation.IN_PROGRESS_STATUS, statusCode);
                         } else if (statusCode == 200 || statusCode == 201 || statusCode == 204) {
                             try {
                                 pollingState.updateFromResponseOnDeletePost(response);
@@ -752,6 +754,7 @@ public final class AzureClient extends AzureServiceClient {
     }
 
     private <T> Observable<PollingState<T>> postOrDeletePollingDispatcher(PollingState<T> pollingState) {
+        System.out.println("VERBOSE - AzureClient.java - postOrDeletePollingDispatcher() - ENTER");
         if (pollingState.azureAsyncOperationHeaderLink() != null) {
             return updateStateFromAzureAsyncOperationHeaderOnPostOrDeleteAsync(pollingState);
         } else if (pollingState.locationHeaderLink() != null) {

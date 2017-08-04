@@ -754,7 +754,6 @@ public final class AzureClient extends AzureServiceClient {
     }
 
     private <T> Observable<PollingState<T>> postOrDeletePollingDispatcher(PollingState<T> pollingState) {
-        System.out.println("VERBOSE - AzureClient.java - postOrDeletePollingDispatcher() - ENTER");
         if (pollingState.azureAsyncOperationHeaderLink() != null) {
             return updateStateFromAzureAsyncOperationHeaderOnPostOrDeleteAsync(pollingState);
         } else if (pollingState.locationHeaderLink() != null) {

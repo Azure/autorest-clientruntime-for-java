@@ -37,7 +37,7 @@ public class PollingState<T> {
     private String initialHttpMethod;
     /** The polling status. */
     private String status;
-    /** The the HTTP status code */
+    /** The HTTP status code. */
     private int statusCode = DEFAULT_STATUS_CODE;
     /** The link in 'Azure-AsyncOperation' header. */
     private String azureAsyncOperationHeaderLink;

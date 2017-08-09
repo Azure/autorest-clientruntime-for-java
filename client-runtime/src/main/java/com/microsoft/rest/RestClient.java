@@ -42,7 +42,7 @@ public final class RestClient {
     private final OkHttpClient httpClient;
     /** The {@link retrofit2.Retrofit} object. */
     private final Retrofit retrofit;
-    /** The credentials to authenticate. */
+    /** The original builder for this rest client. */
     private final RestClient.Builder builder;
 
     private RestClient(OkHttpClient httpClient,

@@ -42,20 +42,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  *
  *   In this case, if consumer pass "a/b" as the value for param1 then the resolved url looks as expected: "http://wq.com/foo/a/b/values"
  *
- * Example#3:
- *
- *   If the "uri template" is relative then engine will resolve full url using the base url. If base URL contains path segment variables then
- *   that also should be resolved using the parameters annotated with PathParam.
- *
- *   {@literal @}GET("/foo/{name2}/values")
- *   String getValues(@PathParam("name1") String param1, @PathParam("name2") String param2);
- *
- *    Here name2 is not exists in the uri segment but after resolving the full path URI may looks like:
- *
- *    http://foo.com/sd/{name1}/foo/{name2}/values
- *
- *    Apply replacement rule in the resolved path.
- *
  */
 @Retention(RUNTIME)
 @Target(PARAMETER)

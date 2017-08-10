@@ -24,6 +24,9 @@ import static java.lang.annotation.ElementType.TYPE;
  * provided. See Java docs in {@link HostParam} for directions for host
  * parameters.
  *
+ * The host is allowed to contain the protocol and the port number. If provided,
+ * these information will override the setting in RestClient.
+ *
  * Example 1: Static annotation.
  *
  *   {@literal @}Host("management.azure.com")
@@ -34,7 +37,7 @@ import static java.lang.annotation.ElementType.TYPE;
  *
  *  Example 2: Dynamic annotation.
  *
- *    {@literal @}Host("{vaultName}.vault.azure.net")
+ *    {@literal @}Host("https://{vaultName}.vault.azure.net:443")
  *    interface KeyVaultService {
  *       {@literal @}GET("secrets/{secretName}")
  *       Secret get(@HostParam("vaultName") String vaultName, @PathParam("secretName") String secretName);

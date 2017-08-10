@@ -36,6 +36,7 @@ import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
+// TODO: Convert this to RxNetty and finish
 public class RestProxy implements InvocationHandler {
     private final String host;
     private final RestClient restClient;
@@ -53,6 +54,7 @@ public class RestProxy implements InvocationHandler {
         RequestBody requestBody = null;
         if (info.bodyArg != null) {
             if (args[info.bodyArg] != null) {
+                // TODO: what's the actual media type?
                 requestBody = RequestBody.create(MediaType.parse("application/json"), restClient.serializerAdapter().serialize(args[info.bodyArg]));
             }
         }
@@ -121,8 +123,12 @@ public class RestProxy implements InvocationHandler {
     @SuppressWarnings("unchecked")
     public static <A> A create(Class<A> actionable, RestClient restClient) {
         String host = restClient.retrofit().baseUrl().host();
+        String protocol = restClient.retrofit().baseUrl().scheme();
         if (actionable.isAnnotationPresent(Host.class)) {
             host = actionable.getAnnotation(Host.class).value();
+            if (!host.contains("://")) {
+                host = protocol + "://" + host;
+            }
         }
         RestProxy restProxy = new RestProxy(host, restClient);
         restProxy.matrix = populateMethodMatrix(actionable);
@@ -140,6 +146,7 @@ public class RestProxy implements InvocationHandler {
                 for (Annotation annotation : annotations) {
                     if (annotation.annotationType().equals(HostParam.class)) {
                         String name = ((HostParam) annotation).value();
+                        // TODO: mark encoded using a better approach than positive/negative int
                         info.hostArgs.put(name, ((HostParam) annotation).encoded() ? i : -i);
                     }
                     if (annotation.annotationType().equals(PathParam.class)) {

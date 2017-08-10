@@ -154,8 +154,7 @@ public final class AzureClient extends AzureServiceClient {
      * @return the observable of which a subscription will lead PUT or PATCH action.
      */
     public <T> Single<PollingState<T>> beginPutOrPatchAsync(Observable<Response<ResponseBody>> observable, final Type resourceType) {
-        return observable
-                .observeOn(Schedulers.immediate()).map(new Func1<Response<ResponseBody>, PollingState<T>>() {
+        return observable.map(new Func1<Response<ResponseBody>, PollingState<T>>() {
             @Override
             public PollingState<T> call(Response<ResponseBody> response) {
                 RuntimeException exception = createExceptionFromResponse(response, 200, 201, 202);
@@ -366,7 +365,7 @@ public final class AzureClient extends AzureServiceClient {
      * @return the observable of which a subscription will lead POST or DELETE action.
      */
     public <T> Single<PollingState<T>> beginPostOrDeleteAsync(Observable<Response<ResponseBody>> observable, final Type resourceType) {
-        return observable.observeOn(Schedulers.immediate()).map(new Func1<Response<ResponseBody>, PollingState<T>>() {
+        return observable.map(new Func1<Response<ResponseBody>, PollingState<T>>() {
             @Override
             public PollingState<T> call(Response<ResponseBody> response) {
                 RuntimeException exception = createExceptionFromResponse(response, 200, 202, 204);

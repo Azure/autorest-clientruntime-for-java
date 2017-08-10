@@ -4,49 +4,36 @@
  * license information.
  */
 
-package com.microsoft.rest.v2;
+package com.microsoft.azure.v2;
 
-import com.microsoft.rest.LogLevel;
+import com.microsoft.azure.v2.annotations.AzureHost;
 import com.microsoft.rest.RestClient;
 import com.microsoft.rest.ServiceResponseBuilder;
 import com.microsoft.rest.serializer.JacksonAdapter;
+import com.microsoft.rest.v2.RestProxy;
 import com.microsoft.rest.v2.annotations.GET;
-import com.microsoft.rest.v2.annotations.Host;
 import com.microsoft.rest.v2.annotations.HostParam;
 import com.microsoft.rest.v2.annotations.PathParam;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class HttpBinTests {
+public class AzureTests {
 
-    @Host("http://httpbin.org")
+    @AzureHost("{vaultBaseUrl}")
     public interface HttpBinService {
-        @GET("bytes/{bytes}")
-        byte[] getBytes(@PathParam("bytes") int bytes);
-    }
-
-    @Host("http://{host}.org")
-    public interface ParametrizedHttpBinService {
-        @GET("bytes/{bytes}")
-        byte[] getBytes(@HostParam("host") String host, @PathParam("bytes") int bytes);
+        @GET("secrets/{secretName}")
+        String getSecret(@HostParam String vaultBaseUrl, @PathParam("secretName") String secretName);
     }
 
     @Test
     public void getBytes() throws Exception {
         RestClient client = new RestClient.Builder()
                 .withBaseUrl("http://localhost")
-                .withLogLevel(LogLevel.BODY_AND_HEADERS)
                 .withSerializerAdapter(new JacksonAdapter())
                 .withResponseBuilderFactory(new ServiceResponseBuilder.Factory())
                 .build();
         HttpBinService service = RestProxy.create(HttpBinService.class, client);
 
-        byte[] bytes = service.getBytes(8);
-        Assert.assertEquals(8, bytes.length);
-
-        ParametrizedHttpBinService parametrizedService = RestProxy.create(ParametrizedHttpBinService.class, client);
-
-        bytes = parametrizedService.getBytes("httpbin", 8);
-        Assert.assertEquals(8, bytes.length);
+        Assert.assertEquals("http://vault1.vault.azure.net/secrets/{secretName}", service.getSecret("http://vault1.vault.azure.net", "secret1"));
     }
 }

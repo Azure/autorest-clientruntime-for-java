@@ -13,54 +13,33 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 
-@Target(value={METHOD,TYPE})    // The context in which annotation is applicable i.e. this annotation (Host) can be applied to method, method parameter and interface.
-@Retention(RetentionPolicy.RUNTIME)        // Record this annotation in the class file and make it available during runtime.
+/**
+ * An extension to {@link com.microsoft.rest.v2.annotations.Host}, allowing endpoints
+ * of {@link com.microsoft.azure.AzureEnvironment} to be specified instead of string
+ * host names. This allows self adaptive base URLs based on the environment the
+ * client is running in.
+ *
+ * Example 1: Azure Resource Manager
+ *
+ *   {@literal @}AzureHost(AzureEnvironment.Endpoint.RESOURCE_MANAGER)
+ *   interface VirtualMachinesService {
+ *     {@literal @}GET("subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}")
+ *     VirtualMachine getByResourceGroup(@PathParam("resourceGroupName") String rgName, @PathParam("vmName") String vmName, @PathParam("subscriptionId") String subscriptionId);
+ *   }
+ *
+ * Example 2: Azure Key Vault
+ *
+ *   {@literal @}AzureHost(AzureEnvironment.Endpoint.KEY_VAULT)
+ *   interface KeyVaultService {
+ *     {@literal @}GET("secrets/{secretName}")
+ *     Secret getSecret(@HostParam String vaultName, @PathParam("secretName") String secretName);
+ *   }
+ */
+@Target(value={TYPE})
+@Retention(RetentionPolicy.RUNTIME)
 public @interface AzureHost {
     String value() default "";
-    AzureEnvironment.Endpoint enpoint() default Endpoint.RESOURCE_MANAGER;
+    AzureEnvironment.Endpoint endpoint() default Endpoint.RESOURCE_MANAGER;
 }
-
-/**
- * The applicability of this annotation is limited to variable with name {host} in the URI template.
- *
- *
- *  [1] Static annotation applied to interface level.
- *
- *    @Host("manage.windowsazure.com")
- *    interface VirtualMachinesService {
- *       @GET("subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}")
- *       VirtualMachine getByResourceGroup(@PathParam("resourceGroupName") String rgName, @PathParam("vmName") String vmName, @PathParam("subscriptionId") String subscriptionId);
- *    }
- *
- *  [2] Static annotation applied to method level.
- *
- *    interface VirtualMachines {
- *        @Host("manage.windowsazure.com")
- *        @GET("subscriptions/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}")
- *        VirtualMachine getByResourceGroup(@PathParam("resourceGroupName") String rgName, @PathParam("vmName") String vmName, @PathParam("subscriptionId") String subscriptionId);
- *    }
- *
- *  [3] Dynamic annotation applied to interface level.
- *
- *    @Host("{vaultName}.vault.azure.net")
- *    interface KeyVaultService {
- *       @GET("secrets/{secretName}")
- *       Secret get(@HostParam("vaultName") String vaultName, @PathParam("secretName") String secretName);
- *    }
- *
- *  [4] Dynamic annotation applied to method level.
- *
- *    interface KeyVaultService {
- *       @Host("{vaultName}.vault.azure.net")
- *       @GET("secrets/{secretName}")
- *       Secret get(@HostParam("vaultName") String vaultName, @PathParam("secretName") String secretName);
- *    }
- *
- * Note:
- *   When this annotation is present in multiple levels, the precedence is method_parameter_level > method_level > interface_level
- *   Annotation parsing engine will throw error if this annotation is applied to interface and/or method level and the static value is null or empty string.
- *   If URI template does not contain {host} this annotation is ignored (e.g. in the third case if parameter host has a value but {host} absent in the URI template then parameter is ignored)
- */

@@ -154,7 +154,8 @@ public final class AzureClient extends AzureServiceClient {
      * @return the observable of which a subscription will lead PUT or PATCH action.
      */
     public <T> Single<PollingState<T>> beginPutOrPatchAsync(Observable<Response<ResponseBody>> observable, final Type resourceType) {
-        return observable.map(new Func1<Response<ResponseBody>, PollingState<T>>() {
+        return observable
+                .observeOn(Schedulers.immediate()).map(new Func1<Response<ResponseBody>, PollingState<T>>() {
             @Override
             public PollingState<T> call(Response<ResponseBody> response) {
                 RuntimeException exception = createExceptionFromResponse(response, 200, 201, 202);
@@ -232,7 +233,6 @@ public final class AzureClient extends AzureServiceClient {
         pollingState.withResourceType(resourceType);
         pollingState.withSerializerAdapter(restClient().serializerAdapter());
         return Observable.just(true)
-                .subscribeOn(Schedulers.io())
                 .flatMap(new Func1<Boolean, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(Boolean aBoolean) {
@@ -245,8 +245,7 @@ public final class AzureClient extends AzureServiceClient {
                             @Override
                             public Observable<Long> call(Void aVoid) {
                                 return Observable.timer(pollingState.delayInMilliseconds(),
-                                        TimeUnit.MILLISECONDS,
-                                        Schedulers.io());
+                                        TimeUnit.MILLISECONDS, Schedulers.immediate());
                             }
                         });
                     }
@@ -367,7 +366,7 @@ public final class AzureClient extends AzureServiceClient {
      * @return the observable of which a subscription will lead POST or DELETE action.
      */
     public <T> Single<PollingState<T>> beginPostOrDeleteAsync(Observable<Response<ResponseBody>> observable, final Type resourceType) {
-        return observable.map(new Func1<Response<ResponseBody>, PollingState<T>>() {
+        return observable.observeOn(Schedulers.immediate()).map(new Func1<Response<ResponseBody>, PollingState<T>>() {
             @Override
             public PollingState<T> call(Response<ResponseBody> response) {
                 RuntimeException exception = createExceptionFromResponse(response, 200, 202, 204);
@@ -400,9 +399,7 @@ public final class AzureClient extends AzureServiceClient {
         pollingState.withResourceType(resourceType);
         pollingState.withSerializerAdapter(restClient().serializerAdapter());
         if (pollingState.isStatusTerminal()) {
-            if (pollingState.isStatusSucceeded()
-                    && pollingState.resource() == null
-                    && pollingState.locationHeaderLink() != null) {
+            if (pollingState.resourcePending()) {
                 return updateStateFromLocationHeaderOnPostOrDeleteAsync(pollingState).toSingle();
             }
             return Single.just(pollingState);
@@ -418,9 +415,7 @@ public final class AzureClient extends AzureServiceClient {
                 .flatMap(new Func1<PollingState<T>, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(PollingState<T> tPollingState) {
-                        if (pollingState.isStatusSucceeded()
-                                && pollingState.resource() == null
-                                && pollingState.locationHeaderLink() != null) {
+                        if (pollingState.resourcePending()) {
                             return updateStateFromLocationHeaderOnPostOrDeleteAsync(pollingState);
                         }
                         return Observable.just(pollingState);
@@ -455,8 +450,7 @@ public final class AzureClient extends AzureServiceClient {
                             @Override
                             public Observable<Long> call(Void aVoid) {
                                 return Observable.timer(pollingState.delayInMilliseconds(),
-                                        TimeUnit.MILLISECONDS,
-                                        Schedulers.io());
+                                        TimeUnit.MILLISECONDS, Schedulers.immediate());
                             }
                         });
                     }

@@ -352,6 +352,14 @@ public class PollingState<T> {
         return AzureAsyncOperation.SUCCESS_STATUS.equalsIgnoreCase(this.status());
     }
 
+    boolean resourcePending() {
+        return statusCode() != 204
+                && isStatusSucceeded()
+                && resource() == null
+                && resourceType() != Void.class
+                && locationHeaderLink() != null;
+    }
+
     /**
      * Gets the logging context.
      *

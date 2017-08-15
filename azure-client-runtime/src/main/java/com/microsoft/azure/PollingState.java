@@ -25,6 +25,7 @@ import okhttp3.ResponseBody;
 import retrofit2.Response;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Type;
 
 /**
@@ -32,7 +33,9 @@ import java.lang.reflect.Type;
  *
  * @param <T> the type of the resource the operation returns.
  */
-public class PollingState<T> {
+public class PollingState<T> implements Serializable {
+    private static final long serialVersionUID = 9874897190735754L;
+
     /** The HTTP method used to initiate the long running operation. **/
     private String initialHttpMethod;
     /** The polling status. */

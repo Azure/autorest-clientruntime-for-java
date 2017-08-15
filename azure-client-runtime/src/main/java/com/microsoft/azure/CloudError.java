@@ -6,13 +6,16 @@
 
 package com.microsoft.azure;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * An instance of this class provides additional information about an http error response.
  */
-public final class CloudError {
+public final class CloudError implements Serializable {
+    private static final long serialVersionUID = -987489719074576123L;
+
     /**
      * The error code parsed from the body of the http error response.
      */

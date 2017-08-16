@@ -36,15 +36,15 @@ public class OkHttpClient implements HttpClient {
     @Override
     public HttpResponse sendRequest(HttpRequest request) throws IOException {
         RequestBody requestBody = null;
-        final String requestBodyString = request.getBody();
+        final String requestBodyString = request.body();
         if (requestBodyString != null && !requestBodyString.isEmpty()) {
-            final MediaType mediaType = MediaType.parse(request.getMIMEType());
+            final MediaType mediaType = MediaType.parse(request.mimeType());
             requestBody = RequestBody.create(mediaType, requestBodyString);
         }
 
         final Request.Builder requestBuilder = new Request.Builder()
-                .method(request.getMethod(), requestBody)
-                .url(request.getURL());
+                .method(request.method(), requestBody)
+                .url(request.url());
 
         final Request okhttpRequest = requestBuilder.build();
         final Call call = client.newCall(okhttpRequest);

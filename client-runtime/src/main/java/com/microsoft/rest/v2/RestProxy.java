@@ -60,27 +60,27 @@ public final class RestProxy implements InvocationHandler {
         final String actualPath = methodDetails.getSubstitutedPath(args);
 
         final UrlBuilder urlBuilder = new UrlBuilder()
-                .setScheme(hostParts[0])
-                .setHost(hostParts[1])
-                .setPath(actualPath);
+                .withScheme(hostParts[0])
+                .withHost(hostParts[1])
+                .withPath(actualPath);
 
         for (EncodedParameter queryParameter : methodDetails.getEncodedQueryParameters(args)) {
-            urlBuilder.addQueryParameter(queryParameter.getName(), queryParameter.getEncodedValue());
+            urlBuilder.withQueryParameter(queryParameter.name(), queryParameter.encodedValue());
         }
 
         final String url = urlBuilder.toString();
-        final HttpRequest request = new HttpRequest(methodDetails.getMethod(), url);
+        final HttpRequest request = new HttpRequest(methodDetails.method(), url);
 
         for (final EncodedParameter headerParameter : methodDetails.getEncodedHeaderParameters(args)) {
-            request.addHeader(headerParameter.getName(), headerParameter.getEncodedValue());
+            request.withHeader(headerParameter.name(), headerParameter.encodedValue());
         }
 
-        final Integer bodyContentMethodParameterIndex = methodDetails.getBodyContentMethodParameterIndex();
+        final Integer bodyContentMethodParameterIndex = methodDetails.bodyContentMethodParameterIndex();
         if (bodyContentMethodParameterIndex != null) {
             final Object bodyContentObject = args[bodyContentMethodParameterIndex];
             if (bodyContentObject != null) {
                 final String bodyContentString = serializer.serialize(bodyContentObject);
-                request.setBody(bodyContentString, "application/json");
+                request.withBody(bodyContentString, "application/json");
             }
         }
 
@@ -90,11 +90,11 @@ public final class RestProxy implements InvocationHandler {
         if (returnType.equals(Void.TYPE) || !response.hasBody()) {
             return null;
         } else if (returnType.isAssignableFrom(InputStream.class)) {
-            return response.getBodyAsInputStream();
+            return response.bodyAsInputStream();
         } else if (returnType.isAssignableFrom(byte[].class)) {
-            return response.getBodyAsByteArray();
+            return response.bodyAsByteArray();
         } else {
-            final String responseBodyString = response.getBodyAsString();
+            final String responseBodyString = response.bodyAsString();
             return serializer.deserialize(responseBodyString, returnType);
         }
     }

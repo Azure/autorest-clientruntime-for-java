@@ -31,17 +31,17 @@ public class OkHttpResponse implements HttpResponse {
     }
 
     @Override
-    public InputStream getBodyAsInputStream() {
+    public InputStream bodyAsInputStream() {
         return response.body().byteStream();
     }
 
     @Override
-    public byte[] getBodyAsByteArray() throws IOException {
+    public byte[] bodyAsByteArray() throws IOException {
         return response.body().bytes();
     }
 
     @Override
-    public String getBodyAsString() throws IOException {
+    public String bodyAsString() throws IOException {
         return response.body().string();
     }
 }

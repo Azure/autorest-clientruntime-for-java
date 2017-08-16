@@ -26,7 +26,7 @@ public interface HttpResponse {
      * @return This response object's body as an InputStream. If this response object doesn't have a
      * body, then null will be returned.
      */
-    InputStream getBodyAsInputStream();
+    InputStream bodyAsInputStream();
 
     /**
      * Get this response object's body as a byte[]. If this response object doesn't have a body,
@@ -35,7 +35,7 @@ public interface HttpResponse {
      * then null will be returned.
      * @throws IOException On network issues.
      */
-    byte[] getBodyAsByteArray() throws IOException;
+    byte[] bodyAsByteArray() throws IOException;
 
     /**
      * Get this response object's body as a string. If this response object doesn't have a body,
@@ -44,5 +44,5 @@ public interface HttpResponse {
      * then null will be returned.
      * @throws IOException On network issues.
      */
-    String getBodyAsString() throws IOException;
+    String bodyAsString() throws IOException;
 }

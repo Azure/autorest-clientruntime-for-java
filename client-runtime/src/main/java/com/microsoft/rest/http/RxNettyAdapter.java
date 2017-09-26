@@ -8,15 +8,15 @@ package com.microsoft.rest.http;
 
 import com.microsoft.rest.policy.RequestPolicy;
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
-import io.reactivex.netty.protocol.http.client.HttpClientRequest;
-import io.reactivex.netty.protocol.http.client.HttpClientResponse;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.util.concurrent.Future;
 import rx.Observable;
 import rx.Observer;
 import rx.Single;
-import rx.functions.Func1;
 import rx.observables.SyncOnSubscribe;
 
 import javax.net.ssl.SSLContext;
@@ -27,11 +27,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A HttpClient that is implemented using RxNetty.
@@ -63,72 +60,57 @@ public class RxNettyAdapter extends HttpClient {
 
     @Override
     public Single<HttpResponse> sendRequestInternalAsync(HttpRequest request) {
-        Single<HttpResponse> result;
-
-        try {
-            final URI uri = new URI(request.url());
-
-            Map<String, Set<Object>> rxnHeaders = new HashMap<>();
-            for (HttpHeader header : request.headers()) {
-                rxnHeaders.put(header.name(), Collections.<Object>singleton(header.value()));
+        return Observable.defer(() -> {
+            URI uri = null;
+            try {
+                uri = new URI(request.uri());
+                request.setHeader(io.netty.handler.codec.http.HttpHeaders.Names.HOST, uri.getHost());
+                request.setHeader(io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION, io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE);
+            } catch (URISyntaxException e) {
+                return Observable.error(e);
             }
 
-            String mimeType = request.mimeType();
-            if (mimeType != null) {
-                rxnHeaders.put("Content-Type", Collections.<Object>singleton(mimeType));
-            }
+            Future<Channel> future = pool.acquire();
 
-            final boolean isSecure = "https".equalsIgnoreCase(uri.getScheme());
-            final int port;
-            if (uri.getPort() != -1) {
-                port = uri.getPort();
-            } else {
-                port = isSecure ? 443 : 80;
-            }
-
-            io.reactivex.netty.protocol.http.client.HttpClient<ByteBuf, ByteBuf> rxnClient =
-                    io.reactivex.netty.protocol.http.client.HttpClient.newClient(uri.getHost(), port);
-
-            for (int i = 0; i < handlerConfigs.size(); i++) {
-                ChannelHandlerConfig config = handlerConfigs.get(i);
-                if (config.mayBlock()) {
-                    EventExecutorGroup executorGroup = new DefaultEventExecutorGroup(1);
-                    rxnClient = rxnClient.addChannelHandlerLast(executorGroup, "az-client-handler-" + i, config.factory());
-                } else {
-                    rxnClient = rxnClient.addChannelHandlerLast("az-client-handler-" + i, config.factory());
+            return Observable.<ByteBuf>fromEmitter(emitter -> future.addListener(cf -> {
+                if (!cf.isSuccess()) {
+                    emitter.onError(cf.cause());
+                    return;
                 }
-            }
 
-            if (isSecure) {
-                rxnClient = rxnClient.secure(getSSLEngine(uri.getHost()));
-            }
+                Channel channel = (Channel) cf.getNow();
 
-            HttpClientRequest<ByteBuf, ByteBuf> rxnReq = rxnClient
-                    .createRequest(HttpMethod.valueOf(request.httpMethod()), uri.toASCIIString())
-                    .addHeaders(rxnHeaders);
+                channel.attr(REQUEST_PROVIDER).set(request);
 
-            Observable<HttpClientResponse<ByteBuf>> obsResponse = rxnReq;
-
-            final HttpRequestBody body = request.body();
-            if (body != null) {
-                try (final InputStream bodyStream = body.createInputStream()) {
-                    obsResponse = rxnReq.writeBytesContent(toByteArrayObservable(bodyStream));
+                if (channel.pipeline().last() == null) {
+                    channel.pipeline().addLast(new HttpResponseDecoder());
+                    channel.pipeline().addLast(new HttpRequestEncoder());
+                    channel.pipeline().addLast(new RetryChannelHandler(NettyRxAdapter.this));
+                    channel.pipeline().addLast(new HttpClientInboundHandler(NettyRxAdapter.this));
                 }
-            }
 
-            result = obsResponse
-                    .map(new Func1<HttpClientResponse<ByteBuf>, HttpResponse>() {
-                        @Override
-                        public HttpResponse call(HttpClientResponse<ByteBuf> rxnRes) {
-                            return new RxNettyResponse(rxnRes);
-                        }
-                    })
-                    .toSingle();
-        } catch (URISyntaxException | IOException e) {
-            result = Single.error(e);
-        }
+                channel.pipeline().get(HttpClientInboundHandler.class).setEmitter(emitter);
 
-        return result;
+
+                FullHttpRequest raw = request.provide();
+                String range = raw.headers().get("x-ms-range");
+                channel.attr(RANGE).set(range);
+                channel.writeAndFlush(raw).addListener(v -> {
+                    if (v.isSuccess()) {
+                        channel.read();
+                    } else {
+                        emitter.onError(v.cause());
+                    }
+                });
+            }), BackpressureMode.BUFFER)
+                    .retryWhen(observable -> observable.zipWith(Observable.range(1, 10), (throwable, integer) -> integer)
+                            .flatMap(i -> Observable.timer(i, TimeUnit.SECONDS)))
+                    .toList()
+                    .map(l -> {
+                        ByteBuf[] bufs = new ByteBuf[l.size()];
+                        return Unpooled.wrappedBuffer(l.toArray(bufs));
+                    });
+        });
     }
 
     // This InputStream to Observable<byte[]> conversion comes from rxjava-string

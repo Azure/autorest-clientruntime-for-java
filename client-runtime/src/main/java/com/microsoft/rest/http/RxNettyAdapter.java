@@ -7,12 +7,20 @@
 package com.microsoft.rest.http;
 
 import com.microsoft.rest.policy.RequestPolicy;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.pool.AbstractChannelPoolHandler;
+import io.netty.channel.pool.ChannelPool;
+import io.netty.channel.pool.FixedChannelPool;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.Future;
 import rx.Observable;
 import rx.Observer;
@@ -35,7 +43,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class RxNettyAdapter extends HttpClient {
     private final List<ChannelHandlerConfig> handlerConfigs;
-
+    private final NioEventLoopGroup eventLoopGroup;
+    private final Bootstrap bootstrap;
+    private SslContext sslContext;
+    private final ChannelPool pool;
     /**
      * Creates RxNettyClient.
      * @param policyFactories the sequence of RequestPolicies to apply when sending HTTP requests.
@@ -44,6 +55,30 @@ public class RxNettyAdapter extends HttpClient {
     public RxNettyAdapter(List<RequestPolicy.Factory> policyFactories, List<ChannelHandlerConfig> handlerConfigs) {
         super(policyFactories);
         this.handlerConfigs = handlerConfigs;
+        this.eventLoopGroup = new NioEventLoopGroup();
+        this.bootstrap = new Bootstrap();
+        this.bootstrap.group(eventLoopGroup);
+        this.bootstrap.channel(NioSocketChannel.class);
+        this.bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
+        this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) TimeUnit.MINUTES.toMillis(3L));
+        pool = new FixedChannelPool(bootstrap.remoteAddress(host, port), new AbstractChannelPoolHandler() {
+            @Override
+            public void channelCreated(Channel ch) throws Exception {
+                if (sslContext != null) {
+                    ch.pipeline().addLast(sslContext.newHandler(ch.alloc(), host, port));
+                }
+                ch.pipeline().addLast(new HttpResponseDecoder());
+                ch.pipeline().addLast(new HttpRequestEncoder());
+                ch.pipeline().addLast(new RetryChannelHandler(NettyRxAdapter.this));
+                ch.pipeline().addLast(new HttpClientInboundHandler(NettyRxAdapter.this));
+//                ch.pipeline().addFirst(new HttpProxyHandler(new InetSocketAddress("localhost", 8888)));
+            }
+
+            @Override
+            public void channelReleased(Channel ch) throws Exception {
+                ch.attr(RETRY_COUNT).set(0);
+            }
+        }, this.channelPoolSize);
     }
 
     private SSLEngine getSSLEngine(String host) {
@@ -63,9 +98,9 @@ public class RxNettyAdapter extends HttpClient {
         return Observable.defer(() -> {
             URI uri = null;
             try {
-                uri = new URI(request.uri());
-                request.setHeader(io.netty.handler.codec.http.HttpHeaders.Names.HOST, uri.getHost());
-                request.setHeader(io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION, io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE);
+                uri = new URI(request.url());
+                request.withHeader(io.netty.handler.codec.http.HttpHeaders.Names.HOST, uri.getHost());
+                request.withHeader(io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION, io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE);
             } catch (URISyntaxException e) {
                 return Observable.error(e);
             }

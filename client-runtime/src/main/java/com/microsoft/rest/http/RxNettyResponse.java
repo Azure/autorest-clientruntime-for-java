@@ -7,78 +7,64 @@
 package com.microsoft.rest.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
-import io.reactivex.netty.protocol.http.client.HttpClientResponse;
+import rx.Observable;
 import rx.Single;
-import rx.functions.Action2;
-import rx.functions.Func0;
 import rx.functions.Func1;
+
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * A HttpResponse that is implemented using RxNetty.
  */
 class RxNettyResponse extends HttpResponse {
-    private final HttpClientResponse<ByteBuf> rxnRes;
+    private static final String HEADER_CONTENT_LENGTH = "Content-Length";
+    private final io.netty.handler.codec.http.HttpResponse rxnRes;
+    private final long contentLength;
+    private final Observable<ByteBuf> emitter;
 
-    RxNettyResponse(HttpClientResponse<ByteBuf> rxnRes) {
+    RxNettyResponse(io.netty.handler.codec.http.HttpResponse rxnRes, Observable<ByteBuf> emitter) {
         this.rxnRes = rxnRes;
+        this.contentLength = Long.parseLong(rxnRes.headers().get(HEADER_CONTENT_LENGTH));
+        this.emitter = emitter;
     }
 
     @Override
     public int statusCode() {
-        return rxnRes.getStatus().code();
+        return rxnRes.status().code();
     }
 
     @Override
     public String headerValue(String headerName) {
-        return rxnRes.getHeader(headerName);
+        return rxnRes.headers().get(headerName);
     }
 
     @Override
     public HttpHeaders headers() {
         HttpHeaders headers = new HttpHeaders();
-        for (String headerName : rxnRes.getHeaderNames()) {
-            headers.add(headerName, rxnRes.getHeader(headerName));
+        for (Entry<String, String> header : rxnRes.headers()) {
+            headers.add(header.getKey(), header.getValue());
         }
         return headers;
     }
 
-    private Single<ByteBuf> collectContent(boolean pooled) {
-        // Reading entire response into memory-- not sure if this is OK
-        int contentLength = (int) rxnRes.getContentLength();
-        final ByteBuf collector;
-        if (pooled) {
-            collector = PooledByteBufAllocator.DEFAULT.heapBuffer(contentLength);
-        } else {
-            collector = UnpooledByteBufAllocator.DEFAULT.heapBuffer(contentLength);
-        }
-        Single<ByteBuf> collected = rxnRes.getContent()
-                .collect(
-                        new Func0<ByteBuf>() {
-                            @Override
-                            public ByteBuf call() {
-                                return collector;
-                            }
-                        },
-                        new Action2<ByteBuf, ByteBuf>() {
-                            @Override
-                            public void call(ByteBuf collector, ByteBuf chunk) {
-                                collector.writeBytes(chunk);
-                                // Ensure to release upstream ByteBuf, this can be a PooledDirectBuf
-                                ReferenceCountUtil.release(chunk);
-                            }
-                        })
-                .toSingle();
-        return collected;
+    private Single<ByteBuf> collectContent() {
+        return emitter.toList().map(new Func1<List<ByteBuf>, ByteBuf>() {
+            @Override
+            public ByteBuf call(List<ByteBuf> l) {
+                ByteBuf[] bufs = new ByteBuf[l.size()];
+                return Unpooled.wrappedBuffer(l.toArray(bufs));
+            }
+        }).toSingle();
     }
 
     @Override
     public Single<? extends InputStream> bodyAsInputStreamAsync() {
-        return collectContent(true).map(new Func1<ByteBuf, InputStream>() {
+        return collectContent().map(new Func1<ByteBuf, InputStream>() {
             @Override
             public InputStream call(ByteBuf byteBuf) {
                 return new ClosableByteBufInputStream(byteBuf);
@@ -88,7 +74,7 @@ class RxNettyResponse extends HttpResponse {
 
     @Override
     public Single<byte[]> bodyAsByteArrayAsync() {
-        return collectContent(false).map(new Func1<ByteBuf, byte[]>() {
+        return collectContent().map(new Func1<ByteBuf, byte[]>() {
             @Override
             public byte[] call(ByteBuf byteBuf) {
                 return byteBuf.array();
@@ -98,7 +84,7 @@ class RxNettyResponse extends HttpResponse {
 
     @Override
     public Single<String> bodyAsStringAsync() {
-        return collectContent(true).map(new Func1<ByteBuf, String>() {
+        return collectContent().map(new Func1<ByteBuf, String>() {
             @Override
             public String call(ByteBuf byteBuf) {
                 try {

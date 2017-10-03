@@ -6,20 +6,17 @@
 
 package com.microsoft.rest.http;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-
 /**
  * A HTTP request body that contains a byte[].
  */
-public class ByteArrayHttpRequestBody implements HttpRequestBody {
+public class ByteArrayRequestBody implements HttpRequestBody {
     private final byte[] contents;
 
     /**
      * Create a new ByteArrayHttpRequestBody with the provided byte[].
      * @param contents The byte[] to store in this ByteArrayHttpRequestBody.
      */
-    public ByteArrayHttpRequestBody(byte[] contents) {
+    public ByteArrayRequestBody(byte[] contents) {
         this.contents = contents;
     }
 
@@ -28,8 +25,7 @@ public class ByteArrayHttpRequestBody implements HttpRequestBody {
         return contents.length;
     }
 
-    @Override
-    public InputStream createInputStream() {
-        return new ByteArrayInputStream(contents);
+    public byte[] content() {
+        return contents;
     }
 }

@@ -91,7 +91,7 @@ public class HttpRequest {
      * @return This HttpRequest so that multiple operations can be chained together.
      */
     public HttpRequest withBody(byte[] body, String mimeType) {
-        return withBody(new ByteArrayHttpRequestBody(body), mimeType);
+        return withBody(new ByteArrayRequestBody(body), mimeType);
     }
 
     /**

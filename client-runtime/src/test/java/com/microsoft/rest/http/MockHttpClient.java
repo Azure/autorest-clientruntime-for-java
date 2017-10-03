@@ -6,15 +6,15 @@
 
 package com.microsoft.rest.http;
 
-import com.google.common.io.CharStreams;
 import com.microsoft.rest.HttpBinJSON;
 import com.microsoft.rest.policy.RequestPolicy;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import rx.Single;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,8 +87,15 @@ public class MockHttpClient extends HttpClient {
     }
 
     private static String bodyToString(HttpRequest request) throws IOException {
-        try (final InputStream bodyStream = request.body().createInputStream()) {
-            return CharStreams.toString(new InputStreamReader(bodyStream));
+        if (request.body() instanceof ByteArrayRequestBody) {
+            return new String(((ByteArrayRequestBody) request.body()).content());
+        } else if (request.body() instanceof FileRequestBody) {
+            FileSegment segment = ((FileRequestBody) request.body()).content();
+            ByteBuf requestContent = ByteBufAllocator.DEFAULT.buffer(segment.length());
+            requestContent.writeBytes(segment.fileChannel(), segment.offset(), segment.length());
+            return requestContent.toString(Charset.defaultCharset());
+        } else {
+            throw new IllegalArgumentException("Only ByteArrayRequestBody or FileRequestBody are supported");
         }
     }
 

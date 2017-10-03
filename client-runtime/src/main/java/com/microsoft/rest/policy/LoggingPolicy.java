@@ -6,8 +6,8 @@
 
 package com.microsoft.rest.policy;
 
-import com.google.common.io.CharStreams;
 import com.microsoft.rest.LogLevel;
+import com.microsoft.rest.http.ByteArrayRequestBody;
 import com.microsoft.rest.http.HttpHeader;
 import com.microsoft.rest.http.HttpRequest;
 import com.microsoft.rest.http.HttpResponse;
@@ -18,8 +18,6 @@ import rx.Single;
 import rx.functions.Action1;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -89,14 +87,10 @@ public final class LoggingPolicy implements RequestPolicy {
         if (logLevel.shouldLogBody() && request.body() != null) {
             // TODO: maximum content-length?
             // TODO: check MIME type?
-            InputStream is = request.body().createInputStream();
-            InputStreamReader reader = new InputStreamReader(is);
-            try {
-                String bodyString = CharStreams.toString(reader);
+            if (request.body() instanceof ByteArrayRequestBody) {
+                String bodyString = new String(((ByteArrayRequestBody) request.body()).content());
                 log(logger, String.format("%s-byte body:\n%s", request.body().contentLength(), bodyString));
                 log(logger, "--> END " + request.httpMethod());
-            } catch (IOException e) {
-                log(logger, "Exception occurred when reading body: " + e.getMessage());
             }
         }
 

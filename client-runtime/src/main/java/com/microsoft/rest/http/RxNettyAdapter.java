@@ -9,28 +9,43 @@ package com.microsoft.rest.http;
 import com.microsoft.rest.policy.RequestPolicy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
-import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+import rx.Emitter;
+import rx.Emitter.BackpressureMode;
 import rx.Observable;
 import rx.Observer;
 import rx.Single;
+import rx.functions.Action1;
+import rx.functions.Func0;
 import rx.observables.SyncOnSubscribe;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
@@ -46,7 +61,10 @@ public class RxNettyAdapter extends HttpClient {
     private final NioEventLoopGroup eventLoopGroup;
     private final Bootstrap bootstrap;
     private SslContext sslContext;
-    private final ChannelPool pool;
+    private final FixedChannelPool pool;
+    private final static AttributeKey<Integer> RETRY_COUNT = AttributeKey.newInstance("retry-count");
+    private final static AttributeKey<HttpRequest> REQUEST_PROVIDER = AttributeKey.newInstance("request-provider");
+
     /**
      * Creates RxNettyClient.
      * @param policyFactories the sequence of RequestPolicies to apply when sending HTTP requests.
@@ -61,24 +79,19 @@ public class RxNettyAdapter extends HttpClient {
         this.bootstrap.channel(NioSocketChannel.class);
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
         this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) TimeUnit.MINUTES.toMillis(3L));
-        pool = new FixedChannelPool(bootstrap.remoteAddress(host, port), new AbstractChannelPoolHandler() {
+        pool = new FixedChannelPool(bootstrap.remoteAddress("microsoft.com", 80), new AbstractChannelPoolHandler() {
             @Override
             public void channelCreated(Channel ch) throws Exception {
-                if (sslContext != null) {
-                    ch.pipeline().addLast(sslContext.newHandler(ch.alloc(), host, port));
-                }
                 ch.pipeline().addLast(new HttpResponseDecoder());
                 ch.pipeline().addLast(new HttpRequestEncoder());
-                ch.pipeline().addLast(new RetryChannelHandler(NettyRxAdapter.this));
-                ch.pipeline().addLast(new HttpClientInboundHandler(NettyRxAdapter.this));
-//                ch.pipeline().addFirst(new HttpProxyHandler(new InetSocketAddress("localhost", 8888)));
+                ch.pipeline().addLast(new HttpClientInboundHandler(RxNettyAdapter.this));
             }
 
             @Override
             public void channelReleased(Channel ch) throws Exception {
                 ch.attr(RETRY_COUNT).set(0);
             }
-        }, this.channelPoolSize);
+        }, this.eventLoopGroup.executorCount() * 2);
     }
 
     private SSLEngine getSSLEngine(String host) {
@@ -94,58 +107,165 @@ public class RxNettyAdapter extends HttpClient {
     }
 
     @Override
-    public Single<HttpResponse> sendRequestInternalAsync(HttpRequest request) {
-        return Observable.defer(() -> {
-            URI uri = null;
-            try {
-                uri = new URI(request.url());
-                request.withHeader(io.netty.handler.codec.http.HttpHeaders.Names.HOST, uri.getHost());
-                request.withHeader(io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION, io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE);
-            } catch (URISyntaxException e) {
-                return Observable.error(e);
+    public Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request) {
+        return Single.defer(new Func0<Single<HttpResponse>>() {
+            @Override
+            public Single<HttpResponse> call() {
+                final URI uri;
+                try {
+                    uri = new URI(request.url());
+                    request.withHeader(io.netty.handler.codec.http.HttpHeaders.Names.HOST, uri.getHost());
+                    request.withHeader(io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION, io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE);
+                } catch (URISyntaxException e) {
+                    return Single.error(e);
+                }
+
+                final String host = uri.getHost();
+                final int port;
+                if (uri.getPort() < 0) {
+                    port = "https".equals(uri.getScheme()) ? 443 : 80;
+                } else {
+                    port = uri.getPort();
+                }
+
+                final Future<Channel> future = pool.acquire();
+
+                return Observable.fromEmitter(new Action1<Emitter<HttpResponse>>() {
+                    @Override
+                    public void call(final Emitter<HttpResponse> emitter) {
+                        future.addListener(new GenericFutureListener<Future<? super Channel>>() {
+                            @Override
+                            public void operationComplete(Future<? super Channel> cf) throws Exception {
+                                if (!cf.isSuccess()) {
+                                    emitter.onError(cf.cause());
+                                    return;
+                                }
+
+                                final Channel channel = (Channel) cf.getNow();
+
+                                channel.attr(REQUEST_PROVIDER).set(request);
+
+                                if (channel.pipeline().get(SslHandler.class) == null && "https".equals(uri.getScheme())) {
+                                    channel.pipeline().addLast(sslContext.newHandler(channel.alloc(), host, port));
+                                }
+                                if (channel.pipeline().last() == null) {
+                                    channel.pipeline().addLast(new HttpResponseDecoder());
+                                    channel.pipeline().addLast(new HttpRequestEncoder());
+                                    channel.pipeline().addLast(new HttpClientInboundHandler(RxNettyAdapter.this));
+                                }
+
+                                channel.pipeline().get(HttpClientInboundHandler.class).setResponseEmitter(emitter);
+
+                                final FullHttpRequest raw;
+                                if (request.body() == null || request.body().contentLength() == 0) {
+                                    raw = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                                            HttpMethod.valueOf(request.httpMethod()),
+                                            request.url());
+                                } else {
+                                    ByteBuf requestContent;
+                                    if (request.body() instanceof ByteArrayRequestBody) {
+                                        requestContent = Unpooled.wrappedBuffer(((ByteArrayRequestBody) request.body()).content());
+                                    } else if (request.body() instanceof FileRequestBody) {
+                                        FileSegment segment = ((FileRequestBody) request.body()).content();
+                                        requestContent = ByteBufAllocator.DEFAULT.buffer(segment.length());
+                                        requestContent.writeBytes(segment.fileChannel(), segment.offset(), segment.length());
+                                    } else {
+                                        throw new IllegalArgumentException("Only ByteArrayRequestBody or FileRequestBody are supported");
+                                    }
+                                    raw = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                                            HttpMethod.valueOf(request.httpMethod()),
+                                            request.url(),
+                                            requestContent);
+                                }
+                                channel.connect(new InetSocketAddress(host, port)).addListener(new GenericFutureListener<Future<? super Void>>() {
+                                    @Override
+                                    public void operationComplete(Future<? super Void> future) throws Exception {
+                                        channel.writeAndFlush(raw).addListener(new GenericFutureListener<Future<? super Void>>() {
+                                            @Override
+                                            public void operationComplete(Future<? super Void> v) throws Exception {
+                                                if (v.isSuccess()) {
+                                                    channel.read();
+                                                } else {
+                                                    emitter.onError(v.cause());
+                                                }
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }, BackpressureMode.BUFFER).toSingle();
             }
+        });
+    }
 
-            Future<Channel> future = pool.acquire();
+    private static class HttpClientInboundHandler extends ChannelInboundHandlerAdapter {
 
-            return Observable.<ByteBuf>fromEmitter(emitter -> future.addListener(cf -> {
-                if (!cf.isSuccess()) {
-                    emitter.onError(cf.cause());
+        private static final String HEADER_CONTENT_LENGTH = "Content-Length";
+        private Emitter<ByteBuf> contentEmitter;
+        private Emitter<HttpResponse> responseEmitter;
+        private RxNettyAdapter adapter;
+        private long contentLength;
+
+        public HttpClientInboundHandler(RxNettyAdapter adapter) {
+            this.adapter = adapter;
+        }
+
+        public void setResponseEmitter(Emitter<HttpResponse> emitter) {
+            this.responseEmitter = emitter;
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            adapter.pool.release(ctx.channel());
+            contentEmitter.onError(cause);
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof io.netty.handler.codec.http.HttpResponse)
+            {
+                io.netty.handler.codec.http.HttpResponse response = (io.netty.handler.codec.http.HttpResponse) msg;
+
+                responseEmitter.onNext(new RxNettyResponse(response, Observable.fromEmitter(new Action1<Emitter<ByteBuf>>() {
+                    @Override
+                    public void call(Emitter<ByteBuf> byteBufEmitter) {
+                        contentEmitter = byteBufEmitter;
+                    }
+                }, BackpressureMode.BUFFER)));
+
+                if (response.headers().contains(HEADER_CONTENT_LENGTH)) {
+                    contentLength = Long.parseLong(response.headers().get(HEADER_CONTENT_LENGTH));
+                }
+
+                if (contentLength == 0) {
+                    contentEmitter.onNext(new EmptyByteBuf(ByteBufAllocator.DEFAULT));
+                    contentEmitter.onCompleted();
+                    adapter.pool.release(ctx.channel());
+                }
+            }
+            if(msg instanceof HttpContent)
+            {
+                if (contentLength == 0) {
                     return;
                 }
 
-                Channel channel = (Channel) cf.getNow();
+                HttpContent content = (HttpContent)msg;
+                ByteBuf buf = content.content();
 
-                channel.attr(REQUEST_PROVIDER).set(request);
-
-                if (channel.pipeline().last() == null) {
-                    channel.pipeline().addLast(new HttpResponseDecoder());
-                    channel.pipeline().addLast(new HttpRequestEncoder());
-                    channel.pipeline().addLast(new RetryChannelHandler(NettyRxAdapter.this));
-                    channel.pipeline().addLast(new HttpClientInboundHandler(NettyRxAdapter.this));
+                if (contentLength > 0 && buf != null && buf.readableBytes() > 0) {
+                    int readable = buf.readableBytes();
+                    contentLength -= readable;
+                    contentEmitter.onNext(buf);
                 }
 
-                channel.pipeline().get(HttpClientInboundHandler.class).setEmitter(emitter);
-
-
-                FullHttpRequest raw = request.provide();
-                String range = raw.headers().get("x-ms-range");
-                channel.attr(RANGE).set(range);
-                channel.writeAndFlush(raw).addListener(v -> {
-                    if (v.isSuccess()) {
-                        channel.read();
-                    } else {
-                        emitter.onError(v.cause());
-                    }
-                });
-            }), BackpressureMode.BUFFER)
-                    .retryWhen(observable -> observable.zipWith(Observable.range(1, 10), (throwable, integer) -> integer)
-                            .flatMap(i -> Observable.timer(i, TimeUnit.SECONDS)))
-                    .toList()
-                    .map(l -> {
-                        ByteBuf[] bufs = new ByteBuf[l.size()];
-                        return Unpooled.wrappedBuffer(l.toArray(bufs));
-                    });
-        });
+                if (contentLength == 0) {
+                    contentEmitter.onCompleted();
+                    adapter.pool.release(ctx.channel());
+                }
+            }
+        }
     }
 
     // This InputStream to Observable<byte[]> conversion comes from rxjava-string

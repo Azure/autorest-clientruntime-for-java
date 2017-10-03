@@ -8,7 +8,6 @@ package com.microsoft.rest;
 
 import com.google.common.util.concurrent.AbstractFuture;
 import rx.Completable;
-import rx.CompletableSubscriber;
 import rx.Observable;
 import rx.Subscription;
 import rx.functions.Action0;

@@ -26,7 +26,7 @@ import java.net.URL;
 public class MSICredentials extends AzureTokenCredentials {
     private final String resource;
     private final int msiPort;
-
+    private final AzureJacksonAdapter adapter;
     /**
      * Initializes a new instance of the MSICredentials.
      *
@@ -46,6 +46,7 @@ public class MSICredentials extends AzureTokenCredentials {
         super(environment, null /** retrieving MSI token does not require tenant **/);
         this.resource = environment.resourceManagerEndpoint();
         this.msiPort = msiPort;
+        this.adapter = new AzureJacksonAdapter();
     }
 
     @Override
@@ -73,7 +74,6 @@ public class MSICredentials extends AzureTokenCredentials {
             BufferedReader reader = new BufferedReader(new InputStreamReader(stream, "UTF-8"), 100);
             String result = reader.readLine();
 
-            AzureJacksonAdapter adapter = new AzureJacksonAdapter();
             MSIToken msiToken = adapter.deserialize(result, MSIToken.class);
             return msiToken.accessToken;
         } finally {

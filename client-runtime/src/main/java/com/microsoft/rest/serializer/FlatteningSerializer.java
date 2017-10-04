@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -87,7 +86,12 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
     private List<Field> getAllDeclaredFields(Class<?> clazz) {
         List<Field> fields = new ArrayList<Field>();
         while (clazz != null && !clazz.equals(Object.class)) {
-            fields.addAll(Arrays.asList(clazz.getDeclaredFields()));
+            for (Field f : clazz.getDeclaredFields()) {
+                int mod = f.getModifiers();
+                if (!Modifier.isFinal(mod) && !Modifier.isStatic(mod)) {
+                    fields.add(f);
+                }
+            }
             clazz = clazz.getSuperclass();
         }
         return fields;

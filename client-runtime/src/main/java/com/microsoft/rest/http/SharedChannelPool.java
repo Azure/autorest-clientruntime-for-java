@@ -6,92 +6,160 @@
 
 package com.microsoft.rest.http;
 
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
-import io.netty.channel.pool.SimpleChannelPool;
-import io.netty.util.concurrent.CompleteFuture;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.SucceededFuture;
 
+import java.net.InetSocketAddress;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A HTTP request body that contains a chunk of a file.
  */
-public class SharedChannelPool extends SimpleChannelPool {
+public class SharedChannelPool implements ChannelPool {
+    private final Bootstrap bootstrap;
+    private final ChannelPoolHandler handler;
     private boolean closed = false;
     private final int poolSize;
-    private Queue<SettableFuture<Channel>> requests;
-    private final AtomicInteger poolAvailable;
+    private final Queue<ChannelRequest> requests;
+    private final Queue<Channel> available;
+    private final Queue<Channel> leased;
+    private final Object sync = -1;
 
-    public SharedChannelPool(Bootstrap bootstrap, ChannelPoolHandler handler, int size) {
-        super(bootstrap, handler);
+    public SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size) {
+        this.bootstrap = bootstrap.clone().handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                assert ch.eventLoop().inEventLoop();
+                handler.channelCreated(ch);
+            }
+        });
+        this.handler = handler;
         this.poolSize = size;
-        this.poolAvailable = new AtomicInteger(size);
         this.requests = new ConcurrentLinkedDeque<>();
+        this.available = new ConcurrentLinkedDeque<>();
+        this.leased = new ConcurrentLinkedDeque<>();
         bootstrap.config().group().submit(new Runnable() {
             @Override
             public void run() {
                 while (!closed) {
                     try {
-                        while (requests.isEmpty()) {
-                            Thread.sleep(100);
+                        final ChannelRequest request;
+                        final ChannelFuture channelFuture;
+                        if (requests.isEmpty() && !closed) {
+                            synchronized (requests) {
+                                requests.wait();
+                            }
                         }
+                        request = requests.poll();
 
-                        while (poolAvailable.get() <= 0 && !closed) {
-                            synchronized (poolAvailable) {
-                                poolAvailable.wait(1000);
+                        synchronized (sync) {
+                            if (leased.size() >= poolSize && !closed) {
+                                sync.wait();
                             }
-                        }
-                        if (!closed) {
-                            Future<Channel> cf = SharedChannelPool.super.acquire();
-                            if (cf.isSuccess()) {
-                                requests.poll().set(cf.getNow());
+                            if (!available.isEmpty()) {
+                                Channel channel = available.poll();
+                                channelFuture = channel.connect(new InetSocketAddress(request.host, request.port));
                             } else {
-                                requests.poll().setException(cf.cause());
+                                channelFuture = SharedChannelPool.this.bootstrap.clone().connect(request.host, request.port);
                             }
+                            channelFuture.addListener(new GenericFutureListener<Future<? super Void>>() {
+                                @Override
+                                public void operationComplete(Future<? super Void> future) throws Exception {
+                                    if (future.isSuccess()) {
+                                        handler.channelAcquired(channelFuture.channel());
+                                        request.promise.setSuccess(channelFuture.channel());
+                                    } else {
+                                        request.promise.setFailure(future.cause());
+                                        throw new RuntimeException(future.cause());
+                                    }
+                                }
+                            });
+                            leased.add(channelFuture.channel());
                         }
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
                 }
             }
         });
     }
 
+    public Future<Channel> acquire(String host, int port) {
+        return this.acquire(host, port, this.bootstrap.config().group().next().<Channel>newPromise());
+    }
+
+    public Future<Channel> acquire(String host, int port, final Promise<Channel> promise) {
+        ChannelRequest channelRequest = new ChannelRequest();
+        channelRequest.promise = promise;
+        channelRequest.host = host;
+        channelRequest.port = port;
+        requests.add(channelRequest);
+        synchronized (requests) {
+            requests.notify();
+        }
+        return channelRequest.promise;
+    }
+
     @Override
-    public Future<Channel> acquire(final Promise<Channel> promise) {
-        SettableFuture<Channel> res = SettableFuture.create();
-        SettableFuture<Channel> future = SettableFuture.create();
-        requests.add(future);
-        Futures.transformAsync(future, new AsyncFunction<Channel, Channel>() {
+    public Future<Channel> acquire() {
+        throw new UnsupportedOperationException("Please pass host & port to shared channel pool.");
+    }
+
+    @Override
+    public Future<Channel> acquire(Promise<Channel> promise) {
+        throw new UnsupportedOperationException("Please pass host & port to shared channel pool.");
+    }
+
+    @Override
+    public Future<Void> release(final Channel channel) {
+        return this.release(channel, this.bootstrap.config().group().next().<Void>newPromise());
+    }
+
+    @Override
+    public Future<Void> release(final Channel channel, final Promise<Void> promise) {
+        return channel.disconnect().addListener(new GenericFutureListener<Future<? super Void>>() {
             @Override
-            public ListenableFuture<Channel> apply(Channel input) throws Exception {
-                return null;
+            public void operationComplete(Future<? super Void> future) throws Exception {
+                if (future.isSuccess()) {
+                    handler.channelReleased(channel);
+                    promise.setSuccess((Void) future.getNow());
+                    synchronized (sync) {
+                        leased.remove(channel);
+                        available.add(channel);
+                        sync.notify();
+                    }
+                } else {
+                    promise.setFailure(future.cause());
+                    throw new RuntimeException(future.cause());
+                }
             }
-        })
+        });
     }
 
     @Override
     public void close() {
         closed = true;
-        super.close();
+        synchronized (sync) {
+            for (Channel channel : leased) {
+                channel.close();
+            }
+            for (Channel channel : available) {
+                channel.close();
+            }
+        }
     }
 
-    @Override
-    protected ChannelFuture connectChannel(Bootstrap bs) {
-        return new DefaultChannelPromise()
+    private static class ChannelRequest {
+        private String host;
+        private int port;
+        private Promise<Channel> promise;
     }
 }

@@ -211,7 +211,9 @@ public final class AzureEnvironment implements Environment {
     /**
      * @return the Data Lake resource ID.
      */
-    public String dataLakeEndpointResourceId() { return endpoints.get("dataLakeEndpointResourceId"); }
+    public String dataLakeEndpointResourceId() {
+        return endpoints.get("dataLakeEndpointResourceId");
+    }
 
     /**
      * @return the Active Directory api version.

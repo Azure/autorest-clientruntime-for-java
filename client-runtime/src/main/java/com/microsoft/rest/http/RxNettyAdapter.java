@@ -20,14 +20,16 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
@@ -37,17 +39,18 @@ import rx.Emitter.BackpressureMode;
 import rx.Observable;
 import rx.Observer;
 import rx.Single;
-import rx.SingleEmitter;
 import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.observables.SyncOnSubscribe;
+import rx.subjects.ReplaySubject;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
@@ -59,13 +62,15 @@ import java.util.concurrent.TimeUnit;
  * A HttpClient that is implemented using RxNetty.
  */
 public class RxNettyAdapter extends HttpClient {
+    private final static AttributeKey<Integer> RETRY_COUNT = AttributeKey.newInstance("retry-count");
+    private final static AttributeKey<HttpRequest> REQUEST_PROVIDER = AttributeKey.newInstance("request-provider");
+    private static final String HEADER_CONTENT_LENGTH = "Content-Length";
+
     private final List<ChannelHandlerConfig> handlerConfigs;
     private final NioEventLoopGroup eventLoopGroup;
     private final Bootstrap bootstrap;
     private SslContext sslContext;
     private final SharedChannelPool pool;
-    private final static AttributeKey<Integer> RETRY_COUNT = AttributeKey.newInstance("retry-count");
-    private final static AttributeKey<HttpRequest> REQUEST_PROVIDER = AttributeKey.newInstance("request-provider");
 
     /**
      * Creates RxNettyClient.
@@ -90,14 +95,22 @@ public class RxNettyAdapter extends HttpClient {
         pool = new SharedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
             @Override
             public void channelCreated(Channel ch) throws Exception {
-                ch.pipeline().addLast(new HttpResponseDecoder());
-                ch.pipeline().addLast(new HttpRequestEncoder());
-                ch.pipeline().addLast(new HttpClientInboundHandler(RxNettyAdapter.this));
+//                ch.pipeline().addLast(new HttpResponseDecoder());
+//                ch.pipeline().addLast(new HttpRequestEncoder());
+//                ch.pipeline().addLast(new HttpClientInboundHandler(RxNettyAdapter.this));
+//                ch.pipeline().addFirst(new HttpProxyHandler(new InetSocketAddress("localhost", 8888)));
+            }
+
+            @Override
+            public void channelAcquired(Channel ch) throws Exception {
             }
 
             @Override
             public void channelReleased(Channel ch) throws Exception {
                 ch.attr(RETRY_COUNT).set(0);
+                while (ch.pipeline().last() != null) {
+                    ch.pipeline().removeLast();
+                }
             }
         }, this.eventLoopGroup.executorCount() * 2);
     }
@@ -138,9 +151,9 @@ public class RxNettyAdapter extends HttpClient {
 
                 final Future<Channel> future = pool.acquire(host, port);
 
-                return Single.fromEmitter(new Action1<SingleEmitter<HttpResponse>>() {
+                return Observable.fromEmitter(new Action1<Emitter<HttpResponse>>() {
                     @Override
-                    public void call(final SingleEmitter<HttpResponse> emitter) {
+                    public void call(final Emitter<HttpResponse> emitter) {
                         future.addListener(new GenericFutureListener<Future<? super Channel>>() {
                             @Override
                             public void operationComplete(Future<? super Channel> cf) throws Exception {
@@ -153,18 +166,25 @@ public class RxNettyAdapter extends HttpClient {
 
                                 channel.attr(REQUEST_PROVIDER).set(request);
 
-//                                if (channel.pipeline().get(SslHandler.class) == null) {
-//                                    channel.pipeline().addFirst(sslContext.newHandler(channel.alloc(), host, port));
-//                                }
-                                if (channel.pipeline().last() == null) {
+                                if (sslContext != null && "https".equalsIgnoreCase(uri.getScheme())) {
+                                    channel.pipeline().addLast(sslContext.newHandler(channel.alloc(), host, port));
+                                }
+                                HttpClientInboundHandler inboundHandler;
+                                if (request.httpMethod().equalsIgnoreCase("HEAD")) {
+                                    channel.pipeline().addLast(new HttpClientCodec());
+                                    inboundHandler = new HttpClientInboundHandler(RxNettyAdapter.this);
+                                    inboundHandler.contentExpected = false;
+                                } else {
                                     channel.pipeline().addLast(new HttpResponseDecoder());
                                     channel.pipeline().addLast(new HttpRequestEncoder());
-                                    channel.pipeline().addLast(new HttpClientInboundHandler(RxNettyAdapter.this));
+                                    inboundHandler = new HttpClientInboundHandler(RxNettyAdapter.this);
+                                    inboundHandler.contentExpected = true;
                                 }
+                                channel.pipeline().addLast(inboundHandler);
 
-                                channel.pipeline().get(HttpClientInboundHandler.class).setResponseEmitter(emitter);
+                                inboundHandler.setResponseEmitter(emitter);
 
-                                final FullHttpRequest raw;
+                                final DefaultFullHttpRequest raw;
                                 if (request.body() == null || request.body().contentLength() == 0) {
                                     raw = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
                                             HttpMethod.valueOf(request.httpMethod()),
@@ -185,6 +205,10 @@ public class RxNettyAdapter extends HttpClient {
                                             request.url(),
                                             requestContent);
                                 }
+                                for (HttpHeader header : request.headers()) {
+                                    raw.headers().add(header.name(), header.value());
+                                }
+                                raw.headers().add(HEADER_CONTENT_LENGTH, raw.content().readableBytes());
                                 channel.writeAndFlush(raw).addListener(new GenericFutureListener<Future<? super Void>>() {
                                     @Override
                                     public void operationComplete(Future<? super Void> v) throws Exception {
@@ -198,31 +222,31 @@ public class RxNettyAdapter extends HttpClient {
                             }
                         });
                     }
-                });
+                }, BackpressureMode.BUFFER).toSingle();
             }
         });
     }
 
     private static class HttpClientInboundHandler extends ChannelInboundHandlerAdapter {
 
-        private static final String HEADER_CONTENT_LENGTH = "Content-Length";
-        private Emitter<ByteBuf> contentEmitter;
-        private SingleEmitter<HttpResponse> responseEmitter;
+        private ReplaySubject<ByteBuf> contentEmitter;
+        private Emitter<HttpResponse> responseEmitter;
         private RxNettyAdapter adapter;
         private long contentLength;
+        private boolean contentExpected;
 
         public HttpClientInboundHandler(RxNettyAdapter adapter) {
             this.adapter = adapter;
         }
 
-        public void setResponseEmitter(SingleEmitter<HttpResponse> emitter) {
+        public void setResponseEmitter(Emitter<HttpResponse> emitter) {
             this.responseEmitter = emitter;
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             adapter.pool.release(ctx.channel());
-            contentEmitter.onError(cause);
+            responseEmitter.onError(cause);
         }
 
         @Override
@@ -231,35 +255,30 @@ public class RxNettyAdapter extends HttpClient {
             {
                 io.netty.handler.codec.http.HttpResponse response = (io.netty.handler.codec.http.HttpResponse) msg;
 
+                if (response.decoderResult().isFailure()) {
+                    exceptionCaught(ctx, response.decoderResult().cause());
+                    return;
+                }
+
                 if (response.headers().contains(HEADER_CONTENT_LENGTH)) {
                     contentLength = Long.parseLong(response.headers().get(HEADER_CONTENT_LENGTH));
                 }
 
-                if (contentLength == 0) {
-                    responseEmitter.onSuccess(new RxNettyResponse(response, Observable.just((ByteBuf) new EmptyByteBuf(ByteBufAllocator.DEFAULT))
-                    .doOnCompleted(new Action0() {
-                        @Override
-                        public void call() {
-                            adapter.pool.release(ctx.channel());
-                        }
-                    })));
-                } else {
-                    responseEmitter.onSuccess(new RxNettyResponse(response, Observable.fromEmitter(new Action1<Emitter<ByteBuf>>() {
-                        @Override
-                        public void call(Emitter<ByteBuf> byteBufEmitter) {
-                            contentEmitter = byteBufEmitter;
-                        }
-                    }, BackpressureMode.BUFFER)));
-                }
+                contentEmitter = ReplaySubject.create();
+                responseEmitter.onNext(new RxNettyResponse(response, contentEmitter));
             }
             if(msg instanceof HttpContent)
             {
-                if (contentLength == 0) {
-                    return;
-                }
-
                 HttpContent content = (HttpContent)msg;
                 ByteBuf buf = content.content();
+
+                if (contentLength == 0 || !contentExpected) {
+                    contentEmitter.onNext(buf);
+                    contentEmitter.onCompleted();
+                    responseEmitter.onCompleted();
+                    adapter.pool.release(ctx.channel());
+                    return;
+                }
 
                 if (contentLength > 0 && buf != null && buf.readableBytes() > 0) {
                     int readable = buf.readableBytes();
@@ -269,6 +288,7 @@ public class RxNettyAdapter extends HttpClient {
 
                 if (contentLength == 0) {
                     contentEmitter.onCompleted();
+                    responseEmitter.onCompleted();
                     adapter.pool.release(ctx.channel());
                 }
             }

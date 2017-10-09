@@ -1,7 +1,5 @@
 package com.microsoft.rest;
 
-import com.microsoft.rest.protocol.SerializerAdapter;
-import com.microsoft.rest.serializer.JacksonAdapter;
 import com.microsoft.rest.annotations.BodyParam;
 import com.microsoft.rest.annotations.DELETE;
 import com.microsoft.rest.annotations.ExpectedResponses;
@@ -19,6 +17,8 @@ import com.microsoft.rest.annotations.QueryParam;
 import com.microsoft.rest.annotations.UnexpectedResponseExceptionType;
 import com.microsoft.rest.http.HttpClient;
 import com.microsoft.rest.http.HttpHeaders;
+import com.microsoft.rest.protocol.SerializerAdapter;
+import com.microsoft.rest.serializer.JacksonAdapter;
 import org.junit.Test;
 import rx.Completable;
 import rx.Observable;
@@ -28,7 +28,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public abstract class RestProxyTests {
 
@@ -54,7 +59,7 @@ public abstract class RestProxyTests {
         final byte[] result = createService(Service1.class)
                 .getByteArray();
         assertNotNull(result);
-        assertEquals(result.length, 100);
+        assertEquals(100, result.length);
     }
 
     @Test
@@ -63,7 +68,7 @@ public abstract class RestProxyTests {
                 .getByteArrayAsync()
                 .toBlocking().value();
         assertNotNull(result);
-        assertEquals(result.length, 100);
+        assertEquals(100, result.length);
     }
 
     @Host("http://{hostName}.org")
@@ -92,6 +97,14 @@ public abstract class RestProxyTests {
                 .toBlocking().value();
         assertNotNull(result);
         assertEquals(result.length, 50);
+    }
+
+    @Test
+    public void SyncRequestWithEmptyByteArrayReturnTypeAndParameterizedHostAndPath() {
+        final byte[] result = createService(Service2.class)
+                .getByteArray("httpbin", 0);
+        assertNotNull(result);
+        assertEquals(result.length, 0);
     }
 
     @Host("http://httpbin.org")

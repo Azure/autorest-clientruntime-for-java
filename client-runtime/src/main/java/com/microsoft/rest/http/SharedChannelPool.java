@@ -29,8 +29,8 @@ public class SharedChannelPool implements ChannelPool {
     private boolean closed = false;
     private final int poolSize;
     private final Queue<ChannelRequest> requests;
-    private final Queue<Channel> available;
-    private final Queue<Channel> leased;
+    private final ConcurrentMultiHashMap<InetSocketAddress, Channel> available;
+    private final ConcurrentMultiHashMap<InetSocketAddress, Channel> leased;
     private final Object sync = -1;
 
     public SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size) {
@@ -44,8 +44,8 @@ public class SharedChannelPool implements ChannelPool {
         this.handler = handler;
         this.poolSize = size;
         this.requests = new ConcurrentLinkedDeque<>();
-        this.available = new ConcurrentLinkedDeque<>();
-        this.leased = new ConcurrentLinkedDeque<>();
+        this.available = new ConcurrentMultiHashMap<>();
+        this.leased = new ConcurrentMultiHashMap<>();
         bootstrap.config().group().submit(new Runnable() {
             @Override
             public void run() {
@@ -53,36 +53,47 @@ public class SharedChannelPool implements ChannelPool {
                     try {
                         final ChannelRequest request;
                         final ChannelFuture channelFuture;
-                        if (requests.isEmpty() && !closed) {
-                            synchronized (requests) {
+                        synchronized (requests) {
+                            if (requests.isEmpty() && !closed) {
                                 requests.wait();
                             }
                         }
                         request = requests.poll();
 
-                        synchronized (sync) {
-                            if (leased.size() >= poolSize && !closed) {
+                        if (leased.size() >= poolSize && !closed) {
+                            synchronized (sync) {
                                 sync.wait();
                             }
-                            if (!available.isEmpty()) {
-                                Channel channel = available.poll();
-                                channelFuture = channel.connect(new InetSocketAddress(request.host, request.port));
+                        }
+                        if (closed) {
+                            break;
+                        }
+                        synchronized (sync) {
+                            InetSocketAddress address = new InetSocketAddress(request.host, request.port);
+                            if (available.containsKey(address)) {
+                                Channel channel = available.poll(address);
+                                channelFuture = channel.newSucceededFuture();
+                                handler.channelAcquired(channelFuture.channel());
+                                request.promise.setSuccess(channelFuture.channel());
                             } else {
-                                channelFuture = SharedChannelPool.this.bootstrap.clone().connect(request.host, request.port);
-                            }
-                            channelFuture.addListener(new GenericFutureListener<Future<? super Void>>() {
-                                @Override
-                                public void operationComplete(Future<? super Void> future) throws Exception {
-                                    if (future.isSuccess()) {
-                                        handler.channelAcquired(channelFuture.channel());
-                                        request.promise.setSuccess(channelFuture.channel());
-                                    } else {
-                                        request.promise.setFailure(future.cause());
-                                        throw new RuntimeException(future.cause());
-                                    }
+                                if (available.size() > 0 && available.size() + leased.size() >= poolSize) {
+                                    available.poll().closeFuture();
                                 }
-                            });
-                            leased.add(channelFuture.channel());
+                                channelFuture = SharedChannelPool.this.bootstrap.clone().connect(address);
+                                channelFuture.addListener(new GenericFutureListener<Future<? super Void>>() {
+                                    @Override
+                                    public void operationComplete(Future<? super Void> future) throws Exception {
+                                        if (future.isSuccess()) {
+                                            handler.channelAcquired(channelFuture.channel());
+                                            request.promise.setSuccess(channelFuture.channel());
+                                        } else {
+                                            request.promise.setFailure(future.cause());
+                                            throw new RuntimeException(future.cause());
+                                        }
+                                    }
+                                });
+                            }
+                            leased.put(address, channelFuture.channel());
                         }
                     } catch (Exception e) {
                         throw new RuntimeException(e);
@@ -125,33 +136,29 @@ public class SharedChannelPool implements ChannelPool {
 
     @Override
     public Future<Void> release(final Channel channel, final Promise<Void> promise) {
-        return channel.disconnect().addListener(new GenericFutureListener<Future<? super Void>>() {
-            @Override
-            public void operationComplete(Future<? super Void> future) throws Exception {
-                if (future.isSuccess()) {
-                    handler.channelReleased(channel);
-                    promise.setSuccess((Void) future.getNow());
-                    synchronized (sync) {
-                        leased.remove(channel);
-                        available.add(channel);
-                        sync.notify();
-                    }
-                } else {
-                    promise.setFailure(future.cause());
-                    throw new RuntimeException(future.cause());
-                }
-            }
-        });
+        try {
+            handler.channelReleased(channel);
+        } catch (Exception e) {
+            promise.setFailure(e);
+            return promise;
+        }
+        promise.setSuccess(null);
+        synchronized (sync) {
+            leased.remove((InetSocketAddress) channel.remoteAddress(), channel);
+            available.put((InetSocketAddress) channel.remoteAddress(), channel);
+            sync.notify();
+        }
+        return promise;
     }
 
     @Override
     public void close() {
         closed = true;
         synchronized (sync) {
-            for (Channel channel : leased) {
+            for (Channel channel : leased.values()) {
                 channel.close();
             }
-            for (Channel channel : available) {
+            for (Channel channel : available.values()) {
                 channel.close();
             }
         }

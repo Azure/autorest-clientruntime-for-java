@@ -10,10 +10,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class RestProxyWithRxNettyTests extends RestProxyTests {
-    @Override
-    protected HttpClient createHttpClient() {
-        return new RxNettyAdapter(new ArrayList<Factory>() {{
+    private static RxNettyAdapter adapter = new RxNettyAdapter(new ArrayList<Factory>() {
+        {
             add(new LoggingPolicy.Factory(LogLevel.BODY_AND_HEADERS));
         }}, Collections.<ChannelHandlerConfig>emptyList());
+
+    @Override
+    protected HttpClient createHttpClient() {
+        return adapter;
     }
 }

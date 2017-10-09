@@ -77,7 +77,14 @@ class RxNettyResponse extends HttpResponse {
         return collectContent().map(new Func1<ByteBuf, byte[]>() {
             @Override
             public byte[] call(ByteBuf byteBuf) {
-                return byteBuf.array();
+                if (byteBuf.hasArray()) {
+                    return byteBuf.array();
+                } else {
+                    byte[] res = new byte[byteBuf.readableBytes()];
+                    byteBuf.readBytes(res);
+                    byteBuf.release();
+                    return res;
+                }
             }
         });
     }
@@ -87,11 +94,7 @@ class RxNettyResponse extends HttpResponse {
         return collectContent().map(new Func1<ByteBuf, String>() {
             @Override
             public String call(ByteBuf byteBuf) {
-                try {
-                    return byteBuf.toString(Charset.defaultCharset());
-                } finally {
-                    byteBuf.release();
-                }
+                return byteBuf.toString(Charset.defaultCharset());
             }
         });
     }

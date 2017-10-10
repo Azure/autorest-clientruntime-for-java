@@ -11,7 +11,7 @@ import com.microsoft.rest.protocol.Environment;
 import com.microsoft.rest.protocol.SerializerAdapter;
 import com.microsoft.rest.http.ChannelHandlerConfig;
 import com.microsoft.rest.http.HttpClient;
-import com.microsoft.rest.http.RxNettyAdapter;
+import com.microsoft.rest.http.NettyAdapter;
 import com.microsoft.rest.policy.CredentialsPolicy;
 import com.microsoft.rest.policy.LoggingPolicy;
 import com.microsoft.rest.policy.RequestPolicy;
@@ -49,7 +49,7 @@ public final class RestClient {
         this.logLevel = builder.logLevel;
         this.customPolicyFactories = builder.customPolicyFactories;
 
-        this.httpClient = new RxNettyAdapter(createPolicyFactories(), Collections.<ChannelHandlerConfig>emptyList());
+        this.httpClient = new NettyAdapter(createPolicyFactories(), Collections.<ChannelHandlerConfig>emptyList());
     }
 
     private List<RequestPolicy.Factory> createPolicyFactories() {

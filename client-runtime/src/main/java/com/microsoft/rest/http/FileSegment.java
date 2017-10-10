@@ -40,14 +40,23 @@ public class FileSegment {
         this.length = length;
     }
 
+    /**
+     * @return the length of the data to read from the file.
+     */
     public int length() {
         return length;
     }
 
+    /**
+     * @return the offset from the beginning of the file.
+     */
     public long offset() {
         return offset;
     }
 
+    /**
+     * @return the channel to the file.
+     */
     public FileChannel fileChannel() {
         return fileChannel;
     }

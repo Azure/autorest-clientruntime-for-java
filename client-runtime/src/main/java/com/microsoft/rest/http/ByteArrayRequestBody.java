@@ -25,6 +25,9 @@ public class ByteArrayRequestBody implements HttpRequestBody {
         return contents.length;
     }
 
+    /**
+     * @return the content of the request, in the format of a byte array.
+     */
     public byte[] content() {
         return contents;
     }

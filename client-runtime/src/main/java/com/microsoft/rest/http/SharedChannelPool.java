@@ -12,27 +12,45 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 
-import java.net.InetSocketAddress;
+import javax.net.ssl.SSLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
- * A HTTP request body that contains a chunk of a file.
+ * A Netty channel pool implementation shared between multiple requests.
+ *
+ * Requests with the same host, port, and scheme share the same internal
+ * pool. All the internal pools for all the requests have a fixed size limit.
+ * This channel pool should be shared between multiple Netty adapters.
  */
 public class SharedChannelPool implements ChannelPool {
+    private static final AttributeKey<URI> CHANNEL_URI = AttributeKey.newInstance("channel-uri");
     private final Bootstrap bootstrap;
     private final ChannelPoolHandler handler;
     private boolean closed = false;
     private final int poolSize;
     private final Queue<ChannelRequest> requests;
-    private final ConcurrentMultiHashMap<InetSocketAddress, Channel> available;
-    private final ConcurrentMultiHashMap<InetSocketAddress, Channel> leased;
+    private final ConcurrentMultiHashMap<URI, Channel> available;
+    private final ConcurrentMultiHashMap<URI, Channel> leased;
     private final Object sync = -1;
+    private final SslContext sslContext;
 
+    /**
+     * Creates an instance of the shared channel pool.
+     * @param bootstrap the bootstrap to create channels
+     * @param handler the handler to apply to the channels on creation, acquisition and release
+     * @param size the upper limit of total number of channels
+     */
     public SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size) {
         this.bootstrap = bootstrap.clone().handler(new ChannelInitializer<Channel>() {
             @Override
@@ -46,6 +64,12 @@ public class SharedChannelPool implements ChannelPool {
         this.requests = new ConcurrentLinkedDeque<>();
         this.available = new ConcurrentMultiHashMap<>();
         this.leased = new ConcurrentMultiHashMap<>();
+        try {
+            sslContext = SslContextBuilder.forClient()
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+        } catch (SSLException e) {
+            throw new RuntimeException(e);
+        }
         bootstrap.config().group().submit(new Runnable() {
             @Override
             public void run() {
@@ -69,17 +93,29 @@ public class SharedChannelPool implements ChannelPool {
                             break;
                         }
                         synchronized (sync) {
-                            InetSocketAddress address = new InetSocketAddress(request.host, request.port);
-                            if (available.containsKey(address)) {
-                                Channel channel = available.poll(address);
-                                channelFuture = channel.newSucceededFuture();
-                                handler.channelAcquired(channelFuture.channel());
-                                request.promise.setSuccess(channelFuture.channel());
+                            if (available.containsKey(request.uri)) {
+                                Channel channel = available.poll(request.uri);
+                                handler.channelAcquired(channel);
+                                request.promise.setSuccess(channel);
+                                leased.put(request.uri, channel);
                             } else {
+                                // Create a new channel - remove an available one if size overflows
                                 if (available.size() > 0 && available.size() + leased.size() >= poolSize) {
-                                    available.poll().closeFuture();
+                                    available.poll().close();
                                 }
-                                channelFuture = SharedChannelPool.this.bootstrap.clone().connect(address);
+                                int port;
+                                if (request.uri.getPort() < 0) {
+                                    port = "https".equals(request.uri.getScheme()) ? 443 : 80;
+                                } else {
+                                    port = request.uri.getPort();
+                                }
+                                channelFuture = SharedChannelPool.this.bootstrap.clone().connect(request.uri.getHost(), port);
+                                channelFuture.channel().attr(CHANNEL_URI).set(request.uri);
+
+                                // Apply SSL handler for https connections
+                                if ("https".equalsIgnoreCase(request.uri.getScheme())) {
+                                    channelFuture.channel().pipeline().addFirst(sslContext.newHandler(channelFuture.channel().alloc(), request.uri.getHost(), port));
+                                }
                                 channelFuture.addListener(new GenericFutureListener<Future<? super Void>>() {
                                     @Override
                                     public void operationComplete(Future<? super Void> future) throws Exception {
@@ -92,8 +128,8 @@ public class SharedChannelPool implements ChannelPool {
                                         }
                                     }
                                 });
+                                leased.put(request.uri, channelFuture.channel());
                             }
-                            leased.put(address, channelFuture.channel());
                         }
                     } catch (Exception e) {
                         throw new RuntimeException(e);
@@ -103,18 +139,38 @@ public class SharedChannelPool implements ChannelPool {
         });
     }
 
-    public Future<Channel> acquire(String host, int port) {
-        return this.acquire(host, port, this.bootstrap.config().group().next().<Channel>newPromise());
+    /**
+     * Acquire a channel for a URI.
+     * @param uri the URI the channel acquired should be connected to
+     * @return the future to a connected channel
+     */
+    public Future<Channel> acquire(URI uri) {
+        return this.acquire(uri, this.bootstrap.config().group().next().<Channel>newPromise());
     }
 
-    public Future<Channel> acquire(String host, int port, final Promise<Channel> promise) {
+    /**
+     * Acquire a channel for a URI.
+     * @param uri the URI the channel acquired should be connected to
+     * @param promise the writable future to a connected channel
+     * @return the future to a connected channel
+     */
+    public Future<Channel> acquire(URI uri, final Promise<Channel> promise) {
         ChannelRequest channelRequest = new ChannelRequest();
         channelRequest.promise = promise;
-        channelRequest.host = host;
-        channelRequest.port = port;
-        requests.add(channelRequest);
-        synchronized (requests) {
-            requests.notify();
+        int port;
+        if (uri.getPort() < 0) {
+            port = "https".equals(uri.getScheme()) ? 443 : 80;
+        } else {
+            port = uri.getPort();
+        }
+        try {
+            channelRequest.uri = new URI(String.format("%s://%s:%d", uri.getScheme(), uri.getHost(), port));
+            requests.add(channelRequest);
+            synchronized (requests) {
+                requests.notify();
+            }
+        } catch (URISyntaxException e) {
+            promise.setFailure(e);
         }
         return channelRequest.promise;
     }
@@ -144,8 +200,8 @@ public class SharedChannelPool implements ChannelPool {
         }
         promise.setSuccess(null);
         synchronized (sync) {
-            leased.remove((InetSocketAddress) channel.remoteAddress(), channel);
-            available.put((InetSocketAddress) channel.remoteAddress(), channel);
+            leased.remove(channel.attr(CHANNEL_URI).get(), channel);
+            available.put(channel.attr(CHANNEL_URI).get(), channel);
             sync.notify();
         }
         return promise;
@@ -165,8 +221,7 @@ public class SharedChannelPool implements ChannelPool {
     }
 
     private static class ChannelRequest {
-        private String host;
-        private int port;
+        private URI uri;
         private Promise<Channel> promise;
     }
 }

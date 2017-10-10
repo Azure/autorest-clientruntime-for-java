@@ -13,6 +13,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ListIterator;
 
 public class PagedListTests {
     private PagedList<Integer> list;
@@ -43,6 +44,7 @@ public class PagedListTests {
         int j = 0;
         for (int i : list) {
             Assert.assertEquals(i, j++);
+            System.out.println(i);
         }
     }
 
@@ -96,6 +98,77 @@ public class PagedListTests {
     @Test
     public void testLastIndexOf() {
         Assert.assertEquals(15, list.lastIndexOf(15));
+    }
+
+
+    @Test
+    public void testIteratorWithListSizeInvocation() {
+        ListIterator<Integer> itr = list.listIterator();
+        list.size();
+        int j = 0;
+        while (itr.hasNext()) {
+            Assert.assertEquals((long) itr.next(), j++);
+        }
+    }
+
+    @Test
+    public void testIteratorPartsWithSizeInvocation() {
+        ListIterator<Integer> itr = list.listIterator();
+        int j = 0;
+        while (j < 5) {
+            Assert.assertTrue(itr.hasNext());
+            Assert.assertEquals((long) itr.next(), j++);
+        }
+        list.size();
+        while (j < 10) {
+            Assert.assertTrue(itr.hasNext());
+            Assert.assertEquals((long) itr.next(), j++);
+        }
+    }
+
+    @Test
+    public void testIteratorWithLoadNextPageInvocation() {
+        ListIterator<Integer> itr = list.listIterator();
+        int j = 0;
+        while (j < 5) {
+            Assert.assertTrue(itr.hasNext());
+            Assert.assertEquals((long) itr.next(), j++);
+        }
+        list.loadNextPage();
+        while (j < 10) {
+            Assert.assertTrue(itr.hasNext());
+            Assert.assertEquals((long) itr.next(), j++);
+        }
+        list.loadNextPage();
+        while (itr.hasNext()) {
+            Assert.assertEquals((long) itr.next(), j++);
+        }
+        Assert.assertEquals(j, 20);
+    }
+
+    @Test
+    public void testIteratorOperations() {
+        ListIterator<Integer> itr1 = list.listIterator();
+        IllegalStateException expectedException = null;
+        try {
+            itr1.remove();
+        } catch (IllegalStateException ex) {
+            expectedException = ex;
+        }
+        Assert.assertNotNull(expectedException);
+
+        ListIterator<Integer> itr2 = list.listIterator();
+        Assert.assertTrue(itr2.hasNext());
+        Assert.assertEquals((long) itr2.next(), 0);
+        itr2.remove();
+        Assert.assertTrue(itr2.hasNext());
+        Assert.assertEquals((long) itr2.next(), 1);
+
+        itr2.set(100);
+        Assert.assertTrue(itr2.hasPrevious());
+        Assert.assertEquals((long) itr2.previous(), 100);
+        Assert.assertTrue(itr2.hasNext());
+        Assert.assertEquals((long) itr2.next(), 100);
     }
 
     public static class TestPage implements Page<Integer> {

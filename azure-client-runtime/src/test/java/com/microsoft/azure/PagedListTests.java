@@ -9,7 +9,6 @@ package com.microsoft.azure;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import sun.plugin.dom.exception.InvalidStateException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -254,7 +253,7 @@ public class PagedListTests {
                         }
                     };
                 }
-                throw new InvalidStateException("nextPage should not be called after a page with next link as null");
+                throw new RuntimeException("nextPage should not be called after a page with next link as null");
             }
         };
         ListIterator<Integer> itr = pagedList.listIterator();

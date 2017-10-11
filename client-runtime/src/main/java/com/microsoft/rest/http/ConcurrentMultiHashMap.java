@@ -9,8 +9,12 @@ package com.microsoft.rest.http;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -22,14 +26,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @param <V> the value type
  */
 public class ConcurrentMultiHashMap<K, V> {
-    private ConcurrentHashMap<K, ConcurrentLinkedQueue<V>> data;
+    private final Map<K, ConcurrentLinkedQueue<V>> data;
     private final AtomicInteger size;
 
     /**
      * Create a concurrent multi hash map.
      */
     public ConcurrentMultiHashMap() {
-        this.data = new ConcurrentHashMap<>();
+        this.data = Collections.synchronizedMap(new LinkedHashMap<K, ConcurrentLinkedQueue<V>>(16, 0.75f, true));
         this.size = new AtomicInteger(0);
     }
 
@@ -62,18 +66,19 @@ public class ConcurrentMultiHashMap<K, V> {
     }
 
     /**
-     * Retrieves one item from the multi map.
-     * @return the item immediately available in the map
+     * Retrieves and removes one item from the multi map. The item is from
+     * the least recently used key set.
+     * @return the item removed from the map
      */
     public V poll() {
         synchronized (size) {
             if (size.get() == 0) {
                 return null;
             } else {
-                Enumeration<K> keys = data.keys();
-                K key = keys.nextElement();
-                while (data.get(key).size() == 0) {
-                    key = keys.nextElement();
+                K key;
+                synchronized (data) {
+                    Iterator<K> keys = data.keySet().iterator();
+                    key = keys.next();
                 }
                 return poll(key);
             }
@@ -90,10 +95,16 @@ public class ConcurrentMultiHashMap<K, V> {
         if (!data.containsKey(key)) {
             return null;
         } else {
+            ConcurrentLinkedQueue<V> queue = data.get(key);
+            V ret;
             synchronized (size) {
                 size.decrementAndGet();
-                return data.get(key).poll();
+                ret = queue.poll();
             }
+            if (queue.isEmpty()) {
+                data.remove(key);
+            }
+            return ret;
         }
     }
 
@@ -150,9 +161,15 @@ public class ConcurrentMultiHashMap<K, V> {
         if (!data.containsKey(key)) {
             return false;
         }
+        ConcurrentLinkedQueue<V> queue = data.get(key);
+        boolean removed;
         synchronized (size) {
             size.decrementAndGet();
-            return data.get(key).remove(value);
+            removed = queue.remove(value);
         }
+        if (queue.isEmpty()) {
+            data.remove(key);
+        }
+        return removed;
     }
 }

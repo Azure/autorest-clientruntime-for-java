@@ -58,7 +58,7 @@ public abstract class PagedList<E> implements List<E> {
 
     private void cachePage(String nextPageLink) {
         try {
-            while (nextPageLink != null) {
+            while (nextPageLink != null && nextPageLink != "") {
                 cachedPage = nextPage(nextPageLink);
                 if (cachedPage == null) {
                     break;

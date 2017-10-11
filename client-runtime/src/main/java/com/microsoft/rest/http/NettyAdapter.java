@@ -204,7 +204,7 @@ public class NettyAdapter extends HttpClient {
                 }
 
                 contentEmitter = ReplaySubject.create();
-                responseEmitter.onNext(new RxNettyResponse(response, contentEmitter));
+                responseEmitter.onNext(new NettyResponse(response, contentEmitter));
             }
             if (msg instanceof HttpContent) {
                 HttpContent content = (HttpContent) msg;
@@ -234,7 +234,7 @@ public class NettyAdapter extends HttpClient {
     }
 
     /**
-     * The builder class for building a RxNettyAdapter.
+     * The builder class for building a NettyAdapter.
      */
     public static class Builder {
         private final List<RequestPolicy.Factory> requestPolicyFactories = new ArrayList<>();
@@ -271,7 +271,7 @@ public class NettyAdapter extends HttpClient {
         }
 
         /**
-         * Add a Proxy to the RxNettyAdapter that will be built from this Builder.
+         * Add a Proxy to the NettyAdapter that will be built from this Builder.
          * @param proxy The Proxy to add.
          * @return The Builder itself for chaining.
          */
@@ -286,8 +286,8 @@ public class NettyAdapter extends HttpClient {
         }
 
         /**
-         * Build a RxNettyAdapter using this Builder's configuration.
-         * @return An RxNettyAdapter that uses this Builder's configuration.
+         * Build a NettyAdapter using this Builder's configuration.
+         * @return A NettyAdapter that uses this Builder's configuration.
          */
         public NettyAdapter build() {
             return new NettyAdapter(requestPolicyFactories, channelHandlerConfigs);

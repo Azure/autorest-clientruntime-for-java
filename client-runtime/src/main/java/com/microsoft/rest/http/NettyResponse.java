@@ -19,15 +19,15 @@ import java.util.List;
 import java.util.Map.Entry;
 
 /**
- * A HttpResponse that is implemented using RxNetty.
+ * A HttpResponse that is implemented using Netty.
  */
-class RxNettyResponse extends HttpResponse {
+class NettyResponse extends HttpResponse {
     private static final String HEADER_CONTENT_LENGTH = "Content-Length";
     private final io.netty.handler.codec.http.HttpResponse rxnRes;
     private final long contentLength;
     private final Observable<ByteBuf> emitter;
 
-    RxNettyResponse(io.netty.handler.codec.http.HttpResponse rxnRes, Observable<ByteBuf> emitter) {
+    NettyResponse(io.netty.handler.codec.http.HttpResponse rxnRes, Observable<ByteBuf> emitter) {
         this.rxnRes = rxnRes;
         this.contentLength = Long.parseLong(rxnRes.headers().get(HEADER_CONTENT_LENGTH));
         this.emitter = emitter;

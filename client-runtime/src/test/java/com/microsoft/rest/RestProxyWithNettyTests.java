@@ -9,11 +9,8 @@ import com.microsoft.rest.policy.RequestPolicy.Factory;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class RestProxyWithRxNettyTests extends RestProxyTests {
-    private static NettyAdapter adapter = new NettyAdapter(new ArrayList<Factory>() {
-        {
-            add(new LoggingPolicy.Factory(LogLevel.BODY_AND_HEADERS));
-        }}, Collections.<ChannelHandlerConfig>emptyList());
+public class RestProxyWithNettyTests extends RestProxyTests {
+    private static NettyAdapter adapter = new NettyAdapter(Collections.<Factory>emptyList(), Collections.<ChannelHandlerConfig>emptyList());
 
     @Override
     protected HttpClient createHttpClient() {

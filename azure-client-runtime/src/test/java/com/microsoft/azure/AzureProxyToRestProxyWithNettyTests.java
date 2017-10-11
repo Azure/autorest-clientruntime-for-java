@@ -7,7 +7,7 @@ import com.microsoft.rest.policy.RequestPolicy;
 
 import java.util.Collections;
 
-public class AzureProxyToRestProxyWithRxNettyTests extends AzureProxyToRestProxyTests {
+public class AzureProxyToRestProxyWithNettyTests extends AzureProxyToRestProxyTests {
     @Override
     protected HttpClient createHttpClient() {
         return new NettyAdapter(Collections.<RequestPolicy.Factory>emptyList(), Collections.<ChannelHandlerConfig>emptyList());

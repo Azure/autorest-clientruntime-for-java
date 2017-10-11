@@ -6,135 +6,77 @@
 
 package com.microsoft.azure;
 
-import com.microsoft.rest.protocol.SerializerAdapter;
-import com.microsoft.rest.http.HttpRequest;
-import com.microsoft.rest.http.HttpResponse;
-import rx.Single;
-
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
+import com.microsoft.rest.RestException;
 
 /**
  * The current state of polling for the result of a long running operation.
  * @param <T> The type of value that will be returned from the long running operation.
  */
 public class OperationStatus<T> {
-    private PollStrategy pollStrategy;
-    private T result;
+    private final PollStrategy pollStrategy;
+    private final T result;
+    private final RestException error;
+    private final String provisioningState;
 
     /**
-     * Create a new OperationStatus from the provided HTTP response.
-     * @param originalHttpRequest The HttpRequest that initiated the long running operation.
-     * @param originalHttpResponse The HttpResponse from the request that initiated the long running
-     *                             operation.
-     * @param serializer The serializer used to deserialize the response body.
+     * Create a new OperationStatus with the provided PollStrategy.
+     * @param pollStrategy The polling strategy that the OperationStatus will use to check the
+     *                     progress of a long running operation.
      */
-    OperationStatus(HttpRequest originalHttpRequest, HttpResponse originalHttpResponse, SerializerAdapter<?> serializer) {
-        final int httpStatusCode = originalHttpResponse.statusCode();
-
-        if (httpStatusCode != 200) {
-            final String fullyQualifiedMethodName = originalHttpRequest.callerMethod();
-            final String originalHttpRequestMethod = originalHttpRequest.httpMethod();
-            final String originalHttpRequestUrl = originalHttpRequest.url();
-
-            if (originalHttpRequestMethod.equalsIgnoreCase("PUT") || originalHttpRequestMethod.equalsIgnoreCase("PATCH")) {
-                if (httpStatusCode == 201) {
-                    pollStrategy = AzureAsyncOperationPollStrategy.tryToCreate(fullyQualifiedMethodName, originalHttpResponse, originalHttpRequestUrl, serializer);
-                } else if (httpStatusCode == 202) {
-                    pollStrategy = AzureAsyncOperationPollStrategy.tryToCreate(fullyQualifiedMethodName, originalHttpResponse, originalHttpRequestUrl, serializer);
-                    if (pollStrategy == null) {
-                        pollStrategy = LocationPollStrategy.tryToCreate(fullyQualifiedMethodName, originalHttpResponse);
-                    }
-                }
-            } else /* if (originalRequestHttpMethod.equalsIgnoreCase("DELETE") || originalRequestHttpMethod.equalsIgnoreCase("POST") */ {
-                if (httpStatusCode == 202) {
-                    pollStrategy = AzureAsyncOperationPollStrategy.tryToCreate(fullyQualifiedMethodName, originalHttpResponse, originalHttpRequestUrl, serializer);
-                    if (pollStrategy == null) {
-                        pollStrategy = LocationPollStrategy.tryToCreate(fullyQualifiedMethodName, originalHttpResponse);
-                    }
-                }
-            }
-        }
+    OperationStatus(PollStrategy pollStrategy) {
+        this.pollStrategy = pollStrategy;
+        this.result = null;
+        this.error = null;
+        this.provisioningState = pollStrategy.provisioningState();
     }
 
     /**
-     * Update the properties of this OperationStatus from the provided response.
-     * @param httpResponse The HttpResponse from the most recent request.
+     * Create a new OperationStatus with the provided result.
+     * @param result The final result of a long running operation.
      */
-    void updateFrom(HttpResponse httpResponse) throws IOException {
-        pollStrategy.updateFrom(httpResponse);
+    OperationStatus(T result, String provisioningState) {
+        this.pollStrategy = null;
+        this.result = result;
+        this.error = null;
+        this.provisioningState = provisioningState;
+    }
+
+    OperationStatus(RestException error, String provisioningState) {
+        this.pollStrategy = null;
+        this.result = null;
+        this.error = error;
+        this.provisioningState = provisioningState;
     }
 
     /**
-     * Update the properties of this OperationStatus from the provided HTTP poll response.
-     * @param httpPollResponse The response of the most recent poll request.
-     * @return A Single that can be used to chain off of this operation.
-     */
-    Single<HttpResponse> updateFromAsync(HttpResponse httpPollResponse) {
-        return pollStrategy.updateFromAsync(httpPollResponse);
-    }
-
-    /**
-     * Get whether or not the long running operation is done.
      * @return Whether or not the long running operation is done.
      */
     public boolean isDone() {
-        return pollStrategy == null || pollStrategy.isDone();
+        return pollStrategy == null;
     }
 
     /**
-     * Create a HttpRequest that will get the next polling status update for the long running
-     * operation.
-     * @return A HttpRequest that will get the next polling status update for the long running
-     * operation.
+     * @return the current provisioning state of the long running operation.
      */
-    HttpRequest createPollRequest() {
-        return pollStrategy.createPollRequest();
-    }
-
-    /**
-     * If this OperationStatus has a retryAfterSeconds value, delay (and block) the current thread for
-     * the number of seconds that are in the retryAfterSeconds value. If this OperationStatus doesn't
-     * have a retryAfterSeconds value, then just return.
-     */
-    void delay() throws InterruptedException {
-        final long delayInMilliseconds = pollStrategy.delayInMilliseconds();
-        if (delayInMilliseconds > 0) {
-            Thread.sleep(delayInMilliseconds);
-        }
-    }
-
-    /**
-     * If this OperationStatus has a retryAfterSeconds value, return an Single that is delayed by the
-     * number of seconds that are in the retryAfterSeconds value. If this OperationStatus doesn't have
-     * a retryAfterSeconds value, then return an Single with no delay.
-     * @return A Single with delay if this OperationStatus has a retryAfterSeconds value.
-     */
-    Single<Void> delayAsync() {
-        Single<Void> result = Single.just(null);
-
-        final long delayInMilliseconds = pollStrategy.delayInMilliseconds();
-        if (delayInMilliseconds > 0) {
-            result = result.delay(delayInMilliseconds, TimeUnit.MILLISECONDS);
-        }
-
-        return result;
+    public String provisioningState() {
+        return provisioningState;
     }
 
     /**
      * If the long running operation is done, get the result of the operation. If the operation is
-     * not done, then return null.
-     * @return The result of the operation, or null if the operation isn't done yet.
+     * not done or if the operation failed, then return null.
+     * @return The result of the operation, or null if the operation isn't done yet or if it failed.
      */
     public T result() {
         return result;
     }
 
     /**
-     * Set the result of this OperationStatus.
-     * @param result The result to assign to this OperationStatus.
+     * If the long running operation failed, get the error that occurred. If the operation is not
+     * done or did not fail, then return null.
+     * @return The error of the operation, or null if the operation isn't done or didn't fail.
      */
-    void setResult(T result) {
-        this.result = result;
+    public RestException error() {
+        return error;
     }
 }

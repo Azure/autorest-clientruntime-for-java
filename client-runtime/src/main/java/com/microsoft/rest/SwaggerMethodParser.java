@@ -8,7 +8,6 @@ package com.microsoft.rest;
 
 import com.google.common.escape.Escaper;
 import com.google.common.net.UrlEscapers;
-import com.google.common.reflect.TypeToken;
 import com.microsoft.rest.annotations.BodyParam;
 import com.microsoft.rest.annotations.DELETE;
 import com.microsoft.rest.annotations.ExpectedResponses;
@@ -25,9 +24,6 @@ import com.microsoft.rest.annotations.PathParam;
 import com.microsoft.rest.annotations.QueryParam;
 import com.microsoft.rest.http.HttpHeader;
 import com.microsoft.rest.http.HttpHeaders;
-import rx.Completable;
-import rx.Observable;
-import rx.Single;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -50,6 +46,7 @@ public class SwaggerMethodParser {
     private final List<Substitution> headerSubstitutions = new ArrayList<>();
     private final HttpHeaders headers = new HttpHeaders();
     private Integer bodyContentMethodParameterIndex;
+    private String bodyContentType;
     private int[] expectedStatusCodes;
     private Type returnType;
     private Class<? extends RestException> exceptionType;
@@ -118,10 +115,7 @@ public class SwaggerMethodParser {
         }
 
         final ExpectedResponses expectedResponses = swaggerMethod.getAnnotation(ExpectedResponses.class);
-        if (expectedResponses == null) {
-            throw new MissingRequiredAnnotationException(ExpectedResponses.class, swaggerMethod);
-        }
-        else {
+        if (expectedResponses != null) {
             expectedStatusCodes = expectedResponses.value();
         }
 
@@ -163,7 +157,9 @@ public class SwaggerMethodParser {
                     headerSubstitutions.add(new Substitution(headerParamAnnotation.value(), parameterIndex, false));
                 }
                 else if (annotationType.equals(BodyParam.class)) {
+                    final BodyParam bodyParamAnnotation = (BodyParam) annotation;
                     bodyContentMethodParameterIndex = parameterIndex;
+                    bodyContentType = bodyParamAnnotation.value();
                 }
             }
         }
@@ -187,8 +183,10 @@ public class SwaggerMethodParser {
 
     /**
      * Get the HTTP response status codes that are expected when a request is sent out for this
-     * Swagger method.
-     * @return The expected HTTP response status codes for this Swagger method.
+     * Swagger method. If the returned int[] is null, then all status codes less than 400 are
+     * allowed.
+     * @return The expected HTTP response status codes for this Swagger method or null if all status
+     * codes less than 400 are allowed.
      */
     public int[] expectedStatusCodes() {
         return expectedStatusCodes;
@@ -258,9 +256,14 @@ public class SwaggerMethodParser {
      * for this Swagger method.
      */
     public boolean isExpectedResponseStatusCode(int responseStatusCode) {
-        boolean result = false;
+        boolean result;
 
-        if (expectedStatusCodes != null && expectedStatusCodes.length > 0) {
+        if (expectedStatusCodes == null) {
+            result = (responseStatusCode < 400);
+        }
+        else {
+            result = false;
+
             for (int expectedStatusCode : expectedStatusCodes) {
                 if (expectedStatusCode == responseStatusCode) {
                     result = true;
@@ -302,11 +305,22 @@ public class SwaggerMethodParser {
 
         if (bodyContentMethodParameterIndex != null
                 && swaggerMethodArguments != null
-                && 0 <= bodyContentMethodParameterIndex && bodyContentMethodParameterIndex < swaggerMethodArguments.length) {
+                && 0 <= bodyContentMethodParameterIndex
+                && bodyContentMethodParameterIndex < swaggerMethodArguments.length) {
             result = swaggerMethodArguments[bodyContentMethodParameterIndex];
+            if (result == null) {
+                throw new IllegalArgumentException("Argument for @BodyParam parameter must be non-null.");
+            }
         }
 
         return result;
+    }
+
+    /**
+     * @return the Content-Type of the body of this Swagger method.
+     */
+    public String bodyContentType() {
+        return bodyContentType;
     }
 
     /**
@@ -315,15 +329,6 @@ public class SwaggerMethodParser {
      */
     public Type returnType() {
         return returnType;
-    }
-
-    /**
-     * Get whether or not this parser's swagger method is asynchronous.
-     * @return Whether or not this parser's swagger method is asynchronous.
-     */
-    public boolean isAsync() {
-        final TypeToken returnTypeToken = TypeToken.of(returnType);
-        return returnTypeToken.isSubtypeOf(Completable.class) || returnTypeToken.isSubtypeOf(Single.class) || returnTypeToken.isSubtypeOf(Observable.class);
     }
 
     /**
@@ -347,8 +352,8 @@ public class SwaggerMethodParser {
                 if (0 <= substitutionParameterIndex && substitutionParameterIndex < methodArguments.length) {
                     final Object methodArgument = methodArguments[substitutionParameterIndex];
 
-                    String substitutionValue = String.valueOf(methodArgument);
-                    if (substitution.shouldEncode()) {
+                    String substitutionValue = methodArgument == null ? "" : methodArgument.toString();
+                    if (substitutionValue != null && !substitutionValue.isEmpty() && substitution.shouldEncode() && escaper != null) {
                         substitutionValue = escaper.escape(substitutionValue);
                     }
 
@@ -368,13 +373,14 @@ public class SwaggerMethodParser {
                 final int parameterIndex = substitution.methodParameterIndex();
                 if (0 <= parameterIndex && parameterIndex < methodArguments.length) {
                     final Object methodArgument = methodArguments[substitution.methodParameterIndex()];
+                    String parameterValue = methodArgument == null ? null : methodArgument.toString();
+                    if (parameterValue != null) {
+                        if (substitution.shouldEncode() && escaper != null) {
+                            parameterValue = escaper.escape(parameterValue);
+                        }
 
-                    String parameterValue = String.valueOf(methodArgument);
-                    if (substitution.shouldEncode() && escaper != null) {
-                        parameterValue = escaper.escape(parameterValue);
+                        result.add(new EncodedParameter(substitution.urlParameterName(), parameterValue));
                     }
-
-                    result.add(new EncodedParameter(substitution.urlParameterName(), parameterValue));
                 }
             }
         }

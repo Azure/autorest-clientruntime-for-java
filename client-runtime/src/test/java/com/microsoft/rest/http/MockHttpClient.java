@@ -6,6 +6,7 @@
 
 package com.microsoft.rest.http;
 
+import com.google.common.io.CharStreams;
 import com.microsoft.rest.HttpBinJSON;
 import com.microsoft.rest.policy.RequestPolicy;
 import io.netty.buffer.ByteBuf;
@@ -13,6 +14,8 @@ import io.netty.buffer.ByteBufAllocator;
 import rx.Single;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -25,12 +28,12 @@ import java.util.Map;
 public class MockHttpClient extends HttpClient {
     public MockHttpClient() {}
 
-    public MockHttpClient(List<RequestPolicy.Factory> policyFactories) {
+    public MockHttpClient(List<? extends RequestPolicy.Factory> policyFactories) {
         super(policyFactories);
     }
 
     @Override
-    public Single<HttpResponse> sendRequestInternalAsync(HttpRequest request) {
+    protected Single<HttpResponse> sendRequestInternalAsync(HttpRequest request) {
         HttpResponse response = null;
 
         try {
@@ -40,12 +43,16 @@ public class MockHttpClient extends HttpClient {
                 final String requestPath = requestUrl.getPath();
                 final String requestPathLower = requestPath.toLowerCase();
                 if (requestPathLower.equals("/anything") || requestPathLower.startsWith("/anything/")) {
-                    final HttpBinJSON json = new HttpBinJSON();
-                    json.url = request.url()
-                            // This is just to mimic the behavior we've seen with httpbin.org.
-                            .replace("%20", " ");
-                    json.headers = toMap(request.headers());
-                    response = new MockHttpResponse(200, json);
+                    if ("HEAD".equals(request.httpMethod())) {
+                        response = new MockHttpResponse(200, "");
+                    } else {
+                        final HttpBinJSON json = new HttpBinJSON();
+                        json.url = request.url()
+                                // This is just to mimic the behavior we've seen with httpbin.org.
+                                .replace("%20", " ");
+                        json.headers = toMap(request.headers());
+                        response = new MockHttpResponse(200, json);
+                    }
                 }
                 else if (requestPathLower.startsWith("/bytes/")) {
                     final String byteCountString = requestPath.substring("/bytes/".length());
@@ -54,6 +61,7 @@ public class MockHttpClient extends HttpClient {
                 }
                 else if (requestPathLower.equals("/delete")) {
                     final HttpBinJSON json = new HttpBinJSON();
+                    json.url = request.url();
                     json.data = bodyToString(request);
                     response = new MockHttpResponse(200, json);
                 }
@@ -65,18 +73,26 @@ public class MockHttpClient extends HttpClient {
                 }
                 else if (requestPathLower.equals("/patch")) {
                     final HttpBinJSON json = new HttpBinJSON();
+                    json.url = request.url();
                     json.data = bodyToString(request);
                     response = new MockHttpResponse(200, json);
                 }
                 else if (requestPathLower.equals("/post")) {
                     final HttpBinJSON json = new HttpBinJSON();
+                    json.url = request.url();
                     json.data = bodyToString(request);
                     response = new MockHttpResponse(200, json);
                 }
                 else if (requestPathLower.equals("/put")) {
                     final HttpBinJSON json = new HttpBinJSON();
+                    json.url = request.url();
                     json.data = bodyToString(request);
                     response = new MockHttpResponse(200, json);
+                }
+                else if (requestPathLower.startsWith("/status/")) {
+                    final String statusCodeString = requestPathLower.substring("/status/".length());
+                    final int statusCode = Integer.valueOf(statusCodeString);
+                    response = new MockHttpResponse(statusCode);
                 }
             }
         }
@@ -87,16 +103,16 @@ public class MockHttpClient extends HttpClient {
     }
 
     private static String bodyToString(HttpRequest request) throws IOException {
-        if (request.body() instanceof ByteArrayRequestBody) {
-            return new String(((ByteArrayRequestBody) request.body()).content());
-        } else if (request.body() instanceof FileRequestBody) {
-            FileSegment segment = ((FileRequestBody) request.body()).content();
-            ByteBuf requestContent = ByteBufAllocator.DEFAULT.buffer(segment.length());
-            requestContent.writeBytes(segment.fileChannel(), segment.offset(), segment.length());
-            return requestContent.toString(Charset.defaultCharset());
-        } else {
-            throw new IllegalArgumentException("Only ByteArrayRequestBody or FileRequestBody are supported");
+        String result = "";
+
+        final HttpRequestBody body = request.body();
+        if (body != null) {
+            try (final InputStream bodyStream = body.createInputStream()) {
+                result = CharStreams.toString(new InputStreamReader(bodyStream));
+            }
         }
+
+        return result;
     }
 
     private static Map<String, String> toMap(HttpHeaders headers) {

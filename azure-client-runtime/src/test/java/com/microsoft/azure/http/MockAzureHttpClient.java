@@ -11,18 +11,25 @@ import com.microsoft.azure.AzureAsyncOperationPollStrategy;
 import com.microsoft.azure.HttpBinJSON;
 import com.microsoft.azure.LocationPollStrategy;
 import com.microsoft.azure.MockResource;
-import com.microsoft.azure.OperationResource;
+import com.microsoft.azure.ResourceWithProvisioningState;
+import com.microsoft.azure.ProvisioningState;
+import com.microsoft.rest.http.ByteArrayHttpRequestBody;
+import com.microsoft.rest.http.FileRequestBody;
+import com.microsoft.rest.http.FileSegment;
 import com.microsoft.rest.http.HttpClient;
 import com.microsoft.rest.http.HttpHeader;
 import com.microsoft.rest.http.HttpHeaders;
 import com.microsoft.rest.http.HttpRequest;
 import com.microsoft.rest.http.HttpResponse;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import rx.Single;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,7 +61,7 @@ public class MockAzureHttpClient extends HttpClient {
     }
 
     @Override
-    public Single<HttpResponse> sendRequestInternalAsync(HttpRequest request) {
+    protected Single<HttpResponse> sendRequestInternalAsync(HttpRequest request) {
         MockAzureHttpResponse response = null;
 
         try {
@@ -64,12 +71,16 @@ public class MockAzureHttpClient extends HttpClient {
             final String requestPathLower = requestPath.toLowerCase();
             if (requestHost.equalsIgnoreCase("httpbin.org")) {
                 if (requestPathLower.equals("/anything") || requestPathLower.startsWith("/anything/")) {
-                    final HttpBinJSON json = new HttpBinJSON();
-                    json.url = request.url()
-                            // This is just to mimic the behavior we've seen with httpbin.org.
-                            .replace("%20", " ");
-                    json.headers = toMap(request.headers());
-                    response = new MockAzureHttpResponse(200, json);
+                    if ("HEAD".equals(request.httpMethod())) {
+                        response = new MockAzureHttpResponse(200, "");
+                    } else {
+                        final HttpBinJSON json = new HttpBinJSON();
+                        json.url = request.url()
+                                // This is just to mimic the behavior we've seen with httpbin.org.
+                                .replace("%20", " ");
+                        json.headers = toMap(request.headers());
+                        response = new MockAzureHttpResponse(200, json);
+                    }
                 }
                 else if (requestPathLower.startsWith("/bytes/")) {
                     final String byteCountString = requestPath.substring("/bytes/".length());
@@ -78,6 +89,7 @@ public class MockAzureHttpClient extends HttpClient {
                 }
                 else if (requestPathLower.equals("/delete")) {
                     final HttpBinJSON json = new HttpBinJSON();
+                    json.url = request.url();
                     json.data = bodyToString(request);
                     response = new MockAzureHttpResponse(200, json);
                 }
@@ -89,26 +101,38 @@ public class MockAzureHttpClient extends HttpClient {
                 }
                 else if (requestPathLower.equals("/patch")) {
                     final HttpBinJSON json = new HttpBinJSON();
+                    json.url = request.url();
                     json.data = bodyToString(request);
                     response = new MockAzureHttpResponse(200, json);
                 }
                 else if (requestPathLower.equals("/post")) {
                     final HttpBinJSON json = new HttpBinJSON();
+                    json.url = request.url();
                     json.data = bodyToString(request);
                     response = new MockAzureHttpResponse(200, json);
                 }
                 else if (requestPathLower.equals("/put")) {
                     final HttpBinJSON json = new HttpBinJSON();
+                    json.url = request.url();
                     json.data = bodyToString(request);
                     response = new MockAzureHttpResponse(200, json);
+                }
+                else if (requestPathLower.startsWith("/status/")) {
+                    final String statusCodeString = requestPathLower.substring("/status/".length());
+                    final int statusCode = Integer.valueOf(statusCodeString);
+                    response = new MockAzureHttpResponse(statusCode);
                 }
             }
             else if (requestHost.equalsIgnoreCase("mock.azure.com")) {
                 if (request.httpMethod().equalsIgnoreCase("GET")) {
                     if (requestPathLower.contains("/mockprovider/mockresources/")) {
                         ++getRequests;
+                        --pollsRemaining;
+
                         final MockResource resource = new MockResource();
                         resource.name = requestPath.substring(requestPath.lastIndexOf('/') + 1);
+                        resource.properties = new MockResource.Properties();
+                        resource.properties.provisioningState = (pollsRemaining <= 0 ? ProvisioningState.SUCCEEDED : ProvisioningState.IN_PROGRESS);
                         response = new MockAzureHttpResponse(200, resource);
                     }
                     else if (requestPathLower.contains("/mockprovider/mockoperations/")) {
@@ -119,15 +143,15 @@ public class MockAzureHttpClient extends HttpClient {
                         final String pollType = requestQueryMap.get("PollType");
 
                         if (pollType.equalsIgnoreCase(AzureAsyncOperationPollStrategy.HEADER_NAME)) {
-                            final OperationResource.Properties properties = new OperationResource.Properties();
+                            final ResourceWithProvisioningState.Properties properties = new ResourceWithProvisioningState.Properties();
                             if (pollsRemaining <= 1) {
-                                properties.setProvisioningState(AzureAsyncOperationPollStrategy.SUCCEEDED);
+                                properties.setProvisioningState(ProvisioningState.SUCCEEDED);
                             }
                             else {
                                 --pollsRemaining;
-                                properties.setProvisioningState(AzureAsyncOperationPollStrategy.IN_PROGRESS);
+                                properties.setProvisioningState(ProvisioningState.IN_PROGRESS);
                             }
-                            final OperationResource operationResource = new OperationResource();
+                            final ResourceWithProvisioningState operationResource = new ResourceWithProvisioningState();
                             operationResource.setProperties(properties);
                             response = new MockAzureHttpResponse(200, operationResource);
                         }
@@ -157,8 +181,23 @@ public class MockAzureHttpClient extends HttpClient {
                         final MockResource resource = new MockResource();
                         resource.name = "c";
                         response = new MockAzureHttpResponse(200, resource);
-                    } else {
+                    }
+                    else if (pollType.equalsIgnoreCase("ProvisioningState")) {
 
+                        if (pollsRemainingString == null) {
+                            pollsRemaining = 1;
+                        }
+                        else {
+                            pollsRemaining = Integer.valueOf(pollsRemainingString);
+                        }
+
+                        final MockResource resource = new MockResource();
+                        resource.name = "c";
+                        resource.properties = new MockResource.Properties();
+                        resource.properties.provisioningState = (pollsRemaining <= 0 ? ProvisioningState.SUCCEEDED : ProvisioningState.IN_PROGRESS);
+                        response = new MockAzureHttpResponse(200, resource);
+                    }
+                    else {
                         if (pollsRemainingString == null) {
                             pollsRemaining = 1;
                         }

@@ -7,7 +7,7 @@
 package com.microsoft.rest.policy;
 
 import com.microsoft.rest.LogLevel;
-import com.microsoft.rest.http.ByteArrayRequestBody;
+import com.microsoft.rest.http.ByteArrayHttpRequestBody;
 import com.microsoft.rest.http.HttpHeader;
 import com.microsoft.rest.http.HttpRequest;
 import com.microsoft.rest.http.HttpResponse;
@@ -16,8 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Single;
 import rx.functions.Action1;
+import rx.functions.Func1;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -87,29 +87,29 @@ public final class LoggingPolicy implements RequestPolicy {
         if (logLevel.shouldLogBody() && request.body() != null) {
             // TODO: maximum content-length?
             // TODO: check MIME type?
-            if (request.body() instanceof ByteArrayRequestBody) {
-                String bodyString = new String(((ByteArrayRequestBody) request.body()).content());
+            if (request.body() instanceof ByteArrayHttpRequestBody) {
+                String bodyString = new String(((ByteArrayHttpRequestBody) request.body()).content());
                 log(logger, String.format("%s-byte body:\n%s", request.body().contentLength(), bodyString));
                 log(logger, "--> END " + request.httpMethod());
             }
         }
 
         final long startNs = System.nanoTime();
-        return next.sendAsync(request).doOnError(new Action1<Throwable>() {
+        return next.sendAsync(request).flatMap(new Func1<HttpResponse, Single<HttpResponse>>() {
+            @Override
+            public Single<HttpResponse> call(HttpResponse httpResponse) {
+                long tookMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
+                return logResponse(logger, httpResponse, request.url(), tookMs);
+            }
+        }).doOnError(new Action1<Throwable>() {
             @Override
             public void call(Throwable throwable) {
                 log(logger, "<-- HTTP FAILED: " + throwable);
             }
-        }).doOnSuccess(new Action1<HttpResponse>() {
-            @Override
-            public void call(HttpResponse httpResponse) {
-                long tookMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
-                logResponse(logger, httpResponse, request.url(), tookMs);
-            }
         });
     }
 
-    private void logResponse(Logger logger, HttpResponse response, String url, long tookMs) {
+    private Single<HttpResponse> logResponse(final Logger logger, final HttpResponse response, String url, long tookMs) {
         String bodySize;
         try {
             long contentLength = Long.parseLong(response.headerValue("Content-Length"));
@@ -130,63 +130,25 @@ public final class LoggingPolicy implements RequestPolicy {
         }
 
         if (logLevel.shouldLogBody()) {
-            logger.warn("Logging HTTP response bodies not fully implemented.");
             String contentTypeHeader = response.headerValue("Content-Type");
-            if ("application/json".equals(contentTypeHeader)) {
-                try {
-                    log(logger, response.bodyAsString());
-                } catch (IOException e) {
-                    log(logger, "Error occurred when logging body: " + e.getMessage());
-                }
+            if ((contentTypeHeader == null || "application/json".equals(contentTypeHeader))) {
+                final HttpResponse bufferedResponse = response.buffer();
+                return bufferedResponse.bodyAsStringAsync().map(new Func1<String, HttpResponse>() {
+                    @Override
+                    public HttpResponse call(String s) {
+                        log(logger, s);
+                        log(logger, "<-- END HTTP");
+                        return bufferedResponse;
+                    }
+                });
             } else {
                 log(logger, "Not logging response body because the Content-Type is " + contentTypeHeader);
+                log(logger, "<-- END HTTP");
             }
+        } else {
             log(logger, "<-- END HTTP");
         }
 
-//        if (logLevel == LogLevel.BODY || logLevel == LogLevel.BODY_AND_HEADERS) {
-//            if (response.body() != null) {
-//                BufferedSource source = responseBody.source();
-//                source.request(Long.MAX_VALUE); // Buffer the entire body.
-//                Buffer buffer = source.buffer();
-//
-//                Charset charset = Charset.forName("UTF8");
-//                MediaType contentType = responseBody.contentType();
-//                if (contentType != null) {
-//                    try {
-//                        charset = contentType.charset(charset);
-//                    } catch (UnsupportedCharsetException e) {
-//                        log(logger, "Couldn't decode the response body; charset is likely malformed.");
-//                        log(logger, "<-- END HTTP");
-//                        return response;
-//                    }
-//                }
-//
-//                boolean gzipped = response.header("content-encoding") != null && StringUtils.containsIgnoreCase(response.header("content-encoding"), "gzip");
-//                if (!isPlaintext(buffer) && !gzipped) {
-//                    log(logger, "<-- END HTTP (binary " + buffer.size() + "-byte body omitted)");
-//                    return response;
-//                }
-//
-//                if (contentLength != 0) {
-//                    String content;
-//                    if (gzipped) {
-//                        content = CharStreams.toString(new InputStreamReader(new GZIPInputStream(buffer.clone().inputStream())));
-//                    } else {
-//                        content = buffer.clone().readString(charset);
-//                    }
-//                    if (logLevel.isPrettyJson()) {
-//                        try {
-//                            content = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(MAPPER.readValue(content, JsonNode.class));
-//                        } catch (Exception e) {
-//                            // swallow, keep original content
-//                        }
-//                    }
-//                    log(logger, String.format("%s-byte body:\n%s", buffer.size(), content));
-//                }
-//                log(logger, "<-- END HTTP");
-//            }
-//        }
-//        return response;
+        return Single.just(response);
     }
 }

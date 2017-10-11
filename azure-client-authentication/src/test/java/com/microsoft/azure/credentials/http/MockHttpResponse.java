@@ -4,8 +4,10 @@
  * license information.
  */
 
-package com.microsoft.rest.http;
+package com.microsoft.azure.credentials.http;
 
+import com.microsoft.rest.http.HttpHeaders;
+import com.microsoft.rest.http.HttpResponse;
 import com.microsoft.rest.protocol.SerializerAdapter;
 import com.microsoft.rest.serializer.JacksonAdapter;
 import rx.Single;
@@ -21,36 +23,35 @@ public class MockHttpResponse extends HttpResponse {
 
     private final HttpHeaders headers;
 
-    private final byte[] bodyBytes;
-
-    public MockHttpResponse(int statusCode, byte[] bodyBytes) {
-        this.headers = new HttpHeaders();
-
-        this.statusCode = statusCode;
-        this.bodyBytes = bodyBytes;
-    }
+    private byte[] byteArray;
+    private String string;
 
     public MockHttpResponse(int statusCode) {
-        this(statusCode, (byte[])null);
+        this.statusCode = statusCode;
+
+        headers = new HttpHeaders();
+    }
+
+    public MockHttpResponse(int statusCode, byte[] byteArray) {
+        this(statusCode);
+
+        this.byteArray = byteArray;
     }
 
     public MockHttpResponse(int statusCode, String string) {
-        this(statusCode, string == null ? null : string.getBytes());
+        this(statusCode);
+
+        this.string = string;
     }
 
     public MockHttpResponse(int statusCode, Object serializable) {
-        this(statusCode, serialize(serializable));
-    }
+        this(statusCode);
 
-    private static byte[] serialize(Object serializable) {
-        byte[] result = null;
         try {
-            final String serializedString = serializer.serialize(serializable);
-            result = serializedString == null ? null : serializedString.getBytes();
+            this.string = serializer.serialize(serializable);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return result;
     }
 
     @Override
@@ -70,16 +71,16 @@ public class MockHttpResponse extends HttpResponse {
 
     @Override
     public Single<? extends InputStream> bodyAsInputStreamAsync() {
-        return Single.just(new ByteArrayInputStream(bodyBytes));
+        return Single.just(new ByteArrayInputStream(byteArray));
     }
 
     @Override
     public Single<byte[]> bodyAsByteArrayAsync() {
-        return Single.just(bodyBytes);
+        return Single.just(byteArray);
     }
 
     @Override
     public Single<String> bodyAsStringAsync() {
-        return Single.just(bodyBytes == null ? null : new String(bodyBytes));
+        return Single.just(string);
     }
 }

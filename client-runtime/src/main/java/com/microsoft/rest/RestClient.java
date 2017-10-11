@@ -7,17 +7,20 @@
 package com.microsoft.rest;
 
 import com.microsoft.rest.credentials.ServiceClientCredentials;
-import com.microsoft.rest.protocol.Environment;
-import com.microsoft.rest.protocol.SerializerAdapter;
 import com.microsoft.rest.http.ChannelHandlerConfig;
 import com.microsoft.rest.http.HttpClient;
 import com.microsoft.rest.http.NettyAdapter;
+import com.microsoft.rest.policy.AddCookiesPolicy;
 import com.microsoft.rest.policy.CredentialsPolicy;
 import com.microsoft.rest.policy.LoggingPolicy;
 import com.microsoft.rest.policy.RequestPolicy;
 import com.microsoft.rest.policy.RetryPolicy;
 import com.microsoft.rest.policy.UserAgentPolicy;
+import com.microsoft.rest.protocol.Environment;
+import com.microsoft.rest.protocol.SerializerAdapter;
+import com.microsoft.rest.serializer.JacksonAdapter;
 
+import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,8 +30,8 @@ import java.util.concurrent.TimeUnit;
  * An instance of this class stores configuration for setting up specific service clients.
  */
 public final class RestClient {
-
     private final HttpClient httpClient;
+    private final Proxy proxy;
     private final String baseURL;
     private final String userAgent;
     private final long readTimeoutMillis;
@@ -40,6 +43,7 @@ public final class RestClient {
     private final List<RequestPolicy.Factory> customPolicyFactories;
 
     private RestClient(RestClient.Builder builder) {
+        this.proxy = builder.proxy;
         this.baseURL = builder.baseUrl;
         this.userAgent = builder.userAgent;
         this.readTimeoutMillis = builder.readTimeoutMillis;
@@ -49,19 +53,21 @@ public final class RestClient {
         this.logLevel = builder.logLevel;
         this.customPolicyFactories = builder.customPolicyFactories;
 
-        this.httpClient = new NettyAdapter(createPolicyFactories(), Collections.<ChannelHandlerConfig>emptyList());
-    }
-
-    private List<RequestPolicy.Factory> createPolicyFactories() {
-        List<RequestPolicy.Factory> allFactories = new ArrayList<>();
-        allFactories.add(new UserAgentPolicy.Factory(userAgent));
-        allFactories.add(new RetryPolicy.Factory());
-        allFactories.add(new LoggingPolicy.Factory(logLevel));
+        final NettyAdapter.Builder httpClientBuilder = new NettyAdapter.Builder()
+            .withRequestPolicy(new UserAgentPolicy.Factory(userAgent))
+            .withRequestPolicy(new RetryPolicy.Factory())
+            .withRequestPolicy(new AddCookiesPolicy.Factory());
         if (credentials != null) {
-            allFactories.add(new CredentialsPolicy.Factory(credentials));
+            httpClientBuilder.withRequestPolicy(new CredentialsPolicy.Factory(credentials));
         }
-        allFactories.addAll(customPolicyFactories);
-        return allFactories;
+        httpClientBuilder.withRequestPolicies(customPolicyFactories)
+            .withRequestPolicy(new LoggingPolicy.Factory(logLevel));
+
+        if (proxy != null) {
+            httpClientBuilder.withProxy(proxy);
+        }
+
+        this.httpClient = httpClientBuilder.build();
     }
 
     /**
@@ -83,6 +89,13 @@ public final class RestClient {
      */
     public HttpClient httpClient() {
         return httpClient;
+    }
+
+    /**
+     * @return the {@link Proxy} to use
+     */
+    public Proxy proxy() {
+        return proxy;
     }
 
     /**
@@ -129,12 +142,27 @@ public final class RestClient {
     }
 
     /**
+     * @return a new initialized instance of the default HttpClient type.
+     */
+    public static HttpClient createDefaultHttpClient() {
+        return new NettyAdapter(Collections.<RequestPolicy.Factory>emptyList(), Collections.<ChannelHandlerConfig>emptyList());
+    }
+
+    /**
+     * @return a new initialized instance of the default SerializerAdapter type.
+     */
+    public static SerializerAdapter<?> createDefaultSerializer() {
+        return new JacksonAdapter();
+    }
+
+    /**
      * The builder class for building a REST client.
      */
     public static class Builder {
         private final long defaultReadTimeoutMillis = 10000;
         private final long defaultConnectionTimeoutMillis = 10000;
 
+        private Proxy proxy;
         /** The dynamic base URL with variables wrapped in "{" and "}". */
         private String baseUrl;
         /** The credentials to authenticate. */
@@ -152,6 +180,7 @@ public final class RestClient {
         private LogLevel logLevel = LogLevel.NONE;
 
         private Builder(final RestClient restClient) {
+            this.proxy = restClient.proxy;
             this.baseUrl = restClient.baseURL;
             this.userAgent = restClient.userAgent;
             this.connectionTimeoutMillis = restClient.connectionTimeoutMillis;
@@ -166,6 +195,16 @@ public final class RestClient {
          * Creates an instance of the builder.
          */
         public Builder() { }
+
+        /**
+         * Sets the proxy.
+         * @param proxy the proxy to use.
+         * @return the builder itself for chaining.
+         */
+        public Builder withProxy(Proxy proxy) {
+            this.proxy = proxy;
+            return this;
+        }
 
         /**
          * Sets the dynamic base URL.

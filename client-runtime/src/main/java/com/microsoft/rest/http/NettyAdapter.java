@@ -7,11 +7,13 @@
 package com.microsoft.rest.http;
 
 import com.microsoft.rest.policy.RequestPolicy;
+import com.microsoft.rest.policy.RequestPolicy.Factory;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
@@ -25,6 +27,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import rx.Emitter;
@@ -32,10 +35,14 @@ import rx.Emitter.BackpressureMode;
 import rx.Observable;
 import rx.Single;
 import rx.functions.Action1;
+import rx.functions.Func0;
 import rx.subjects.ReplaySubject;
 
+import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -130,8 +137,8 @@ public class NettyAdapter extends HttpClient {
                                     request.url());
                         } else {
                             ByteBuf requestContent;
-                            if (request.body() instanceof ByteArrayRequestBody) {
-                                requestContent = Unpooled.wrappedBuffer(((ByteArrayRequestBody) request.body()).content());
+                            if (request.body() instanceof ByteArrayHttpRequestBody) {
+                                requestContent = Unpooled.wrappedBuffer(((ByteArrayHttpRequestBody) request.body()).content());
                             } else if (request.body() instanceof FileRequestBody) {
                                 FileSegment segment = ((FileRequestBody) request.body()).content();
                                 requestContent = ByteBufAllocator.DEFAULT.buffer(segment.length());
@@ -223,6 +230,67 @@ public class NettyAdapter extends HttpClient {
                     adapter.pool.release(ctx.channel());
                 }
             }
+        }
+    }
+
+    /**
+     * The builder class for building a RxNettyAdapter.
+     */
+    public static class Builder {
+        private final List<RequestPolicy.Factory> requestPolicyFactories = new ArrayList<>();
+        private final List<ChannelHandlerConfig> channelHandlerConfigs = new ArrayList<>();
+
+        /**
+         * Add the provided RequestPolicy.Factory to this Builder's configuration.
+         * @param requestPolicyFactory The RequestPolicy.Factory to add.
+         * @return The Builder itself for chaining.
+         */
+        public Builder withRequestPolicy(RequestPolicy.Factory requestPolicyFactory) {
+            requestPolicyFactories.add(requestPolicyFactory);
+            return this;
+        }
+
+        /**
+         * Add the provided RequestPolicy.Factories to this Builder's configuration.
+         * @param requestPolicyFactories The RequestPolicy.Factories to add.
+         * @return The Builder itself for chaining.
+         */
+        public Builder withRequestPolicies(Collection<Factory> requestPolicyFactories) {
+            this.requestPolicyFactories.addAll(requestPolicyFactories);
+            return this;
+        }
+
+        /**
+         * Add the provided ChannelHandlerConfig to this Builder's configuration.
+         * @param channelHandlerConfig The ChannelHandlerConfig to add.
+         * @return The Builder itself for chaining.
+         */
+        public Builder withChannelHandler(ChannelHandlerConfig channelHandlerConfig) {
+            channelHandlerConfigs.add(channelHandlerConfig);
+            return this;
+        }
+
+        /**
+         * Add a Proxy to the RxNettyAdapter that will be built from this Builder.
+         * @param proxy The Proxy to add.
+         * @return The Builder itself for chaining.
+         */
+        public Builder withProxy(final Proxy proxy) {
+            return withChannelHandler(new ChannelHandlerConfig(new Func0<ChannelHandler>() {
+                @Override
+                public ChannelHandler call() {
+                    return new HttpProxyHandler(proxy.address());
+                }
+            },
+                    false));
+        }
+
+        /**
+         * Build a RxNettyAdapter using this Builder's configuration.
+         * @return An RxNettyAdapter that uses this Builder's configuration.
+         */
+        public NettyAdapter build() {
+            return new NettyAdapter(requestPolicyFactories, channelHandlerConfigs);
         }
     }
 }

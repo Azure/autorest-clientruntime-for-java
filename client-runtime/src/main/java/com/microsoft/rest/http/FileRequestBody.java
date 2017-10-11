@@ -6,6 +6,13 @@
 
 package com.microsoft.rest.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufInputStream;
+
+import java.io.IOException;
+import java.io.InputStream;
+
 /**
  * A HTTP request body that contains a chunk of a file.
  */
@@ -24,6 +31,22 @@ public class FileRequestBody implements HttpRequestBody {
     @Override
     public int contentLength() {
         return fileSegment.length();
+    }
+
+    @Override
+    public String contentType() {
+        return "application/octet-stream";
+    }
+
+    @Override
+    public InputStream createInputStream() {
+        ByteBuf content = ByteBufAllocator.DEFAULT.buffer(fileSegment.length());
+        try {
+            content.writeBytes(fileSegment.fileChannel(), fileSegment.offset(), fileSegment.length());
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to read file");
+        }
+        return new ByteBufInputStream(content);
     }
 
     /**

@@ -20,7 +20,7 @@ import java.util.Collections;
 public class RetryPolicyTests {
     @Test
     public void exponentialRetryEndOn501() throws Exception {
-        HttpClient client = new HttpClient(Collections.<RequestPolicy.Factory>singletonList(new RetryPolicy.Factory(3))) {
+        HttpClient client = new MockHttpClient(Collections.singletonList(new RetryPolicy.Factory(3))) {
             // Send 408, 500, 502, all retried, with a 501 ending
             private final int[] codes = new int[]{408, 500, 502, 501};
             private int count = 0;
@@ -31,11 +31,11 @@ public class RetryPolicyTests {
             }
         };
 
-        HttpResponse response = client.sendRequest(
+        HttpResponse response = client.sendRequestAsync(
                 new HttpRequest(
                         "exponentialRetryEndOn501",
                         "GET",
-                        "http://localhost/"));
+                        "http://localhost/")).toBlocking().value();
 
         Assert.assertEquals(501, response.statusCode());
     }
@@ -44,7 +44,7 @@ public class RetryPolicyTests {
     public void exponentialRetryMax() throws Exception {
         final int maxRetries = 5;
 
-        HttpClient client = new HttpClient(Collections.<RequestPolicy.Factory>singletonList(new RetryPolicy.Factory(maxRetries))) {
+        HttpClient client = new MockHttpClient(Collections.singletonList(new RetryPolicy.Factory(maxRetries))) {
             int count = -1;
             @Override
             public Single<HttpResponse> sendRequestInternalAsync(HttpRequest request) {
@@ -53,11 +53,11 @@ public class RetryPolicyTests {
             }
         };
 
-        HttpResponse response = client.sendRequest(
+        HttpResponse response = client.sendRequestAsync(
                 new HttpRequest(
                         "exponentialRetryMax",
                         "GET",
-                        "http://localhost/"));
+                        "http://localhost/")).toBlocking().value();
 
         Assert.assertEquals(500, response.statusCode());
     }

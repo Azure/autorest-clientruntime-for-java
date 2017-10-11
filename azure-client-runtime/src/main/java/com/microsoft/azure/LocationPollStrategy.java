@@ -6,11 +6,10 @@
 
 package com.microsoft.azure;
 
+import com.microsoft.rest.RestProxy;
 import com.microsoft.rest.http.HttpRequest;
 import com.microsoft.rest.http.HttpResponse;
 import rx.Single;
-
-import java.io.IOException;
 
 /**
  * A PollStrategy type that uses the Location header value to check the status of a long running
@@ -27,8 +26,8 @@ public final class LocationPollStrategy extends PollStrategy {
      */
     public static final String HEADER_NAME = "Location";
 
-    private LocationPollStrategy(String fullyQualifiedMethodName, String locationUrl) {
-        super(AzureProxy.defaultDelayInMilliseconds());
+    private LocationPollStrategy(RestProxy restProxy, String fullyQualifiedMethodName, String locationUrl, long delayInMilliseconds) {
+        super(restProxy, delayInMilliseconds);
 
         this.fullyQualifiedMethodName = fullyQualifiedMethodName;
         this.locationUrl = locationUrl;
@@ -40,27 +39,20 @@ public final class LocationPollStrategy extends PollStrategy {
     }
 
     @Override
-    public void updateFrom(HttpResponse httpPollResponse) throws IOException {
+    public Single<HttpResponse> updateFromAsync(HttpResponse httpPollResponse) {
         final int httpStatusCode = httpPollResponse.statusCode();
         if (httpStatusCode == 202) {
-            locationUrl = httpPollResponse.headerValue(HEADER_NAME);
+            String newLocationUrl = httpPollResponse.headerValue(HEADER_NAME);
+            if (newLocationUrl != null) {
+                locationUrl = newLocationUrl;
+            }
+            
             updateDelayInMillisecondsFrom(httpPollResponse);
         }
         else {
             done = true;
         }
-    }
-
-    @Override
-    public Single<HttpResponse> updateFromAsync(HttpResponse httpPollResponse) {
-        Single<HttpResponse> result;
-        try {
-            updateFrom(httpPollResponse);
-            result = Single.just(httpPollResponse);
-        } catch (IOException e) {
-            result = Single.error(e);
-        }
-        return result;
+        return Single.just(httpPollResponse);
     }
 
     @Override
@@ -76,11 +68,13 @@ public final class LocationPollStrategy extends PollStrategy {
      *                                 long running operation.
      * @param httpResponse The HTTP response that the required header values for this pollStrategy
      *                     will be read from.
+     * @param delayInMilliseconds The delay (in milliseconds) that the resulting pollStrategy will
+     *                            use when polling.
      */
-    static LocationPollStrategy tryToCreate(String fullyQualifiedMethodName, HttpResponse httpResponse) {
+    static PollStrategy tryToCreate(RestProxy restProxy, String fullyQualifiedMethodName, HttpResponse httpResponse, long delayInMilliseconds) {
         final String locationUrl = httpResponse.headerValue(HEADER_NAME);
         return locationUrl != null && !locationUrl.isEmpty()
-                ? new LocationPollStrategy(fullyQualifiedMethodName, locationUrl)
+                ? new LocationPollStrategy(restProxy, fullyQualifiedMethodName, locationUrl, delayInMilliseconds)
                 : null;
     }
 }

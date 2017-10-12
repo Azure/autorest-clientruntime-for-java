@@ -7,7 +7,6 @@
 package com.microsoft.rest.http;
 
 import com.microsoft.rest.policy.RequestPolicy;
-import com.microsoft.rest.policy.RequestPolicy.Factory;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -41,8 +40,6 @@ import rx.subjects.ReplaySubject;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -233,7 +230,7 @@ public class NettyAdapter extends HttpClient {
             }
         }
     }
-    
+
     /**
      * The factory for creating a NettyAdapter.
      */

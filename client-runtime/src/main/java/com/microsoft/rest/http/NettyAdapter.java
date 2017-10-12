@@ -43,6 +43,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -232,65 +233,28 @@ public class NettyAdapter extends HttpClient {
             }
         }
     }
-
+    
     /**
-     * The builder class for building a NettyAdapter.
+     * The factory for creating a NettyAdapter.
      */
-    public static class Builder {
-        private final List<RequestPolicy.Factory> requestPolicyFactories = new ArrayList<>();
-        private final List<ChannelHandlerConfig> channelHandlerConfigs = new ArrayList<>();
+    public static class Factory implements HttpClient.Factory {
+        @Override
+        public HttpClient create(final Configuration configuration) {
+            final List<ChannelHandlerConfig> channelHandlerConfigs;
+            final Proxy proxy = configuration.proxy();
+            if (proxy != null) {
+                ChannelHandlerConfig channelHandlerConfig = new ChannelHandlerConfig(new Func0<ChannelHandler>() {
+                    @Override
+                    public ChannelHandler call() {
+                        return new HttpProxyHandler(proxy.address());
+                    }
+                }, false);
+                channelHandlerConfigs = Collections.singletonList(channelHandlerConfig);
+            } else {
+                channelHandlerConfigs = Collections.emptyList();
+            }
 
-        /**
-         * Add the provided RequestPolicy.Factory to this Builder's configuration.
-         * @param requestPolicyFactory The RequestPolicy.Factory to add.
-         * @return The Builder itself for chaining.
-         */
-        public Builder withRequestPolicy(RequestPolicy.Factory requestPolicyFactory) {
-            requestPolicyFactories.add(requestPolicyFactory);
-            return this;
-        }
-
-        /**
-         * Add the provided RequestPolicy.Factories to this Builder's configuration.
-         * @param requestPolicyFactories The RequestPolicy.Factories to add.
-         * @return The Builder itself for chaining.
-         */
-        public Builder withRequestPolicies(Collection<Factory> requestPolicyFactories) {
-            this.requestPolicyFactories.addAll(requestPolicyFactories);
-            return this;
-        }
-
-        /**
-         * Add the provided ChannelHandlerConfig to this Builder's configuration.
-         * @param channelHandlerConfig The ChannelHandlerConfig to add.
-         * @return The Builder itself for chaining.
-         */
-        public Builder withChannelHandler(ChannelHandlerConfig channelHandlerConfig) {
-            channelHandlerConfigs.add(channelHandlerConfig);
-            return this;
-        }
-
-        /**
-         * Add a Proxy to the NettyAdapter that will be built from this Builder.
-         * @param proxy The Proxy to add.
-         * @return The Builder itself for chaining.
-         */
-        public Builder withProxy(final Proxy proxy) {
-            return withChannelHandler(new ChannelHandlerConfig(new Func0<ChannelHandler>() {
-                @Override
-                public ChannelHandler call() {
-                    return new HttpProxyHandler(proxy.address());
-                }
-            },
-                    false));
-        }
-
-        /**
-         * Build a NettyAdapter using this Builder's configuration.
-         * @return A NettyAdapter that uses this Builder's configuration.
-         */
-        public NettyAdapter build() {
-            return new NettyAdapter(requestPolicyFactories, channelHandlerConfigs);
+            return new NettyAdapter(configuration.policyFactories(), channelHandlerConfigs);
         }
     }
 }

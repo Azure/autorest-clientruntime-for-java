@@ -9,6 +9,9 @@ package com.microsoft.azure;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import rx.Observable;
+import rx.functions.Action1;
+import rx.functions.Func0;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -263,6 +266,61 @@ public class PagedListTests {
             c++;
         }
         Assert.assertEquals(7, c);
+    }
+
+    @Test
+    public void canCreateObservableFromPagedList() {
+        // Test lazy observable can be created by ensuring loadNextPage invoked lazily
+        //
+        class ObservableFromPagedList {
+            int loadNextPageCallCount;
+
+            Observable<Integer> toObservable() {
+                return firstObservable().concatWith(nextObservable());
+            }
+
+            rx.Observable<Integer> firstObservable() {
+                return rx.Observable.defer(new Func0<rx.Observable<Integer>>() {
+                    @Override
+                    public rx.Observable<Integer> call() {
+                        return rx.Observable.from(list.currentPage().items());
+                    }
+                });
+            }
+
+            Observable<Integer> nextObservable() {
+                return Observable.defer(new Func0<Observable<Integer>>() {
+                    @Override
+                    public Observable<Integer> call() {
+                        if (list.hasNextPage()) {
+                            list.loadNextPage();
+                            loadNextPageCallCount++;
+                            return rx.Observable.from(list.currentPage().items()).concatWith(Observable.defer(new Func0<Observable<Integer>>() {
+                                @Override
+                                public Observable<Integer> call() {
+                                    return nextObservable();
+                                }
+                            }));
+                        } else {
+                            return rx.Observable.empty();
+                        }
+                    }
+                });
+            }
+        }
+
+        ObservableFromPagedList obpl = new ObservableFromPagedList();
+
+        final Integer[] cnt = new Integer[] { 0 };
+        obpl.toObservable().subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                Assert.assertEquals(cnt[0], integer);
+                cnt[0]++;
+            }
+        });
+        Assert.assertEquals(20, (long) cnt[0]);
+        Assert.assertEquals(19, obpl.loadNextPageCallCount);
     }
 
 

@@ -171,6 +171,7 @@ public abstract class PagedList<E> implements List<E> {
                 } else {
                     loadNextPage();
                 }
+                // Recurse until we load a page with non-zero items.
                 return next();
             } else {
                 try {
@@ -179,6 +180,8 @@ public abstract class PagedList<E> implements List<E> {
                     this.nextIndex = this.nextIndex + 1;
                     return nextItem;
                 } catch (IndexOutOfBoundsException ex) {
+                    // The nextIndex got invalid means a different instance of iterator
+                    // removed item from this index.
                     throw new ConcurrentModificationException();
                 }
             }
@@ -209,17 +212,15 @@ public abstract class PagedList<E> implements List<E> {
             int i = this.nextIndex - 1;
             if (i < 0) {
                 throw new NoSuchElementException();
-            } else {
-                if (i >= items.size()) {
+            } else if (i >= items.size()) {
                     throw new ConcurrentModificationException();
-                } else {
-                    try {
-                        this.nextIndex = i;
-                        this.lastRetIndex = i;
-                        return items.get(this.lastRetIndex);
-                    } catch (IndexOutOfBoundsException ex) {
-                        throw new ConcurrentModificationException();
-                    }
+            } else {
+                try {
+                    this.nextIndex = i;
+                    this.lastRetIndex = i;
+                    return items.get(this.lastRetIndex);
+                } catch (IndexOutOfBoundsException ex) {
+                    throw new ConcurrentModificationException();
                 }
             }
         }

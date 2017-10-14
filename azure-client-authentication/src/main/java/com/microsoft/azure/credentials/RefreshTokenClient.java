@@ -18,7 +18,7 @@ import com.microsoft.rest.annotations.ExpectedResponses;
 import com.microsoft.rest.annotations.POST;
 import com.microsoft.rest.annotations.PathParam;
 import com.microsoft.rest.http.HttpClient;
-import com.microsoft.rest.http.NettyAdapter;
+import com.microsoft.rest.http.NettyClient;
 import com.microsoft.rest.policy.RequestPolicy;
 import com.microsoft.rest.protocol.SerializerAdapter;
 import rx.Single;
@@ -45,7 +45,7 @@ final class RefreshTokenClient {
     }
 
     private static HttpClient createHttpClient(Proxy proxy) {
-        return new NettyAdapter.Factory()
+        return new NettyClient.Factory()
                 .create(new HttpClient.Configuration(Collections.<RequestPolicy.Factory>emptyList(), proxy));
     }
 

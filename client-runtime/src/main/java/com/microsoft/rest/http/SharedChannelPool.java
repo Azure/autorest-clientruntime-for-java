@@ -10,6 +10,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.handler.ssl.SslContext;
@@ -44,6 +45,10 @@ public class SharedChannelPool implements ChannelPool {
     private final ConcurrentMultiHashMap<URI, Channel> leased;
     private final Object sync = -1;
     private final SslContext sslContext;
+
+    EventLoopGroup eventLoopGroup() {
+        return bootstrap.config().group();
+    }
 
     /**
      * Creates an instance of the shared channel pool.

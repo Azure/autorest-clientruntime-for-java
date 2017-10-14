@@ -9,7 +9,7 @@ package com.microsoft.rest;
 import com.microsoft.rest.credentials.ServiceClientCredentials;
 import com.microsoft.rest.http.ChannelHandlerConfig;
 import com.microsoft.rest.http.HttpClient;
-import com.microsoft.rest.http.NettyAdapter;
+import com.microsoft.rest.http.NettyClient;
 import com.microsoft.rest.policy.AddCookiesPolicy;
 import com.microsoft.rest.policy.CredentialsPolicy;
 import com.microsoft.rest.policy.LoggingPolicy;
@@ -145,7 +145,7 @@ public final class RestClient {
      * @return a new initialized instance of the default HttpClient type.
      */
     public static HttpClient createDefaultHttpClient() {
-        return new NettyAdapter(Collections.<RequestPolicy.Factory>emptyList(), Collections.<ChannelHandlerConfig>emptyList());
+        return new NettyClient(Collections.<RequestPolicy.Factory>emptyList());
     }
 
     /**
@@ -197,7 +197,7 @@ public final class RestClient {
          * Creates an instance of the builder.
          */
         public Builder() {
-            this.httpClientFactory = new NettyAdapter.Factory();
+            this.httpClientFactory = new NettyClient.Factory();
         }
 
         /**

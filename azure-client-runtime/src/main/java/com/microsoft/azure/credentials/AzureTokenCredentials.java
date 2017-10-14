@@ -42,7 +42,7 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
     @Override
     protected final String getToken(Request request) throws IOException {
         String host = request.url().toString().toLowerCase();
-        String resource = environment().activeDirectoryResourceId();
+        String resource = environment().managementEndpoint();
         for (Map.Entry<String, String> endpoint : environment().endpoints().entrySet()) {
             if (host.contains(endpoint.getValue())) {
                 if (endpoint.getKey().equals(Endpoint.KEYVAULT.identifier())) {

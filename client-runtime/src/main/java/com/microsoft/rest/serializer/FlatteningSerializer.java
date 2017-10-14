@@ -7,6 +7,7 @@
 package com.microsoft.rest.serializer;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -135,6 +136,9 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
             String wireName = f.getName();
             ObjectNode pointer = res;
             JsonProperty property = f.getAnnotation(JsonProperty.class);
+            if (property != null && Access.WRITE_ONLY.equals(property.access())) {
+                continue;
+            }
             if (property != null && !property.value().isEmpty()) {
                 wireName = f.getAnnotation(JsonProperty.class).value();
             }

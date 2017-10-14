@@ -12,7 +12,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
@@ -26,7 +25,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import rx.Emitter;
@@ -34,22 +32,17 @@ import rx.Emitter.BackpressureMode;
 import rx.Observable;
 import rx.Single;
 import rx.functions.Action1;
-import rx.functions.Func0;
 import rx.subjects.ReplaySubject;
 
-import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 
 /**
  * An HttpClient that is implemented using Netty.
  */
-public class NettyClient extends HttpClient {
+public final class NettyClient extends HttpClient {
     private static final String HEADER_CONTENT_LENGTH = "Content-Length";
     private final NettyAdapter adapter;
 
@@ -57,7 +50,7 @@ public class NettyClient extends HttpClient {
      * Creates NettyClient.
      * @param policyFactories the sequence of RequestPolicies to apply when sending HTTP requests.
      */
-    public NettyClient(List<RequestPolicy.Factory> policyFactories) {
+    private NettyClient(List<RequestPolicy.Factory> policyFactories) {
         super(policyFactories);
         this.adapter = new NettyAdapter();
     }
@@ -65,14 +58,15 @@ public class NettyClient extends HttpClient {
     /**
      * Creates NettyClient.
      * @param policyFactories the sequence of RequestPolicies to apply when sending HTTP requests.
+     * @param adapter the adapter to Netty
      */
-    public NettyClient(List<RequestPolicy.Factory> policyFactories, NettyAdapter adapter) {
+    private NettyClient(List<RequestPolicy.Factory> policyFactories, NettyAdapter adapter) {
         super(policyFactories);
         this.adapter = adapter;
     }
 
     @Override
-    public Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request) {
+    protected Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request) {
         return adapter.sendRequestInternalAsync(request);
     }
 
@@ -80,7 +74,7 @@ public class NettyClient extends HttpClient {
         private final NioEventLoopGroup eventLoopGroup;
         private final SharedChannelPool channelPool;
 
-        public NettyAdapter() {
+        private NettyAdapter() {
             this.eventLoopGroup = new NioEventLoopGroup();
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(eventLoopGroup);
@@ -97,7 +91,7 @@ public class NettyClient extends HttpClient {
             }, eventLoopGroup.executorCount() * 2);
         }
 
-        public NettyAdapter(int eventLoopGroupSize, int channelPoolSize) {
+        private NettyAdapter(int eventLoopGroupSize, int channelPoolSize) {
             this.eventLoopGroup = new NioEventLoopGroup(eventLoopGroupSize);
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(eventLoopGroup);
@@ -114,7 +108,7 @@ public class NettyClient extends HttpClient {
             }, channelPoolSize);
         }
 
-        public Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request) {
+        private Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request) {
             final URI uri;
             try {
                 uri = new URI(request.url());
@@ -261,15 +255,24 @@ public class NettyClient extends HttpClient {
     }
 
     /**
-     * The factory for creating a NettyAdapter.
+     * The factory for creating a NettyClient.
      */
     public static class Factory implements HttpClient.Factory {
         private final NettyAdapter adapter;
 
+        /**
+         * Create a Netty client factory with default settings.
+         */
         public Factory() {
             this.adapter = new NettyAdapter();
         }
 
+        /**
+         * Create a Netty client factory, specifying the event loop group
+         * size and the channel pool size.
+         * @param eventLoopGroupSize the number of event loop executors
+         * @param channelPoolSize the number of pooled channels (connections)
+         */
         public Factory(int eventLoopGroupSize, int channelPoolSize) {
             this.adapter = new NettyAdapter(eventLoopGroupSize, channelPoolSize);
         }

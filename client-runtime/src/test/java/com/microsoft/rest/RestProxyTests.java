@@ -20,6 +20,7 @@ import com.microsoft.rest.http.HttpClient;
 import com.microsoft.rest.http.HttpHeaders;
 import com.microsoft.rest.protocol.SerializerAdapter;
 import com.microsoft.rest.serializer.JacksonAdapter;
+import org.junit.Assert;
 import org.junit.Test;
 import rx.Completable;
 import rx.Observable;
@@ -1185,7 +1186,7 @@ public abstract class RestProxyTests {
         assertEquals("keep-alive", headers.connection);
         assertNotNull(headers.date);
         assertEquals("1.1 vegur", headers.via);
-        assertNotEquals(0, headers.xProcessedTime);
+        Assert.assertNotEquals(0, headers.xProcessedTime);
     }
 
     @Test
@@ -1206,7 +1207,7 @@ public abstract class RestProxyTests {
         assertEquals("keep-alive", headers.connection);
         assertNotNull(headers.date);
         assertEquals("1.1 vegur", headers.via);
-        assertNotEquals(0, headers.xProcessedTime);
+        Assert.assertNotEquals(0, headers.xProcessedTime);
     }
 
     @Test
@@ -1223,7 +1224,7 @@ public abstract class RestProxyTests {
         assertEquals("keep-alive", headers.connection);
         assertNotNull(headers.date);
         assertEquals("1.1 vegur", headers.via);
-        assertNotEquals(0, headers.xProcessedTime);
+        Assert.assertNotEquals(0, headers.xProcessedTime);
     }
 
     @Test
@@ -1245,7 +1246,7 @@ public abstract class RestProxyTests {
         assertEquals("keep-alive", headers.connection);
         assertNotNull(headers.date);
         assertEquals("1.1 vegur", headers.via);
-        assertNotEquals(0, headers.xProcessedTime);
+        Assert.assertNotEquals(0, headers.xProcessedTime);
     }
 
     // Helpers

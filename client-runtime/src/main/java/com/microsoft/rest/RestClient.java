@@ -7,7 +7,6 @@
 package com.microsoft.rest;
 
 import com.microsoft.rest.credentials.ServiceClientCredentials;
-import com.microsoft.rest.http.ChannelHandlerConfig;
 import com.microsoft.rest.http.HttpClient;
 import com.microsoft.rest.http.NettyClient;
 import com.microsoft.rest.policy.AddCookiesPolicy;
@@ -22,7 +21,6 @@ import com.microsoft.rest.serializer.JacksonAdapter;
 
 import java.net.Proxy;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -139,13 +137,6 @@ public final class RestClient {
      */
     public String userAgent() {
         return userAgent;
-    }
-
-    /**
-     * @return a new initialized instance of the default HttpClient type.
-     */
-    public static HttpClient createDefaultHttpClient() {
-        return new NettyClient(Collections.<RequestPolicy.Factory>emptyList());
     }
 
     /**

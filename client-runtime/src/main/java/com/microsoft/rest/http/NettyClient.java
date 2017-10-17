@@ -49,15 +49,6 @@ public final class NettyClient extends HttpClient {
     /**
      * Creates NettyClient.
      * @param policyFactories the sequence of RequestPolicies to apply when sending HTTP requests.
-     */
-    private NettyClient(List<RequestPolicy.Factory> policyFactories) {
-        super(policyFactories);
-        this.adapter = new NettyAdapter();
-    }
-
-    /**
-     * Creates NettyClient.
-     * @param policyFactories the sequence of RequestPolicies to apply when sending HTTP requests.
      * @param adapter the adapter to Netty
      */
     private NettyClient(List<RequestPolicy.Factory> policyFactories, NettyAdapter adapter) {

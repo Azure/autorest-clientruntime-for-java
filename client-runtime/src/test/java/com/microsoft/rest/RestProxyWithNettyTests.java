@@ -8,7 +8,7 @@ import com.microsoft.rest.policy.RequestPolicy.Factory;
 import java.util.Collections;
 
 public class RestProxyWithNettyTests extends RestProxyTests {
-    private static NettyClient.Factory nettyClientFactory = new NettyClient.Factory(2, 4);
+    private static NettyClient.Factory nettyClientFactory = new NettyClient.Factory();
 
     @Override
     protected HttpClient createHttpClient() {

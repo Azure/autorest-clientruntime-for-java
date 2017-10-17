@@ -35,7 +35,7 @@ public final class AzureEnvironment implements Environment {
     public static final AzureEnvironment AZURE = new AzureEnvironment(new HashMap<String, String>() {{
         put("portalUrl", "http://go.microsoft.com/fwlink/?LinkId=254433");
         put("publishingProfileUrl", "http://go.microsoft.com/fwlink/?LinkId=254432");
-        put("managementEndpointUrl", "https://management.core.windows.net");
+        put("managementEndpointUrl", "https://management.core.windows.net/");
         put("resourceManagerEndpointUrl", "https://management.azure.com/");
         put("sqlManagementEndpointUrl", "https://management.core.windows.net:8443/");
         put("sqlServerHostnameSuffix", ".database.windows.net");
@@ -57,8 +57,8 @@ public final class AzureEnvironment implements Environment {
     public static final AzureEnvironment AZURE_CHINA = new AzureEnvironment(new HashMap<String, String>() {{
         put("portalUrl", "http://go.microsoft.com/fwlink/?LinkId=301902");
         put("publishingProfileUrl", "http://go.microsoft.com/fwlink/?LinkID=301774");
-        put("managementEndpointUrl", "https://management.core.chinacloudapi.cn");
-        put("resourceManagerEndpointUrl", "https://management.chinacloudapi.cn");
+        put("managementEndpointUrl", "https://management.core.chinacloudapi.cn/");
+        put("resourceManagerEndpointUrl", "https://management.chinacloudapi.cn/");
         put("sqlManagementEndpointUrl", "https://management.core.chinacloudapi.cn:8443/");
         put("sqlServerHostnameSuffix", ".database.chinacloudapi.cn");
         put("galleryEndpointUrl", "https://gallery.chinacloudapi.cn/");
@@ -81,8 +81,8 @@ public final class AzureEnvironment implements Environment {
     public static final AzureEnvironment AZURE_US_GOVERNMENT = new AzureEnvironment(new HashMap<String, String>() {{
         put("portalUrl", "https://manage.windowsazure.us");
         put("publishingProfileUrl", "https://manage.windowsazure.us/publishsettings/index");
-        put("managementEndpointUrl", "https://management.core.usgovcloudapi.net");
-        put("resourceManagerEndpointUrl", "https://management.usgovcloudapi.net");
+        put("managementEndpointUrl", "https://management.core.usgovcloudapi.net/");
+        put("resourceManagerEndpointUrl", "https://management.usgovcloudapi.net/");
         put("sqlManagementEndpointUrl", "https://management.core.usgovcloudapi.net:8443/");
         put("sqlServerHostnameSuffix", ".database.usgovcloudapi.net");
         put("galleryEndpointUrl", "https://gallery.usgovcloudapi.net/");
@@ -105,8 +105,8 @@ public final class AzureEnvironment implements Environment {
     public static final AzureEnvironment AZURE_GERMANY = new AzureEnvironment(new HashMap<String, String>() {{
         put("portalUrl", "http://portal.microsoftazure.de/");
         put("publishingProfileUrl", "https://manage.microsoftazure.de/publishsettings/index");
-        put("managementEndpointUrl", "https://management.core.cloudapi.de");
-        put("resourceManagerEndpointUrl", "https://management.microsoftazure.de");
+        put("managementEndpointUrl", "https://management.core.cloudapi.de/");
+        put("resourceManagerEndpointUrl", "https://management.microsoftazure.de/");
         put("sqlManagementEndpointUrl", "https://management.core.cloudapi.de:8443/");
         put("sqlServerHostnameSuffix", ".database.cloudapi.de");
         put("galleryEndpointUrl", "https://gallery.cloudapi.de/");

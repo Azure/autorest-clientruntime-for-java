@@ -35,7 +35,7 @@ public final class AzureEnvironment implements Environment {
     public static final AzureEnvironment AZURE = new AzureEnvironment(new HashMap<String, String>() {{
         put("portalUrl", "http://go.microsoft.com/fwlink/?LinkId=254433");
         put("publishingProfileUrl", "http://go.microsoft.com/fwlink/?LinkId=254432");
-        put("managementEndpointUrl", "https://management.core.windows.net");
+        put("managementEndpointUrl", "https://management.core.windows.net/");
         put("resourceManagerEndpointUrl", "https://management.azure.com/");
         put("sqlManagementEndpointUrl", "https://management.core.windows.net:8443/");
         put("sqlServerHostnameSuffix", ".database.windows.net");
@@ -43,6 +43,7 @@ public final class AzureEnvironment implements Environment {
         put("activeDirectoryEndpointUrl", "https://login.microsoftonline.com/");
         put("activeDirectoryResourceId", "https://management.core.windows.net/");
         put("activeDirectoryGraphResourceId", "https://graph.windows.net/");
+        put("dataLakeEndpointResourceId", "https://datalake.azure.net/");
         put("activeDirectoryGraphApiVersion", "2013-04-05");
         put("storageEndpointSuffix", ".core.windows.net");
         put("keyVaultDnsSuffix", ".vault.azure.net");
@@ -56,14 +57,16 @@ public final class AzureEnvironment implements Environment {
     public static final AzureEnvironment AZURE_CHINA = new AzureEnvironment(new HashMap<String, String>() {{
         put("portalUrl", "http://go.microsoft.com/fwlink/?LinkId=301902");
         put("publishingProfileUrl", "http://go.microsoft.com/fwlink/?LinkID=301774");
-        put("managementEndpointUrl", "https://management.core.chinacloudapi.cn");
-        put("resourceManagerEndpointUrl", "https://management.chinacloudapi.cn");
+        put("managementEndpointUrl", "https://management.core.chinacloudapi.cn/");
+        put("resourceManagerEndpointUrl", "https://management.chinacloudapi.cn/");
         put("sqlManagementEndpointUrl", "https://management.core.chinacloudapi.cn:8443/");
         put("sqlServerHostnameSuffix", ".database.chinacloudapi.cn");
         put("galleryEndpointUrl", "https://gallery.chinacloudapi.cn/");
         put("activeDirectoryEndpointUrl", "https://login.chinacloudapi.cn/");
         put("activeDirectoryResourceId", "https://management.core.chinacloudapi.cn/");
         put("activeDirectoryGraphResourceId", "https://graph.chinacloudapi.cn/");
+        // TODO: add resource id for the china cloud for datalake once it is defined.
+        put("dataLakeEndpointResourceId", "N/A");
         put("activeDirectoryGraphApiVersion", "2013-04-05");
         put("storageEndpointSuffix", ".core.chinacloudapi.cn");
         put("keyVaultDnsSuffix", ".vault.azure.cn");
@@ -78,14 +81,16 @@ public final class AzureEnvironment implements Environment {
     public static final AzureEnvironment AZURE_US_GOVERNMENT = new AzureEnvironment(new HashMap<String, String>() {{
         put("portalUrl", "https://manage.windowsazure.us");
         put("publishingProfileUrl", "https://manage.windowsazure.us/publishsettings/index");
-        put("managementEndpointUrl", "https://management.core.usgovcloudapi.net");
-        put("resourceManagerEndpointUrl", "https://management.usgovcloudapi.net");
+        put("managementEndpointUrl", "https://management.core.usgovcloudapi.net/");
+        put("resourceManagerEndpointUrl", "https://management.usgovcloudapi.net/");
         put("sqlManagementEndpointUrl", "https://management.core.usgovcloudapi.net:8443/");
         put("sqlServerHostnameSuffix", ".database.usgovcloudapi.net");
         put("galleryEndpointUrl", "https://gallery.usgovcloudapi.net/");
         put("activeDirectoryEndpointUrl", "https://login-us.microsoftonline.com/");
         put("activeDirectoryResourceId", "https://management.core.usgovcloudapi.net/");
         put("activeDirectoryGraphResourceId", "https://graph.windows.net/");
+        // TODO: add resource id for the US government for datalake once it is defined.
+        put("dataLakeEndpointResourceId", "N/A");
         put("activeDirectoryGraphApiVersion", "2013-04-05");
         put("storageEndpointSuffix", ".core.usgovcloudapi.net");
         put("keyVaultDnsSuffix", ".vault.usgovcloudapi.net");
@@ -100,20 +105,22 @@ public final class AzureEnvironment implements Environment {
     public static final AzureEnvironment AZURE_GERMANY = new AzureEnvironment(new HashMap<String, String>() {{
         put("portalUrl", "http://portal.microsoftazure.de/");
         put("publishingProfileUrl", "https://manage.microsoftazure.de/publishsettings/index");
-        put("managementEndpointUrl", "https://management.core.cloudapi.de");
-        put("resourceManagerEndpointUrl", "https://management.microsoftazure.de");
+        put("managementEndpointUrl", "https://management.core.cloudapi.de/");
+        put("resourceManagerEndpointUrl", "https://management.microsoftazure.de/");
         put("sqlManagementEndpointUrl", "https://management.core.cloudapi.de:8443/");
         put("sqlServerHostnameSuffix", ".database.cloudapi.de");
         put("galleryEndpointUrl", "https://gallery.cloudapi.de/");
         put("activeDirectoryEndpointUrl", "https://login.microsoftonline.de/");
         put("activeDirectoryResourceId", "https://management.core.cloudapi.de/");
         put("activeDirectoryGraphResourceId", "https://graph.cloudapi.de/");
+        // TODO: add resource id for the germany cloud for datalake once it is defined.
+        put("dataLakeEndpointResourceId", "N/A");
         put("activeDirectoryGraphApiVersion", "2013-04-05");
         put("storageEndpointSuffix", ".core.cloudapi.de");
         put("keyVaultDnsSuffix", ".vault.microsoftazure.de");
-        // TODO: add dns suffixes for the US government for datalake store and datalake analytics once they are defined.
+        // TODO: add dns suffixes for the germany cloud for datalake store and datalake analytics once they are defined.
         put("azureDataLakeStoreFileSystemEndpointSuffix", "N/A");
-        put("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix", "N/");
+        put("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix", "N/A");
     }});
 
     /**
@@ -202,6 +209,13 @@ public final class AzureEnvironment implements Environment {
     }
 
     /**
+     * @return the Data Lake resource ID.
+     */
+    public String dataLakeEndpointResourceId() {
+        return endpoints.get("dataLakeEndpointResourceId");
+    }
+
+    /**
      * @return the Active Directory api version.
      */
     public String activeDirectoryGraphApiVersion() {
@@ -241,20 +255,24 @@ public final class AzureEnvironment implements Environment {
      * The enum representing available endpoints in an environment.
      */
     public enum Endpoint implements Environment.Endpoint {
+        /** Azure management endpoint. */
+        MANAGEMENT("managementEndpointUrl"),
         /** Azure Resource Manager endpoint. */
         RESOURCE_MANAGER("resourceManagerEndpointUrl"),
-        /** Azure Active Directory Graph APIs endpoint. */
-        GRAPH("activeDirectoryGraphResourceId"),
         /** Azure SQL endpoint. */
         SQL("sqlManagementEndpointUrl"),
         /** Azure Gallery endpoint. */
         GALLERY("galleryEndpointUrl"),
         /** Active Directory authentication endpoint. */
         ACTIVE_DIRECTORY("activeDirectoryEndpointUrl"),
-        /** Azure management endpoint. */
-        MANAGEMENT("managementEndpointUrl"),
+        /** Azure Active Directory Graph APIs endpoint. */
+        GRAPH("activeDirectoryGraphResourceId"),
         /** Key Vault DNS suffix. */
-        KEYVAULT("keyVaultDnsSuffix");
+        KEYVAULT("keyVaultDnsSuffix"),
+        /** Azure Data Lake Store DNS suffix. */
+        DATA_LAKE_STORE("azureDataLakeStoreFileSystemEndpointSuffix"),
+        /** Azure Data Lake Analytics DNS suffix. */
+        DATA_LAKE_ANALYTICS("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix");
 
         private String field;
 

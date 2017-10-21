@@ -8,13 +8,15 @@ package com.microsoft.rest;
 
 import com.google.common.reflect.TypeToken;
 import com.microsoft.rest.http.ContentType;
-import com.microsoft.rest.http.HttpHeaders;
-import com.microsoft.rest.protocol.SerializerAdapter;
+import com.microsoft.rest.http.FileRequestBody;
+import com.microsoft.rest.http.FileSegment;
 import com.microsoft.rest.http.HttpClient;
 import com.microsoft.rest.http.HttpHeader;
+import com.microsoft.rest.http.HttpHeaders;
 import com.microsoft.rest.http.HttpRequest;
 import com.microsoft.rest.http.HttpResponse;
 import com.microsoft.rest.http.UrlBuilder;
+import com.microsoft.rest.protocol.SerializerAdapter;
 import com.microsoft.rest.protocol.SerializerAdapter.Encoding;
 import com.microsoft.rest.protocol.TypeFactory;
 import org.joda.time.DateTime;
@@ -286,6 +288,9 @@ public class RestProxy implements InvocationHandler {
             }
             else if (bodyContentObject instanceof byte[]) {
                 request.withBody((byte[]) bodyContentObject, contentType);
+            }
+            else if (bodyContentObject instanceof FileSegment) {
+                request.withBody(new FileRequestBody((FileSegment) bodyContentObject));
             }
             else if (bodyContentObject instanceof String) {
                 final String bodyContentString = (String) bodyContentObject;

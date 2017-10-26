@@ -385,6 +385,17 @@ public class RestProxy implements InvocationHandler {
         return asyncResult;
     }
 
+    private boolean isObservableByteArray(TypeToken entityTypeToken) {
+        if (entityTypeToken.isSubtypeOf(Observable.class)) {
+            final Type innerType = ((ParameterizedType) entityTypeToken.getType()).getActualTypeArguments()[0];
+            final TypeToken innerTypeToken = TypeToken.of(innerType);
+            if (innerTypeToken.isSubtypeOf(byte[].class)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private Single<?> handleBodyReturnTypeAsync(final HttpResponse response, final SwaggerMethodParser methodParser, final Type entityType) {
         final TypeToken entityTypeToken = TypeToken.of(entityType);
         final int responseStatusCode = response.statusCode();
@@ -411,6 +422,8 @@ public class RestProxy implements InvocationHandler {
                 });
             }
             asyncResult = responseBodyBytesAsync;
+        } else if (isObservableByteArray(entityTypeToken)) {
+            asyncResult = Single.just(response.streamBodyAsync());
         } else {
             asyncResult = response
                     .bodyAsStringAsync()

@@ -12,6 +12,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
@@ -27,13 +28,11 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import rx.Emitter;
-import rx.Emitter.BackpressureMode;
-import rx.Observable;
 import rx.Single;
 import rx.SingleEmitter;
 import rx.functions.Action0;
 import rx.functions.Action1;
+import rx.functions.Cancellable;
 import rx.subjects.ReplaySubject;
 
 import java.net.URI;
@@ -123,6 +122,8 @@ public final class NettyClient extends HttpClient {
                                 return;
                             }
 
+                            System.out.println("Channel acquired");
+
                             final Channel channel = (Channel) cf.getNow();
 
                             HttpClientInboundHandler inboundHandler = channel.pipeline().get(HttpClientInboundHandler.class);
@@ -169,9 +170,17 @@ public final class NettyClient extends HttpClient {
                                 raw.headers().add(header.name(), header.value());
                             }
                             raw.headers().set(HEADER_CONTENT_LENGTH, raw.content().readableBytes());
-                            channel.writeAndFlush(raw).addListener(new GenericFutureListener<Future<? super Void>>() {
+                            final ChannelFuture sendRequest = channel.writeAndFlush(raw);
+                            emitter.setCancellation(new Cancellable() {
+                                @Override
+                                public void cancel() throws Exception {
+                                    sendRequest.cancel(true);
+                                }
+                            });
+                            sendRequest.addListener(new GenericFutureListener<Future<? super Void>>() {
                                 @Override
                                 public void operationComplete(Future<? super Void> v) throws Exception {
+                                    System.out.println("Request sent");
                                     if (v.isSuccess()) {
                                         channel.read();
                                     } else {
@@ -211,6 +220,7 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+            System.out.println("response received");
             if (msg instanceof io.netty.handler.codec.http.HttpResponse) {
                 io.netty.handler.codec.http.HttpResponse response = (io.netty.handler.codec.http.HttpResponse) msg;
 

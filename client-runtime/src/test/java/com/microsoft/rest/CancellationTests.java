@@ -10,7 +10,6 @@ package com.microsoft.rest;
 import com.microsoft.rest.annotations.ExpectedResponses;
 import com.microsoft.rest.annotations.GET;
 import com.microsoft.rest.annotations.Host;
-import com.microsoft.rest.entities.HttpBinJSON;
 import com.microsoft.rest.http.HttpClient;
 import com.microsoft.rest.http.HttpClient.Configuration;
 import com.microsoft.rest.http.NettyClient;
@@ -18,16 +17,16 @@ import com.microsoft.rest.policy.RequestPolicy.Factory;
 import com.microsoft.rest.serializer.JacksonAdapter;
 import org.junit.Assert;
 import org.junit.Test;
+import rx.Observable;
 import rx.Single;
 import rx.Subscription;
 import rx.functions.Action1;
+import rx.functions.Func1;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.Assert.fail;
 
 public class CancellationTests {
 
@@ -41,98 +40,111 @@ public class CancellationTests {
 
     @Host("http://httpbin.org")
     private interface Service {
-        @GET("bytes/10737418240")
+        @GET("bytes/102400")
         @ExpectedResponses({200})
         Single<byte[]> getByteArrayAsync();
 
-        @GET("stream-bytes/10737418240")
+        @GET("bytes/102400")
         @ExpectedResponses({200})
-        Single<InputStream> getByteArrayAsStreamAsync();
-
-        @GET("anything")
-        @ExpectedResponses({200})
-        HttpBinJSON getAnything();
+        Single<Observable<byte[]>> getByteArrayAsStreamAsync();
     }
 
     @Test
     public void cancelOperationInProgress() throws Exception {
-        Subscription subscription = proxy.getByteArrayAsync().subscribe(new Action1<byte[]>() {
-            @Override
-            public void call(byte[] bytes) {
-                fail();
-            }
-        });
+        final AtomicBoolean finished = new AtomicBoolean(false);
+        Subscription subscription = proxy.getByteArrayAsync()
+                .subscribe(new Action1<byte[]>() {
+                    @Override
+                    public void call(byte[] voidRestResponse) {
+                        finished.set(true);
+                    }
+                });
 
-        Thread.sleep(1000);
+        Thread.sleep(100);
 
         subscription.unsubscribe();
         Assert.assertTrue(subscription.isUnsubscribed());
+
+        Thread.sleep(1000);
+        Assert.assertFalse(finished.get());
     }
 
     @Test
     public void cancelStreamingInProgress() throws Exception {
         final AtomicInteger received = new AtomicInteger();
-        Subscription subscription = proxy.getByteArrayAsStreamAsync()
-                .subscribe(new Action1<InputStream>() {
-            @Override
-            public void call(InputStream inputStream) {
-                try {
-                    while (inputStream.read() >= 0) {
-                        received.incrementAndGet();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        Subscription subscription = proxy.getByteArrayAsStreamAsync().toObservable()
+                .flatMap(new Func1<Observable<byte[]>, Observable<byte[]>>() {
+                    @Override
+                    public Observable<byte[]> call(Observable<byte[]> observable) {
+                        return observable;
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+                })
+                .subscribe(new Action1<byte[]>() {
+                    @Override
+                    public void call(byte[] bytes) {
+                        received.addAndGet(bytes.length);
+                        if (received.get() >= 30000) {
+                            latch.countDown();
+                        }
+                    }
+                }, new Action1<Throwable>() {
+                    @Override
+                    public void call(Throwable throwable) {
+                        throwable.printStackTrace();
+                    }
+                });
 
-        Thread.sleep(3000);
+        latch.await();
 
-//        subscription.unsubscribe();
-//        Assert.assertTrue(subscription.isUnsubscribed());
-        System.out.println("received " + received.get());
+        subscription.unsubscribe();
+        Assert.assertTrue(subscription.isUnsubscribed());
+        int partial = received.get();
 
-        Thread.sleep(5000);
-        System.out.println("received " + received.get());
+        Thread.sleep(1000);
+        Assert.assertEquals(partial, received.get());
     }
 
     @Test
     public void cancelOperationBeforeSent() throws Exception {
         final AtomicInteger firstReceived = new AtomicInteger();
         final AtomicInteger secondReceived = new AtomicInteger();
-        Subscription first = proxy.getByteArrayAsStreamAsync().subscribe(new Action1<InputStream>() {
-            @Override
-            public void call(InputStream inputStream) {
-                try {
-                    while (inputStream.read() >= 0) {
-                        firstReceived.incrementAndGet();
+        Subscription first = proxy.getByteArrayAsStreamAsync().toObservable()
+                .flatMap(new Func1<Observable<byte[]>, Observable<byte[]>>() {
+                    @Override
+                    public Observable<byte[]> call(Observable<byte[]> observable) {
+                        return observable;
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        Subscription second = proxy.getByteArrayAsStreamAsync().subscribe(new Action1<InputStream>() {
-            @Override
-            public void call(InputStream inputStream) {
-                try {
-                    while (inputStream.read() >= 0) {
-                        secondReceived.incrementAndGet();
+                })
+                .subscribe(new Action1<byte[]>() {
+                    @Override
+                    public void call(byte[] bytes) {
+                        firstReceived.addAndGet(bytes.length);
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+                });
 
-        Thread.sleep(5000);
+
+        Thread.sleep(500);
+
+        Subscription second = proxy.getByteArrayAsStreamAsync().toObservable()
+                .flatMap(new Func1<Observable<byte[]>, Observable<byte[]>>() {
+                    @Override
+                    public Observable<byte[]> call(Observable<byte[]> observable) {
+                        return observable;
+                    }
+                })
+                .subscribe(new Action1<byte[]>() {
+                    @Override
+                    public void call(byte[] bytes) {
+                        secondReceived.addAndGet(bytes.length);
+                    }
+                });
 
         second.unsubscribe();
         first.unsubscribe();
         Assert.assertTrue(first.isUnsubscribed());
         Assert.assertTrue(second.isUnsubscribed());
-        System.out.println("First received " + firstReceived.get());
-        System.out.println("Second received " + secondReceived.get());
+        Assert.assertEquals(0, secondReceived.get());
     }
 }

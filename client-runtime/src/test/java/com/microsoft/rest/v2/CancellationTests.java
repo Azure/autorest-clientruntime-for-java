@@ -4,17 +4,17 @@
  * license information.
  */
 
-package com.microsoft.rest;
+package com.microsoft.rest.v2;
 
 
-import com.microsoft.rest.annotations.ExpectedResponses;
-import com.microsoft.rest.annotations.GET;
-import com.microsoft.rest.annotations.Host;
-import com.microsoft.rest.http.HttpClient;
-import com.microsoft.rest.http.HttpClient.Configuration;
-import com.microsoft.rest.http.NettyClient;
-import com.microsoft.rest.policy.RequestPolicy.Factory;
-import com.microsoft.rest.serializer.JacksonAdapter;
+import com.microsoft.rest.v2.annotations.ExpectedResponses;
+import com.microsoft.rest.v2.annotations.GET;
+import com.microsoft.rest.v2.annotations.Host;
+import com.microsoft.rest.v2.http.HttpClient;
+import com.microsoft.rest.v2.http.HttpClient.Configuration;
+import com.microsoft.rest.v2.http.NettyClient;
+import com.microsoft.rest.v2.policy.RequestPolicy;
+import com.microsoft.rest.v2.serializer.JacksonAdapter;
 import org.junit.Assert;
 import org.junit.Test;
 import rx.Observable;
@@ -34,7 +34,7 @@ public class CancellationTests {
     private Service proxy;
 
     public CancellationTests() {
-        httpClient = new NettyClient.Factory(1, 1).create(new Configuration(new ArrayList<Factory>(), null));
+        httpClient = new NettyClient.Factory(1, 1).create(new Configuration(new ArrayList<RequestPolicy.Factory>(), null));
         proxy = RestProxy.create(Service.class, null, httpClient, new JacksonAdapter());
     }
 

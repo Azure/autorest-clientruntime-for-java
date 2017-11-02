@@ -12,6 +12,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
@@ -27,12 +28,17 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import rx.Observable;
 import rx.Single;
-import rx.SingleEmitter;
+import rx.Single.OnSubscribe;
+import rx.SingleSubscriber;
+import rx.Subscriber;
 import rx.functions.Action0;
-import rx.functions.Action1;
 import rx.subjects.ReplaySubject;
+import rx.subjects.UnicastSubject;
+import rx.subscriptions.Subscriptions;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -109,20 +115,20 @@ public final class NettyClient extends HttpClient {
             }
 
             // Creates cold observable from an emitter
-            return Single.fromEmitter(new Action1<SingleEmitter<HttpResponse>>() {
+            return Single.create(new OnSubscribe<HttpResponse>() {
                 @Override
-                public void call(final SingleEmitter<HttpResponse> emitter) {
+                public void call(final SingleSubscriber<? super HttpResponse> subscriber) {
                     channelPool.acquire(uri).addListener(new GenericFutureListener<Future<? super Channel>>() {
                         @Override
                         public void operationComplete(Future<? super Channel> cf) throws Exception {
                             if (!cf.isSuccess()) {
-                                emitter.onError(cf.cause());
+                                subscriber.onError(cf.cause());
                                 return;
                             }
 
                             final Channel channel = (Channel) cf.getNow();
 
-                            HttpClientInboundHandler inboundHandler = channel.pipeline().get(HttpClientInboundHandler.class);
+                            final HttpClientInboundHandler inboundHandler = channel.pipeline().get(HttpClientInboundHandler.class);
                             if (request.httpMethod().equalsIgnoreCase("HEAD")) {
                                 // Use HttpClientCodec for HEAD operations
                                 if (channel.pipeline().get("HttpClientCodec") == null) {
@@ -138,7 +144,8 @@ public final class NettyClient extends HttpClient {
                                 }
                                 inboundHandler.contentExpected = true;
                             }
-                            inboundHandler.responseEmitter = emitter;
+                            inboundHandler.responseSubscriber = subscriber;
+                            inboundHandler.nettyResponseBuilder =  new NettyResponse.Builder();
 
                             final DefaultFullHttpRequest raw;
                             if (request.body() == null || request.body().contentLength() == 0) {
@@ -166,32 +173,35 @@ public final class NettyClient extends HttpClient {
                                 raw.headers().add(header.name(), header.value());
                             }
                             raw.headers().set(HEADER_CONTENT_LENGTH, raw.content().readableBytes());
-                            channel.writeAndFlush(raw).addListener(new GenericFutureListener<Future<? super Void>>() {
+                            final ChannelFuture sendRequest = channel.writeAndFlush(raw);
+                            sendRequest.addListener(new GenericFutureListener<Future<? super Void>>() {
                                 @Override
                                 public void operationComplete(Future<? super Void> v) throws Exception {
                                     if (v.isSuccess()) {
-                                        channel.read();
+                                        inboundHandler.nettyResponseBuilder.withContent(Observable.create(new Observable.OnSubscribe<ByteBuf>() {
+                                            @Override
+                                            public void call(final Subscriber<? super ByteBuf> contentSubscriber) {
+                                                inboundHandler.contentSubscriber = contentSubscriber;
+                                                channel.read();
+                                            }
+                                        }));
                                     } else {
-                                        emitter.onError(v.cause());
+                                        subscriber.onError(v.cause());
                                     }
                                 }
                             });
                         }
                     });
                 }
-            }).doOnUnsubscribe(new Action0() {
-                        @Override
-                        public void call() {
-                            // close the connection, release resources
-                        }
-                    });
+            });
         }
     }
 
     private static final class HttpClientInboundHandler extends ChannelInboundHandlerAdapter {
 
-        private ReplaySubject<ByteBuf> contentEmitter;
-        private SingleEmitter<HttpResponse> responseEmitter;
+        private NettyResponse.Builder nettyResponseBuilder;
+        private Subscriber<? super ByteBuf> contentSubscriber;
+        private SingleSubscriber<? super HttpResponse> responseSubscriber;
         private NettyAdapter adapter;
         private long contentLength;
         private boolean contentExpected;
@@ -203,12 +213,13 @@ public final class NettyClient extends HttpClient {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             adapter.channelPool.release(ctx.channel());
-            responseEmitter.onError(cause);
+            responseSubscriber.onError(cause);
         }
 
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof io.netty.handler.codec.http.HttpResponse) {
+
                 io.netty.handler.codec.http.HttpResponse response = (io.netty.handler.codec.http.HttpResponse) msg;
 
                 if (response.decoderResult().isFailure()) {
@@ -220,16 +231,21 @@ public final class NettyClient extends HttpClient {
                     contentLength = Long.parseLong(response.headers().get(HEADER_CONTENT_LENGTH));
                 }
 
-                contentEmitter = ReplaySubject.create();
-                responseEmitter.onSuccess(new NettyResponse(response, contentEmitter));
+                responseSubscriber.onSuccess(nettyResponseBuilder.withResponse(response).build());
+                responseSubscriber.add(Subscriptions.create(new Action0() {
+                    @Override
+                    public void call() {
+                        contentSubscriber.onCompleted();
+                    }
+                }));
             }
             if (msg instanceof HttpContent) {
                 HttpContent content = (HttpContent) msg;
                 ByteBuf buf = content.content();
 
                 if (contentLength == 0 || !contentExpected) {
-                    contentEmitter.onNext(buf);
-                    contentEmitter.onCompleted();
+                    contentSubscriber.onNext(buf);
+                    contentSubscriber.onCompleted();
                     adapter.channelPool.release(ctx.channel());
                     return;
                 }
@@ -237,11 +253,11 @@ public final class NettyClient extends HttpClient {
                 if (contentLength > 0 && buf != null && buf.readableBytes() > 0) {
                     int readable = buf.readableBytes();
                     contentLength -= readable;
-                    contentEmitter.onNext(buf);
+                    contentSubscriber.onNext(buf);
                 }
 
                 if (contentLength == 0) {
-                    contentEmitter.onCompleted();
+                    contentSubscriber.onCompleted();
                     adapter.channelPool.release(ctx.channel());
                 }
             }

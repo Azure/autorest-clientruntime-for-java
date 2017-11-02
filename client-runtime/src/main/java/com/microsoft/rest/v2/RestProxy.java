@@ -438,7 +438,7 @@ public class RestProxy implements InvocationHandler {
             }
             asyncResult = responseBodyBytesAsync;
         } else if (isObservableByteArray(entityTypeToken)) {
-            asyncResult = Single.just(response.streamBodyAsync());
+            asyncResult = Observable.just(response.streamBodyAsync()).toSingle();
         } else {
             asyncResult = response
                     .bodyAsStringAsync()

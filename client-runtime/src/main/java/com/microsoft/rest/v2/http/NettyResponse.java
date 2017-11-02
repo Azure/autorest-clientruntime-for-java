@@ -27,7 +27,7 @@ class NettyResponse extends HttpResponse {
     private final long contentLength;
     private final Observable<ByteBuf> emitter;
 
-    NettyResponse(io.netty.handler.codec.http.HttpResponse rxnRes, Observable<ByteBuf> emitter) {
+    private NettyResponse(io.netty.handler.codec.http.HttpResponse rxnRes, Observable<ByteBuf> emitter) {
         this.rxnRes = rxnRes;
         this.contentLength = getContentLength(rxnRes);
         this.emitter = emitter;
@@ -137,6 +137,25 @@ class NettyResponse extends HttpResponse {
         @Override
         public void close() {
             ReferenceCountUtil.release(this.buffer);
+        }
+    }
+
+    static class Builder {
+        private io.netty.handler.codec.http.HttpResponse rxnRes;
+        private Observable<ByteBuf> content;
+
+        Builder withResponse(io.netty.handler.codec.http.HttpResponse rxnRes) {
+            this.rxnRes = rxnRes;
+            return this;
+        }
+
+        Builder withContent(Observable<ByteBuf> content) {
+            this.content = content;
+            return this;
+        }
+
+        NettyResponse build() {
+            return new NettyResponse(rxnRes, content);
         }
     }
 }

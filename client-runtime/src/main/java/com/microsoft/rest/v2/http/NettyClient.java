@@ -28,13 +28,17 @@ import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import rx.Observable;
 import rx.Single;
 import rx.Single.OnSubscribe;
 import rx.SingleSubscriber;
+import rx.Subscriber;
 import rx.functions.Action0;
+import rx.subjects.ReplaySubject;
 import rx.subjects.UnicastSubject;
 import rx.subscriptions.Subscriptions;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -124,7 +128,7 @@ public final class NettyClient extends HttpClient {
 
                             final Channel channel = (Channel) cf.getNow();
 
-                            HttpClientInboundHandler inboundHandler = channel.pipeline().get(HttpClientInboundHandler.class);
+                            final HttpClientInboundHandler inboundHandler = channel.pipeline().get(HttpClientInboundHandler.class);
                             if (request.httpMethod().equalsIgnoreCase("HEAD")) {
                                 // Use HttpClientCodec for HEAD operations
                                 if (channel.pipeline().get("HttpClientCodec") == null) {
@@ -141,6 +145,7 @@ public final class NettyClient extends HttpClient {
                                 inboundHandler.contentExpected = true;
                             }
                             inboundHandler.responseSubscriber = subscriber;
+                            inboundHandler.nettyResponseBuilder =  new NettyResponse.Builder();
 
                             final DefaultFullHttpRequest raw;
                             if (request.body() == null || request.body().contentLength() == 0) {
@@ -173,7 +178,13 @@ public final class NettyClient extends HttpClient {
                                 @Override
                                 public void operationComplete(Future<? super Void> v) throws Exception {
                                     if (v.isSuccess()) {
-                                        channel.read();
+                                        inboundHandler.nettyResponseBuilder.withContent(Observable.create(new Observable.OnSubscribe<ByteBuf>() {
+                                            @Override
+                                            public void call(final Subscriber<? super ByteBuf> contentSubscriber) {
+                                                inboundHandler.contentSubscriber = contentSubscriber;
+                                                channel.read();
+                                            }
+                                        }));
                                     } else {
                                         subscriber.onError(v.cause());
                                     }
@@ -188,7 +199,8 @@ public final class NettyClient extends HttpClient {
 
     private static final class HttpClientInboundHandler extends ChannelInboundHandlerAdapter {
 
-        private UnicastSubject<ByteBuf> contentSubject;
+        private NettyResponse.Builder nettyResponseBuilder;
+        private Subscriber<? super ByteBuf> contentSubscriber;
         private SingleSubscriber<? super HttpResponse> responseSubscriber;
         private NettyAdapter adapter;
         private long contentLength;
@@ -207,12 +219,6 @@ public final class NettyClient extends HttpClient {
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof io.netty.handler.codec.http.HttpResponse) {
-                responseSubscriber.add(Subscriptions.create(new Action0() {
-                    @Override
-                    public void call() {
-                        contentSubject.onCompleted();
-                    }
-                }));
 
                 io.netty.handler.codec.http.HttpResponse response = (io.netty.handler.codec.http.HttpResponse) msg;
 
@@ -225,16 +231,21 @@ public final class NettyClient extends HttpClient {
                     contentLength = Long.parseLong(response.headers().get(HEADER_CONTENT_LENGTH));
                 }
 
-                contentSubject = UnicastSubject.create();
-                responseSubscriber.onSuccess(new NettyResponse(response, contentSubject));
+                responseSubscriber.onSuccess(nettyResponseBuilder.withResponse(response).build());
+                responseSubscriber.add(Subscriptions.create(new Action0() {
+                    @Override
+                    public void call() {
+                        contentSubscriber.onCompleted();
+                    }
+                }));
             }
             if (msg instanceof HttpContent) {
                 HttpContent content = (HttpContent) msg;
                 ByteBuf buf = content.content();
 
                 if (contentLength == 0 || !contentExpected) {
-                    contentSubject.onNext(buf);
-                    contentSubject.onCompleted();
+                    contentSubscriber.onNext(buf);
+                    contentSubscriber.onCompleted();
                     adapter.channelPool.release(ctx.channel());
                     return;
                 }
@@ -242,11 +253,11 @@ public final class NettyClient extends HttpClient {
                 if (contentLength > 0 && buf != null && buf.readableBytes() > 0) {
                     int readable = buf.readableBytes();
                     contentLength -= readable;
-                    contentSubject.onNext(buf);
+                    contentSubscriber.onNext(buf);
                 }
 
                 if (contentLength == 0) {
-                    contentSubject.onCompleted();
+                    contentSubscriber.onCompleted();
                     adapter.channelPool.release(ctx.channel());
                 }
             }

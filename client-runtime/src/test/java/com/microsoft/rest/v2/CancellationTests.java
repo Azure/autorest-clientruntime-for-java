@@ -10,15 +10,18 @@ package com.microsoft.rest.v2;
 import com.microsoft.rest.v2.annotations.ExpectedResponses;
 import com.microsoft.rest.v2.annotations.GET;
 import com.microsoft.rest.v2.annotations.Host;
+import com.microsoft.rest.v2.annotations.PathParam;
 import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpClient.Configuration;
 import com.microsoft.rest.v2.http.NettyClient;
 import com.microsoft.rest.v2.policy.RequestPolicy;
 import com.microsoft.rest.v2.serializer.JacksonAdapter;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import rx.Observable;
 import rx.Single;
+import rx.Subscriber;
 import rx.Subscription;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -34,25 +37,25 @@ public class CancellationTests {
     private Service proxy;
 
     public CancellationTests() {
-        httpClient = new NettyClient.Factory(1, 1).create(new Configuration(new ArrayList<RequestPolicy.Factory>(), null));
+        httpClient = new NettyClient.Factory().create(new Configuration(new ArrayList<RequestPolicy.Factory>(), null));
         proxy = RestProxy.create(Service.class, null, httpClient, new JacksonAdapter());
     }
 
     @Host("http://httpbin.org")
     private interface Service {
-        @GET("bytes/102400")
+        @GET("bytes/{length}")
         @ExpectedResponses({200})
-        Single<byte[]> getByteArrayAsync();
+        Single<byte[]> getByteArrayAsync(@PathParam("length") int length);
 
-        @GET("bytes/102400")
+        @GET("bytes/{length}")
         @ExpectedResponses({200})
-        Single<Observable<byte[]>> getByteArrayAsStreamAsync();
+        Single<RestResponse<Void, Observable<byte[]>>> getByteArrayAsStreamAsync(@PathParam("length") int length);
     }
 
     @Test
     public void cancelOperationInProgress() throws Exception {
         final AtomicBoolean finished = new AtomicBoolean(false);
-        Subscription subscription = proxy.getByteArrayAsync()
+        Subscription subscription = proxy.getByteArrayAsync(102400)
                 .subscribe(new Action1<byte[]>() {
                     @Override
                     public void call(byte[] voidRestResponse) {
@@ -74,11 +77,11 @@ public class CancellationTests {
         final AtomicInteger received = new AtomicInteger();
 
         final CountDownLatch latch = new CountDownLatch(1);
-        Subscription subscription = proxy.getByteArrayAsStreamAsync().toObservable()
-                .flatMap(new Func1<Observable<byte[]>, Observable<byte[]>>() {
+        Subscription subscription = proxy.getByteArrayAsStreamAsync(102400).toObservable()
+                .flatMap(new Func1<RestResponse<Void, Observable<byte[]>>, Observable<byte[]>>() {
                     @Override
-                    public Observable<byte[]> call(Observable<byte[]> observable) {
-                        return observable;
+                    public Observable<byte[]> call(RestResponse<Void, Observable<byte[]>> voidObservableRestResponse) {
+                        return voidObservableRestResponse.body();
                     }
                 })
                 .subscribe(new Action1<byte[]>() {
@@ -110,11 +113,11 @@ public class CancellationTests {
     public void cancelOperationBeforeSent() throws Exception {
         final AtomicInteger firstReceived = new AtomicInteger();
         final AtomicInteger secondReceived = new AtomicInteger();
-        Subscription first = proxy.getByteArrayAsStreamAsync().toObservable()
-                .flatMap(new Func1<Observable<byte[]>, Observable<byte[]>>() {
+        Subscription first = proxy.getByteArrayAsStreamAsync(102400).toObservable()
+                .flatMap(new Func1<RestResponse<Void, Observable<byte[]>>, Observable<byte[]>>() {
                     @Override
-                    public Observable<byte[]> call(Observable<byte[]> observable) {
-                        return observable;
+                    public Observable<byte[]> call(RestResponse<Void, Observable<byte[]>> voidObservableRestResponse) {
+                        return voidObservableRestResponse.body();
                     }
                 })
                 .subscribe(new Action1<byte[]>() {
@@ -127,11 +130,11 @@ public class CancellationTests {
 
         Thread.sleep(500);
 
-        Subscription second = proxy.getByteArrayAsStreamAsync().toObservable()
-                .flatMap(new Func1<Observable<byte[]>, Observable<byte[]>>() {
+        Subscription second = proxy.getByteArrayAsStreamAsync(102400).toObservable()
+                .flatMap(new Func1<RestResponse<Void, Observable<byte[]>>, Observable<byte[]>>() {
                     @Override
-                    public Observable<byte[]> call(Observable<byte[]> observable) {
-                        return observable;
+                    public Observable<byte[]> call(RestResponse<Void, Observable<byte[]>> voidObservableRestResponse) {
+                        return voidObservableRestResponse.body();
                     }
                 })
                 .subscribe(new Action1<byte[]>() {
@@ -146,5 +149,39 @@ public class CancellationTests {
         Assert.assertTrue(first.isUnsubscribed());
         Assert.assertTrue(second.isUnsubscribed());
         Assert.assertEquals(0, secondReceived.get());
+    }
+
+    @Test
+    public void cancelOperationsInParallel() throws Exception {
+        final AtomicInteger received = new AtomicInteger();
+        Single<RestResponse<Void, Observable<byte[]>>> first = proxy.getByteArrayAsStreamAsync(102400);
+        Single<RestResponse<Void, Observable<byte[]>>> second = proxy.getByteArrayAsStreamAsync(65536);
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        Subscription subscription = first.mergeWith(second)
+                .flatMap(new Func1<RestResponse<Void, Observable<byte[]>>, Observable<byte[]>>() {
+                    @Override
+                    public Observable<byte[]> call(RestResponse<Void, Observable<byte[]>> voidObservableRestResponse) {
+                        return voidObservableRestResponse.body();
+                    }
+                })
+                .subscribe(new Action1<byte[]>() {
+                    @Override
+                    public void call(byte[] bytes) {
+                        received.addAndGet(bytes.length);
+                        if (received.get() >= 102400) {
+                            latch.countDown();
+                        }
+                    }
+                });
+
+        latch.await();
+
+//        subscription.unsubscribe();
+//        Assert.assertTrue(subscription.isUnsubscribed());
+//        int partial = received.get();
+//
+//        Thread.sleep(5000);
+//        Assert.assertEquals(partial, received.get());
     }
 }

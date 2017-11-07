@@ -12,7 +12,7 @@ import com.microsoft.rest.v2.DateTimeRfc1123;
 import com.microsoft.rest.v2.entities.HttpBinJSON;
 import com.microsoft.rest.v2.policy.RequestPolicy;
 import org.joda.time.DateTime;
-import rx.Single;
+import io.reactivex.Single;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,7 +33,8 @@ public class MockHttpClient extends HttpClient {
             .set("Via", "1.1 vegur")
             .set("Connection", "keep-alive")
             .set("X-Processed-Time", "1.0")
-            .set("Access-Control-Allow-Credentials", "true");
+            .set("Access-Control-Allow-Credentials", "true")
+            .set("Content-Type", "application/json");
 
     public MockHttpClient() {}
 
@@ -171,6 +172,10 @@ public class MockHttpClient extends HttpClient {
             }
         }
         catch (Exception ignored) {
+        }
+
+        if (response == null) {
+            response = new MockHttpResponse(500);
         }
 
         return Single.just(response);

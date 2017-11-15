@@ -15,6 +15,7 @@ import com.microsoft.azure.management.apigeneration.Beta;
 import com.microsoft.azure.management.apigeneration.Beta.SinceVersion;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -64,6 +65,32 @@ public class DelegatedTokenCredentials extends AzureTokenCredentials {
         this.redirectUrl = redirectUrl;
         this.authorizationCode = authorizationCode;
         this.refreshTokenClient = new RefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(), proxy());
+    }
+
+    /**
+     * Creates a new instance of the DelegatedTokenCredentials from an auth file.
+     *
+     * @param authFile The credentials based on the file
+     * @param redirectUrl the URL to redirect to after authentication in Active Directory
+     * @return a new delegated token credentials
+     * @throws IOException exception thrown from file access errors.
+     */
+    public static DelegatedTokenCredentials fromFile(File authFile, String redirectUrl) throws IOException {
+        return new DelegatedTokenCredentials(ApplicationTokenCredentials.fromFile(authFile), redirectUrl);
+    }
+
+    /**
+     * Creates a new instance of the DelegatedTokenCredentials from an auth file,
+     * with a pre-acquired oauth2 authorization code.
+     *
+     * @param authFile The credentials based on the file
+     * @param redirectUrl the URL to redirect to after authentication in Active Directory
+     * @param authorizationCode the oauth2 authorization code
+     * @return a new delegated token credentials
+     * @throws IOException exception thrown from file access errors.
+     */
+    public static DelegatedTokenCredentials fromFile(File authFile, String redirectUrl, String authorizationCode) throws IOException {
+        return new DelegatedTokenCredentials(ApplicationTokenCredentials.fromFile(authFile), redirectUrl, authorizationCode);
     }
 
     /**

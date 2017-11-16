@@ -1,3 +1,14 @@
+1.2.0 (2017.11.15)
+  - Add delegated token credentials
+  - Update OkHttp to 3.4 and Okio to 1.9
+
+1.1.1 (2017.10.18)
+  - Adding MSICredentails type
+  - Add data lake resource ID
+  - Fix flattening serializer for HashMaps
+  - Making PagedList to work with Java8 stream apis
+  - Fix Azure environment endpoints
+
 1.1.0 (2017.8.22)
   - New feature to poll previously started long running operations
   - Support JSON based auth file

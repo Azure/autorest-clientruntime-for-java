@@ -66,22 +66,22 @@
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
         <artifactId>okhttp</artifactId>
-        <version>3.3.1</version>
+        <version>3.4.2</version>
       </dependency>
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
         <artifactId>logging-interceptor</artifactId>
-        <version>3.3.1</version>
+        <version>3.4.2</version>
       </dependency>
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
         <artifactId>okhttp-urlconnection</artifactId>
-        <version>3.3.1</version>
+        <version>3.4.2</version>
       </dependency>
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
         <artifactId>okio</artifactId>
-        <version>0.13.0</version>
+        <version>1.9.0</version>
       </dependency>
       <dependency>
         <groupId>com.squareup.retrofit2</groupId>

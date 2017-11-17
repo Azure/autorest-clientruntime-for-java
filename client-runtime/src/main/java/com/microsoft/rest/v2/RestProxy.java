@@ -10,7 +10,6 @@ import com.google.common.reflect.TypeToken;
 import com.microsoft.rest.v2.http.ContentType;
 import com.microsoft.rest.v2.http.FileRequestBody;
 import com.microsoft.rest.v2.http.FileSegment;
-import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpHeader;
 import com.microsoft.rest.v2.http.HttpHeaders;
 import com.microsoft.rest.v2.http.HttpRequest;
@@ -46,19 +45,20 @@ import java.util.Set;
  * Java object.
  */
 public class RestProxy implements InvocationHandler {
-    private final HttpClient httpClient;
+    private final Pipeline pipeline;
     private final SerializerAdapter<?> serializer;
     private final SwaggerInterfaceParser interfaceParser;
 
     /**
      * Create a new instance of RestProxy.
-     * @param httpClient The HttpClient that will be used by this RestProxy to send HttpRequests.
+     * @param pipeline The RequestPolicy and HttpClient pipeline that will be used to send HTTP
+     *                 requests.
      * @param serializer The serializer that will be used to convert response bodies to POJOs.
      * @param interfaceParser The parser that contains information about the swagger interface that
      *                        this RestProxy "implements".
      */
-    public RestProxy(HttpClient httpClient, SerializerAdapter<?> serializer, SwaggerInterfaceParser interfaceParser) {
-        this.httpClient = httpClient;
+    public RestProxy(Pipeline pipeline, SerializerAdapter<?> serializer, SwaggerInterfaceParser interfaceParser) {
+        this.pipeline = pipeline;
         this.serializer = serializer;
         this.interfaceParser = interfaceParser;
     }
@@ -210,7 +210,7 @@ public class RestProxy implements InvocationHandler {
      * @return A {@link Single} representing the HTTP response that will arrive asynchronously.
      */
     public Single<HttpResponse> sendHttpRequestAsync(HttpRequest request) {
-        return httpClient.sendRequestAsync(request);
+        return pipeline.sendRequestAsync(request);
     }
 
     @Override
@@ -532,17 +532,33 @@ public class RestProxy implements InvocationHandler {
     /**
      * Create a proxy implementation of the provided Swagger interface.
      * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
-     * @param baseURL The base URL for the service.
-     * @param httpClient The internal HTTP client that will be used to make REST calls.
+     * @param pipeline The RequestPolicy and HttpClient pipline that will be used to send Http
+     *                 requests.
      * @param serializer The serializer that will be used to convert POJOs to and from request and
      *                   response bodies.
      * @param <A> The type of the Swagger interface.
      * @return A proxy implementation of the provided Swagger interface.
      */
     @SuppressWarnings("unchecked")
-    public static <A> A create(Class<A> swaggerInterface, String baseURL, HttpClient httpClient, SerializerAdapter<?> serializer) {
-        final SwaggerInterfaceParser interfaceParser = new SwaggerInterfaceParser(swaggerInterface, baseURL);
-        final RestProxy restProxy = new RestProxy(httpClient, serializer, interfaceParser);
+    public static <A> A create(Class<A> swaggerInterface, Pipeline pipeline, SerializerAdapter<?> serializer) {
+        return create(swaggerInterface, null, pipeline, serializer);
+    }
+
+    /**
+     * Create a proxy implementation of the provided Swagger interface.
+     * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
+     * @param baseUrl The base URL for the service.
+     * @param pipeline The RequestPolicy and HttpClient pipline that will be used to send Http
+     *                 requests.
+     * @param serializer The serializer that will be used to convert POJOs to and from request and
+     *                   response bodies.
+     * @param <A> The type of the Swagger interface.
+     * @return A proxy implementation of the provided Swagger interface.
+     */
+    @SuppressWarnings("unchecked")
+    public static <A> A create(Class<A> swaggerInterface, String baseUrl, Pipeline pipeline, SerializerAdapter<?> serializer) {
+        final SwaggerInterfaceParser interfaceParser = new SwaggerInterfaceParser(swaggerInterface, baseUrl);
+        final RestProxy restProxy = new RestProxy(pipeline, serializer, interfaceParser);
         return (A) Proxy.newProxyInstance(swaggerInterface.getClassLoader(), new Class[]{swaggerInterface}, restProxy);
     }
 }

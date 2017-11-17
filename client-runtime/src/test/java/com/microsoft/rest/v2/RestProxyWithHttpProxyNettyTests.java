@@ -2,7 +2,6 @@ package com.microsoft.rest.v2;
 
 import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.NettyClient;
-import com.microsoft.rest.v2.policy.RequestPolicy;
 import org.junit.Ignore;
 
 import java.net.InetSocketAddress;

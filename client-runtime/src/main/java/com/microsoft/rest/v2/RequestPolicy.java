@@ -4,7 +4,7 @@
  * license information.
  */
 
-package com.microsoft.rest.v2.policy;
+package com.microsoft.rest.v2;
 
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;

@@ -10,7 +10,7 @@ import com.google.common.io.CharStreams;
 import com.microsoft.rest.v2.Base64Url;
 import com.microsoft.rest.v2.DateTimeRfc1123;
 import com.microsoft.rest.v2.entities.HttpBinJSON;
-import com.microsoft.rest.v2.policy.RequestPolicy;
+import com.microsoft.rest.v2.RequestPolicy;
 import org.joda.time.DateTime;
 import rx.Single;
 

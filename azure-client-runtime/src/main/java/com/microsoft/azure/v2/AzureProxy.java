@@ -8,6 +8,7 @@ package com.microsoft.azure.v2;
 
 import com.google.common.reflect.TypeToken;
 import com.microsoft.azure.v2.annotations.AzureHost;
+import com.microsoft.rest.v2.Pipeline;
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
 import com.microsoft.rest.v2.InvalidReturnTypeException;
 import com.microsoft.rest.v2.RestProxy;
@@ -31,47 +32,47 @@ import java.lang.reflect.Type;
  * generated interface.
  */
 public final class AzureProxy extends RestProxy {
-    private static long defaultDelayInMilliseconds = 30 * 1000;
+    private static long defaultPollingDelayInMilliseconds = 30 * 1000;
 
     /**
      * Create a new instance of RestProxy.
-     * @param httpClient The HttpClient that will be used by this RestProxy to send HttpRequests.
+     * @param pipeline The Pipeline that will be used by this AzureProxy to send HttpRequests.
      * @param serializer The serializer that will be used to convert response bodies to POJOs.
      * @param interfaceParser The parser that contains information about the swagger interface that
      *                        this RestProxy "implements".
      */
-    private AzureProxy(HttpClient httpClient, SerializerAdapter<?> serializer, SwaggerInterfaceParser interfaceParser) {
-        super(httpClient, serializer, interfaceParser);
+    private AzureProxy(Pipeline pipeline, SerializerAdapter<?> serializer, SwaggerInterfaceParser interfaceParser) {
+        super(pipeline, serializer, interfaceParser);
     }
 
     /**
      * @return The millisecond delay that will occur by default between long running operation polls.
      */
     public static long defaultDelayInMilliseconds() {
-        return AzureProxy.defaultDelayInMilliseconds;
+        return AzureProxy.defaultPollingDelayInMilliseconds;
     }
 
     /**
      * Set the millisecond delay that will occur by default between long running operation polls.
-     * @param defaultDelayInMilliseconds The number of milliseconds to delay before sending the next
+     * @param defaultPollingDelayInMilliseconds The number of milliseconds to delay before sending the next
      *                                   long running operation status poll.
      */
-    public static void setDefaultDelayInMilliseconds(long defaultDelayInMilliseconds) {
-        AzureProxy.defaultDelayInMilliseconds = defaultDelayInMilliseconds;
+    public static void setDefaultPollingDelayInMilliseconds(long defaultPollingDelayInMilliseconds) {
+        AzureProxy.defaultPollingDelayInMilliseconds = defaultPollingDelayInMilliseconds;
     }
 
     /**
      * Create a proxy implementation of the provided Swagger interface.
      * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
      * @param azureEnvironment The azure environment that the proxy implementation will target.
-     * @param httpClient The internal HTTP client that will be used to make REST calls.
+     * @param pipeline The HTTP pipeline will be used to make REST calls.
      * @param serializer The serializer that will be used to convert POJOs to and from request and
      *                   response bodies.
      * @param <A> The type of the Swagger interface.
      * @return A proxy implementation of the provided Swagger interface.
      */
     @SuppressWarnings("unchecked")
-    public static <A> A create(Class<A> swaggerInterface, AzureEnvironment azureEnvironment, final HttpClient httpClient, SerializerAdapter<?> serializer) {
+    public static <A> A create(Class<A> swaggerInterface, AzureEnvironment azureEnvironment, Pipeline pipeline, SerializerAdapter<?> serializer) {
         String baseUrl = null;
 
         if (azureEnvironment != null) {
@@ -81,23 +82,23 @@ public final class AzureProxy extends RestProxy {
             }
         }
 
-        return AzureProxy.create(swaggerInterface, baseUrl, httpClient, serializer);
+        return AzureProxy.create(swaggerInterface, baseUrl, pipeline, serializer);
     }
 
     /**
      * Create a proxy implementation of the provided Swagger interface.
      * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
      * @param baseUrl The base URL (protocol and host) that the proxy implementation will target.
-     * @param httpClient The internal HTTP client that will be used to make REST calls.
+     * @param pipeline The internal HTTP pipeline that will be used to make REST calls.
      * @param serializer The serializer that will be used to convert POJOs to and from request and
      *                   response bodies.
      * @param <A> The type of the Swagger interface.
      * @return A proxy implementation of the provided Swagger interface.
      */
     @SuppressWarnings("unchecked")
-    public static <A> A create(Class<A> swaggerInterface, String baseUrl, final HttpClient httpClient, SerializerAdapter<?> serializer) {
+    public static <A> A create(Class<A> swaggerInterface, String baseUrl, Pipeline pipeline, SerializerAdapter<?> serializer) {
         final SwaggerInterfaceParser interfaceParser = new SwaggerInterfaceParser(swaggerInterface, baseUrl);
-        final AzureProxy azureProxy = new AzureProxy(httpClient, serializer, interfaceParser);
+        final AzureProxy azureProxy = new AzureProxy(pipeline, serializer, interfaceParser);
         return (A) Proxy.newProxyInstance(swaggerInterface.getClassLoader(), new Class[]{swaggerInterface}, azureProxy);
     }
 

@@ -12,7 +12,6 @@ import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
 import com.microsoft.rest.v2.http.MockHttpClient;
 import com.microsoft.rest.v2.policy.RequestIdPolicy;
-import com.microsoft.rest.v2.policy.RequestPolicy;
 import com.microsoft.rest.v2.policy.RetryPolicy;
 import org.junit.Assert;
 import org.junit.Test;
@@ -21,9 +20,6 @@ import rx.Single;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 public class RequestIdPolicyTests {
     private final HttpResponse mockResponse = new HttpResponse() {

@@ -10,7 +10,6 @@ import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.NettyClient;
 import com.microsoft.rest.v2.policy.AddCookiesPolicy;
 import com.microsoft.rest.v2.policy.LoggingPolicy;
-import com.microsoft.rest.v2.policy.RequestPolicy;
 import com.microsoft.rest.v2.policy.RetryPolicy;
 import com.microsoft.rest.v2.policy.UserAgentPolicy;
 import com.microsoft.rest.v2.protocol.Environment;

@@ -8,6 +8,7 @@ package com.microsoft.rest.v2.policy;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.BaseEncoding;
+import com.microsoft.rest.v2.RequestPolicy;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
 import rx.Single;

@@ -10,7 +10,6 @@ import com.microsoft.rest.v2.credentials.BasicAuthenticationCredentials;
 import com.microsoft.rest.v2.credentials.TokenCredentials;
 
 import com.microsoft.rest.v2.policy.CredentialsPolicy;
-import com.microsoft.rest.v2.policy.RequestPolicy;
 import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
@@ -18,8 +17,6 @@ import com.microsoft.rest.v2.http.MockHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import rx.Single;
-
-import java.util.Arrays;
 
 public class CredentialsTests {
 

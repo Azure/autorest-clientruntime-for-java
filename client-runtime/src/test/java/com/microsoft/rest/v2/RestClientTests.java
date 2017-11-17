@@ -15,7 +15,6 @@ import com.microsoft.rest.v2.protocol.TypeFactory;
 import com.microsoft.rest.v2.serializer.JacksonAdapter;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
-import com.microsoft.rest.v2.policy.RequestPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 import rx.Single;

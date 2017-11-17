@@ -79,7 +79,7 @@ public class RestProxyXMLTests {
 
     @Test
     public void canReadXMLResponse() throws Exception {
-        MyXMLService myXMLService = RestProxy.create(MyXMLService.class, null, new MockXMLHTTPClient(), new JacksonAdapter());
+        MyXMLService myXMLService = RestProxy.create(MyXMLService.class, null, Pipeline.build(new MockXMLHTTPClient()), new JacksonAdapter());
         List<SignedIdentifierInner> identifiers = myXMLService.getContainerACLs().signedIdentifiers();
         assertNotNull(identifiers);
         assertNotEquals(0, identifiers.size());
@@ -124,7 +124,7 @@ public class RestProxyXMLTests {
 
         JacksonAdapter serializer = new JacksonAdapter();
         MockXMLReceiverClient httpClient = new MockXMLReceiverClient();
-        MyXMLService myXMLService = RestProxy.create(MyXMLService.class, null, httpClient, serializer);
+        MyXMLService myXMLService = RestProxy.create(MyXMLService.class, Pipeline.build(httpClient), serializer);
         SignedIdentifiersWrapper wrapper = new SignedIdentifiersWrapper(expectedAcls);
         myXMLService.setContainerACLs(wrapper);
 
@@ -155,8 +155,7 @@ public class RestProxyXMLTests {
         JacksonAdapter serializer = new JacksonAdapter();
         MyXMLServiceWithAttributes myXMLService = RestProxy.create(
                 MyXMLServiceWithAttributes.class,
-                null,
-                new MockXMLHTTPClient(),
+                Pipeline.build(new MockXMLHTTPClient()),
                 serializer);
 
         Slideshow slideshow = myXMLService.getSlideshow();

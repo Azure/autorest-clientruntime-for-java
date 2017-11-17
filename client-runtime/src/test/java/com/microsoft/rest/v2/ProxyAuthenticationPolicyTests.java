@@ -5,7 +5,6 @@ import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
 import com.microsoft.rest.v2.http.MockHttpClient;
 import com.microsoft.rest.v2.policy.ProxyAuthenticationPolicy;
-import com.microsoft.rest.v2.policy.RequestPolicy;
 import org.junit.Test;
 import rx.Single;
 

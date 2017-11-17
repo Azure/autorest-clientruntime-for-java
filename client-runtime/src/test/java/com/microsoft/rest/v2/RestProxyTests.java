@@ -1281,7 +1281,8 @@ public abstract class RestProxyTests {
     // Helpers
     protected <T> T createService(Class<T> serviceClass) {
         final HttpClient httpClient = createHttpClient();
-        return RestProxy.create(serviceClass, null, httpClient, serializer);
+        final Pipeline pipeline = Pipeline.build(httpClient);
+        return RestProxy.create(serviceClass, pipeline, serializer);
     }
 
     private static void assertContains(String value, String expectedSubstring) {

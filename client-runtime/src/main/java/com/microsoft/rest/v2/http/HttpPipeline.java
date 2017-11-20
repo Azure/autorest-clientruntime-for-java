@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
+
 package com.microsoft.rest.v2.http;
 
 import com.microsoft.rest.v2.policy.RequestPolicy;
@@ -12,7 +18,7 @@ import java.util.List;
  * A collection of RequestPolicies that will be applied to a HTTP request before it is sent and will
  * be applied to a HTTP response when it is received.
  */
-public class HttpPipeline {
+public final class HttpPipeline {
     /**
      * The list of RequestPolicy factories that will be applied to HTTP requests and responses.
      * The factories appear in this list in the order that they will be applied to outgoing
@@ -57,7 +63,7 @@ public class HttpPipeline {
      * @return The built HttpPipeline.
      */
     public static HttpPipeline build(HttpClient httpClient) {
-        return build((RequestPolicy.Factory[])null, httpClient);
+        return build((RequestPolicy.Factory[]) null, httpClient);
     }
 
     /**
@@ -67,7 +73,7 @@ public class HttpPipeline {
      * @return The built HttpPipeline.
      */
     public static HttpPipeline build(RequestPolicy.Factory requestPolicyFactory, HttpClient httpClient) {
-        return build(new RequestPolicy.Factory[] { requestPolicyFactory }, httpClient);
+        return build(new RequestPolicy.Factory[] {requestPolicyFactory}, httpClient);
     }
 
     /**

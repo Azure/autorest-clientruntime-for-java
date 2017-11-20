@@ -21,13 +21,10 @@ import com.microsoft.rest.v2.annotations.POST;
 import com.microsoft.rest.v2.annotations.PathParam;
 import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.NettyClient;
-import com.microsoft.rest.v2.policy.RequestPolicy;
-import com.microsoft.rest.v2.protocol.SerializerAdapter;
 import rx.Single;
 import rx.functions.Func1;
 
 import java.net.Proxy;
-import java.util.Collections;
 import java.util.Date;
 
 /**

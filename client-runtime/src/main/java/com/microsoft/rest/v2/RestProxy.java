@@ -600,6 +600,14 @@ public class RestProxy implements InvocationHandler {
     }
 
     /**
+     * Get the default serializer.
+     * @return the default serializer.
+     */
+    public static SerializerAdapter<?> defaultSerializer() {
+        return new JacksonAdapter();
+    }
+
+    /**
      * Create the default HttpPipeline.
      * @param swaggerInterface The interface that the pipeline will use to generate a user-agent
      *                         string.
@@ -649,7 +657,7 @@ public class RestProxy implements InvocationHandler {
      */
     @SuppressWarnings("unchecked")
     public static <A> A create(Class<A> swaggerInterface) {
-        return create(swaggerInterface, defaultPipeline(swaggerInterface), new JacksonAdapter());
+        return create(swaggerInterface, defaultPipeline(swaggerInterface), defaultSerializer());
     }
 
     /**
@@ -662,7 +670,7 @@ public class RestProxy implements InvocationHandler {
      */
     @SuppressWarnings("unchecked")
     public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline) {
-        return create(swaggerInterface, httpPipeline, new JacksonAdapter());
+        return create(swaggerInterface, httpPipeline, defaultSerializer());
     }
 
     /**

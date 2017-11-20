@@ -554,6 +554,23 @@ public class RestProxy implements InvocationHandler {
     }
 
     /**
+     * Create an instance of the default HttpClient type.
+     * @return an instance of the default HttpClient type.
+     */
+    public static HttpClient createDefaultHttpClient() {
+        return createDefaultHttpClient(null);
+    }
+
+    /**
+     * Create an instance of the default HttpClient type with the provided configuration.
+     * @param configuration The configuration to apply to the HttpClient.
+     * @return an instance of the default HttpClient type.
+     */
+    public static HttpClient createDefaultHttpClient(HttpClient.Configuration configuration) {
+        return defaultHttpClientFactory().create(configuration);
+    }
+
+    /**
      * Create the default HttpPipeline.
      * @return the default HttpPipeline.
      */

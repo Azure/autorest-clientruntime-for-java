@@ -8,6 +8,7 @@ package com.microsoft.azure.v2;
 
 import com.google.common.reflect.TypeToken;
 import com.microsoft.azure.v2.annotations.AzureHost;
+import com.microsoft.azure.v2.serializer.AzureJacksonAdapter;
 import com.microsoft.rest.v2.http.HttpPipeline;
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
 import com.microsoft.rest.v2.InvalidReturnTypeException;
@@ -58,6 +59,14 @@ public final class AzureProxy extends RestProxy {
      */
     public static void setDefaultPollingDelayInMilliseconds(long defaultPollingDelayInMilliseconds) {
         AzureProxy.defaultPollingDelayInMilliseconds = defaultPollingDelayInMilliseconds;
+    }
+
+    /**
+     * Get the default serializer.
+     * @return the default serializer.
+     */
+    public static SerializerAdapter<?> defaultSerializer() {
+        return new AzureJacksonAdapter();
     }
 
     /**

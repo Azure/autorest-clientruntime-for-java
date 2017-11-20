@@ -32,6 +32,6 @@ public class MockHttpClient extends HttpClient {
     public Single<HttpResponse> sendRequestAsync(HttpRequest request) {
         requests.add(request);
 
-        return Single.just(null);
+        return Single.<HttpResponse>just(new MockHttpResponse(200));
     }
 }

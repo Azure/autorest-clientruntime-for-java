@@ -22,7 +22,7 @@ public class ProxyAuthenticationPolicyTests {
         final String username = "testuser";
         final String password = "testpass";
 
-        final HttpPipeline pipeline = HttpPipeline.build(new MockHttpClient(),
+        final HttpPipeline pipeline = HttpPipeline.build(
                 new ProxyAuthenticationPolicy.Factory(username, password),
                 new RequestPolicy.Factory() {
                     @Override
@@ -36,7 +36,8 @@ public class ProxyAuthenticationPolicyTests {
                             }
                         };
                     }
-                });
+                },
+                new MockHttpClient());
 
         pipeline.sendRequestAsync(new HttpRequest("test", "GET", "localhost"))
                 .toBlocking().value();

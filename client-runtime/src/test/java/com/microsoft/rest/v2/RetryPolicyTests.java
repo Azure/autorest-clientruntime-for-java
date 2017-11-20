@@ -22,6 +22,7 @@ public class RetryPolicyTests {
     @Test
     public void exponentialRetryEndOn501() throws Exception {
         HttpPipeline pipeline = HttpPipeline.build(
+            new RetryPolicy.Factory(3),
             new MockHttpClient() {
                 // Send 408, 500, 502, all retried, with a 501 ending
                 private final int[] codes = new int[]{408, 500, 502, 501};
@@ -30,8 +31,7 @@ public class RetryPolicyTests {
                 public Single<HttpResponse> sendRequestAsync(HttpRequest request) {
                     return Single.<HttpResponse>just(new MockHttpResponse(codes[count++]));
                 }
-            },
-            new RetryPolicy.Factory(3));
+            });
 
         HttpResponse response = pipeline.sendRequestAsync(
                 new HttpRequest(
@@ -47,6 +47,7 @@ public class RetryPolicyTests {
         final int maxRetries = 5;
 
         HttpPipeline pipeline = HttpPipeline.build(
+            new RetryPolicy.Factory(maxRetries),
             new MockHttpClient() {
                 int count = -1;
 
@@ -54,8 +55,7 @@ public class RetryPolicyTests {
                     Assert.assertTrue(count++ < maxRetries);
                     return Single.<HttpResponse>just(new MockHttpResponse(500));
                 }
-            },
-            new RetryPolicy.Factory(maxRetries));
+            });
 
         HttpResponse response = pipeline.sendRequestAsync(
                 new HttpRequest(

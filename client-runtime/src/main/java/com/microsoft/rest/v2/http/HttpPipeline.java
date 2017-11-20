@@ -54,10 +54,45 @@ public class HttpPipeline {
     /**
      * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
      * @param httpClient The HttpClient to use.
-     * @param requestPolicyFactories The RequestPolicy factories to use.
      * @return The built HttpPipeline.
      */
-    public static HttpPipeline build(HttpClient httpClient, RequestPolicy.Factory... requestPolicyFactories) {
+    public static HttpPipeline build(HttpClient httpClient) {
+        return build((RequestPolicy.Factory[])null, httpClient);
+    }
+
+    /**
+     * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
+     * @param requestPolicyFactory The RequestPolicy factory to use.
+     * @param httpClient The HttpClient to use.
+     * @return The built HttpPipeline.
+     */
+    public static HttpPipeline build(RequestPolicy.Factory requestPolicyFactory, HttpClient httpClient) {
+        return build(new RequestPolicy.Factory[] { requestPolicyFactory }, httpClient);
+    }
+
+    /**
+     * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
+     * @param requestPolicyFactory1 The first RequestPolicy factory to use.
+     * @param requestPolicyFactory2 The second RequestPolicy factory to use.
+     * @param httpClient The HttpClient to use.
+     * @return The built HttpPipeline.
+     */
+    public static HttpPipeline build(RequestPolicy.Factory requestPolicyFactory1, RequestPolicy.Factory requestPolicyFactory2, HttpClient httpClient) {
+        return build(
+            new RequestPolicy.Factory[] {
+                requestPolicyFactory1,
+                requestPolicyFactory2
+            },
+            httpClient);
+    }
+
+    /**
+     * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
+     * @param requestPolicyFactories The RequestPolicy factories to use.
+     * @param httpClient The HttpClient to use.
+     * @return The built HttpPipeline.
+     */
+    public static HttpPipeline build(RequestPolicy.Factory[] requestPolicyFactories, HttpClient httpClient) {
         final HttpPipeline.Builder builder = new HttpPipeline.Builder(httpClient);
         if (requestPolicyFactories != null) {
             for (final RequestPolicy.Factory requestPolicyFactory : requestPolicyFactories) {

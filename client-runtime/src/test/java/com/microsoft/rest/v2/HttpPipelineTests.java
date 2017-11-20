@@ -59,6 +59,7 @@ public class HttpPipelineTests {
         final String expectedHttpMethod = "GET";
         final String expectedUrl = "http://my.site.com/1";
         final HttpPipeline httpPipeline = HttpPipeline.build(
+                new RequestIdPolicy.Factory(),
                 new HttpClient() {
                     @Override
                     public Single<HttpResponse> sendRequestAsync(HttpRequest request) {
@@ -71,8 +72,7 @@ public class HttpPipelineTests {
                         assertEquals(expectedUrl, request.url());
                         return Single.<HttpResponse>just(new MockHttpResponse(200));
                     }
-                },
-                new RequestIdPolicy.Factory());
+                });
         final HttpResponse response = httpPipeline.sendRequestAsync(new HttpRequest("MOCK_CALLER_METHOD", expectedHttpMethod, expectedUrl)).toBlocking().value();
         assertNotNull(response);
         assertEquals(200, response.statusCode());

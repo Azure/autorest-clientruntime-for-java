@@ -39,9 +39,10 @@ public class CredentialsTests {
             }
         };
 
-        final HttpPipeline pipeline = HttpPipeline.build(new MockHttpClient(),
+        final HttpPipeline pipeline = HttpPipeline.build(
                 new CredentialsPolicy.Factory(credentials),
-                auditorFactory);
+                auditorFactory,
+                new MockHttpClient());
 
         HttpRequest request = new HttpRequest("basicCredentialsTest", "GET", "http://localhost");
         pipeline.sendRequestAsync(request).toBlocking().value();
@@ -65,9 +66,10 @@ public class CredentialsTests {
             }
         };
 
-        HttpPipeline pipeline = HttpPipeline.build(new MockHttpClient(),
+        HttpPipeline pipeline = HttpPipeline.build(
                 new CredentialsPolicy.Factory(credentials),
-                auditorFactory);
+                auditorFactory,
+                new MockHttpClient());
 
         HttpRequest request = new HttpRequest("basicCredentialsTest", "GET", "http://localhost");
         pipeline.sendRequestAsync(request).toBlocking().value();

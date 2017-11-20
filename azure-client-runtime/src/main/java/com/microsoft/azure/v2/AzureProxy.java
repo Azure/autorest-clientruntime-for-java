@@ -6,10 +6,20 @@
 
 package com.microsoft.azure.v2;
 
+import com.google.common.hash.Hashing;
 import com.google.common.reflect.TypeToken;
 import com.microsoft.azure.v2.annotations.AzureHost;
 import com.microsoft.azure.v2.serializer.AzureJacksonAdapter;
+import com.microsoft.rest.v2.LogLevel;
+import com.microsoft.rest.v2.credentials.ServiceClientCredentials;
+import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpPipeline;
+import com.microsoft.rest.v2.http.NettyClient;
+import com.microsoft.rest.v2.policy.AddCookiesPolicy;
+import com.microsoft.rest.v2.policy.CredentialsPolicy;
+import com.microsoft.rest.v2.policy.LoggingPolicy;
+import com.microsoft.rest.v2.policy.RequestPolicy;
+import com.microsoft.rest.v2.policy.RetryPolicy;
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
 import com.microsoft.rest.v2.InvalidReturnTypeException;
 import com.microsoft.rest.v2.RestProxy;
@@ -26,6 +36,8 @@ import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
 
 /**
  * This class can be used to create an Azure specific proxy implementation for a provided Swagger
@@ -65,8 +77,106 @@ public final class AzureProxy extends RestProxy {
      * Get the default serializer.
      * @return the default serializer.
      */
-    public static SerializerAdapter<?> defaultSerializer() {
+    public static SerializerAdapter<?> createDefaultSerializer() {
         return new AzureJacksonAdapter();
+    }
+
+    private static String operatingSystem;
+    private static String operatingSystem() {
+        if (operatingSystem == null) {
+            operatingSystem = System.getProperty("os.name") + "/" + System.getProperty("os.version");
+        }
+        return operatingSystem;
+    }
+
+    private static String macAddressHash;
+    private static String macAddressHash() {
+        if (macAddressHash == null) {
+            byte[] macBytes = null;
+            try {
+                Enumeration<NetworkInterface> networks = NetworkInterface.getNetworkInterfaces();
+                while (networks.hasMoreElements()) {
+                    NetworkInterface network = networks.nextElement();
+                    macBytes = network.getHardwareAddress();
+
+                    if (macBytes != null) {
+                        break;
+                    }
+                }
+            } catch (Throwable t) {
+                // It's okay ignore mac address hash telemetry
+            }
+
+            if (macBytes == null) {
+                macBytes = "Unknown".getBytes();
+            }
+
+            macAddressHash = Hashing.sha256().hashBytes(macBytes).toString();
+        }
+        return macAddressHash;
+    }
+
+    private static String javaVersion;
+    private static String javaVersion() {
+        if (javaVersion == null) {
+            final String versionProperty = System.getProperty("java.version");
+            javaVersion = versionProperty != null ? versionProperty : "Unknown";
+        }
+        return javaVersion;
+    }
+
+    private static <T> String getDefaultUserAgentString(Class<?> swaggerInterface) {
+        final String packageImplementationVersion = swaggerInterface == null ? "" : "/" + swaggerInterface.getPackage().getImplementationVersion();
+        final String operatingSystem = operatingSystem();
+        final String macAddressHash = macAddressHash();
+        final String javaVersion = javaVersion();
+        return String.format("Azure-SDK-For-Java%s OS:%s MacAddressHash:%s Java:%s",
+                packageImplementationVersion,
+                operatingSystem,
+                macAddressHash,
+                javaVersion);
+    }
+
+    /**
+     * Create the default HttpPipeline.
+     * @param swaggerInterface The interface that the pipeline will use to generate a user-agent
+     *                         string.
+     * @return the default HttpPipeline.
+     */
+    public static HttpPipeline defaultPipeline(Class<?> swaggerInterface) {
+        return defaultPipeline(swaggerInterface, (RequestPolicy.Factory) null);
+    }
+
+    /**
+     * Create the default HttpPipeline.
+     * @param swaggerInterface The interface that the pipeline will use to generate a user-agent
+     *                         string.
+     * @param credentials The credentials to use to apply authentication to the pipeline.
+     * @return the default HttpPipeline.
+     */
+    public static HttpPipeline defaultPipeline(Class<?> swaggerInterface, ServiceClientCredentials credentials) {
+        return defaultPipeline(swaggerInterface, new CredentialsPolicy.Factory(credentials));
+    }
+
+    /**
+     * Create the default HttpPipeline.
+     * @param swaggerInterface The interface that the pipeline will use to generate a user-agent
+     *                         string.
+     * @param credentialsPolicy The credentials policy factory to use to apply authentication to the
+     *                          pipeline.
+     * @return the default HttpPipeline.
+     */
+    public static HttpPipeline defaultPipeline(Class<?> swaggerInterface, RequestPolicy.Factory credentialsPolicy) {
+        final HttpClient httpClient = new NettyClient.Factory().create(null);
+        final HttpPipeline.Builder builder = new HttpPipeline.Builder(httpClient);
+        builder.withUserAgent(getDefaultUserAgentString(swaggerInterface));
+        builder.withRequestPolicy(new RetryPolicy.Factory());
+        builder.withRequestPolicy(new AddCookiesPolicy.Factory());
+        if (credentialsPolicy != null) {
+            builder.withRequestPolicy(credentialsPolicy);
+        }
+        builder.withRequestPolicy(new LoggingPolicy.Factory(LogLevel.HEADERS));
+        return builder.build();
     }
 
     /**

@@ -25,6 +25,6 @@ public abstract class AzureServiceClient extends ServiceClient {
 
     @Override
     protected SerializerAdapter<?> createSerializerAdapter() {
-        return AzureProxy.defaultSerializer();
+        return AzureProxy.createDefaultSerializer();
     }
 }

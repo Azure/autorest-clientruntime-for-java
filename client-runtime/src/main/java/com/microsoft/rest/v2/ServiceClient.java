@@ -50,6 +50,6 @@ public abstract class ServiceClient {
     }
 
     protected SerializerAdapter<?> createSerializerAdapter() {
-        return RestProxy.defaultSerializer();
+        return RestProxy.createDefaultSerializer();
     }
 }

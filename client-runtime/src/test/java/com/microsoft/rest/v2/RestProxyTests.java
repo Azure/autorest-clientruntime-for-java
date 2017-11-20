@@ -20,6 +20,7 @@ import com.microsoft.rest.v2.entities.HttpBinJSON;
 import com.microsoft.rest.v2.http.ContentType;
 import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpHeaders;
+import com.microsoft.rest.v2.http.HttpPipeline;
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
 import com.microsoft.rest.v2.serializer.JacksonAdapter;
 import org.junit.Assert;
@@ -1281,8 +1282,8 @@ public abstract class RestProxyTests {
     // Helpers
     protected <T> T createService(Class<T> serviceClass) {
         final HttpClient httpClient = createHttpClient();
-        final Pipeline pipeline = Pipeline.build(httpClient);
-        return RestProxy.create(serviceClass, pipeline, serializer);
+        final HttpPipeline httpPipeline = HttpPipeline.build(httpClient);
+        return RestProxy.create(serviceClass, httpPipeline, serializer);
     }
 
     private static void assertContains(String value, String expectedSubstring) {

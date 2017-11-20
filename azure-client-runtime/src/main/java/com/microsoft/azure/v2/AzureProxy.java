@@ -8,13 +8,12 @@ package com.microsoft.azure.v2;
 
 import com.google.common.reflect.TypeToken;
 import com.microsoft.azure.v2.annotations.AzureHost;
-import com.microsoft.rest.v2.Pipeline;
+import com.microsoft.rest.v2.http.HttpPipeline;
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
 import com.microsoft.rest.v2.InvalidReturnTypeException;
 import com.microsoft.rest.v2.RestProxy;
 import com.microsoft.rest.v2.SwaggerInterfaceParser;
 import com.microsoft.rest.v2.SwaggerMethodParser;
-import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
 import rx.Observable;
@@ -36,13 +35,13 @@ public final class AzureProxy extends RestProxy {
 
     /**
      * Create a new instance of RestProxy.
-     * @param pipeline The Pipeline that will be used by this AzureProxy to send HttpRequests.
+     * @param httpPipeline The HttpPipeline that will be used by this AzureProxy to send HttpRequests.
      * @param serializer The serializer that will be used to convert response bodies to POJOs.
      * @param interfaceParser The parser that contains information about the swagger interface that
      *                        this RestProxy "implements".
      */
-    private AzureProxy(Pipeline pipeline, SerializerAdapter<?> serializer, SwaggerInterfaceParser interfaceParser) {
-        super(pipeline, serializer, interfaceParser);
+    private AzureProxy(HttpPipeline httpPipeline, SerializerAdapter<?> serializer, SwaggerInterfaceParser interfaceParser) {
+        super(httpPipeline, serializer, interfaceParser);
     }
 
     /**
@@ -65,14 +64,14 @@ public final class AzureProxy extends RestProxy {
      * Create a proxy implementation of the provided Swagger interface.
      * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
      * @param azureEnvironment The azure environment that the proxy implementation will target.
-     * @param pipeline The HTTP pipeline will be used to make REST calls.
+     * @param httpPipeline The HTTP httpPipeline will be used to make REST calls.
      * @param serializer The serializer that will be used to convert POJOs to and from request and
      *                   response bodies.
      * @param <A> The type of the Swagger interface.
      * @return A proxy implementation of the provided Swagger interface.
      */
     @SuppressWarnings("unchecked")
-    public static <A> A create(Class<A> swaggerInterface, AzureEnvironment azureEnvironment, Pipeline pipeline, SerializerAdapter<?> serializer) {
+    public static <A> A create(Class<A> swaggerInterface, AzureEnvironment azureEnvironment, HttpPipeline httpPipeline, SerializerAdapter<?> serializer) {
         String baseUrl = null;
 
         if (azureEnvironment != null) {
@@ -82,23 +81,23 @@ public final class AzureProxy extends RestProxy {
             }
         }
 
-        return AzureProxy.create(swaggerInterface, baseUrl, pipeline, serializer);
+        return AzureProxy.create(swaggerInterface, baseUrl, httpPipeline, serializer);
     }
 
     /**
      * Create a proxy implementation of the provided Swagger interface.
      * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
      * @param baseUrl The base URL (protocol and host) that the proxy implementation will target.
-     * @param pipeline The internal HTTP pipeline that will be used to make REST calls.
+     * @param httpPipeline The internal HTTP httpPipeline that will be used to make REST calls.
      * @param serializer The serializer that will be used to convert POJOs to and from request and
      *                   response bodies.
      * @param <A> The type of the Swagger interface.
      * @return A proxy implementation of the provided Swagger interface.
      */
     @SuppressWarnings("unchecked")
-    public static <A> A create(Class<A> swaggerInterface, String baseUrl, Pipeline pipeline, SerializerAdapter<?> serializer) {
+    public static <A> A create(Class<A> swaggerInterface, String baseUrl, HttpPipeline httpPipeline, SerializerAdapter<?> serializer) {
         final SwaggerInterfaceParser interfaceParser = new SwaggerInterfaceParser(swaggerInterface, baseUrl);
-        final AzureProxy azureProxy = new AzureProxy(pipeline, serializer, interfaceParser);
+        final AzureProxy azureProxy = new AzureProxy(httpPipeline, serializer, interfaceParser);
         return (A) Proxy.newProxyInstance(swaggerInterface.getClassLoader(), new Class[]{swaggerInterface}, azureProxy);
     }
 

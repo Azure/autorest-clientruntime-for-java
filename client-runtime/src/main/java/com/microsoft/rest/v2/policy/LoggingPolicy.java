@@ -7,7 +7,6 @@
 package com.microsoft.rest.v2.policy;
 
 import com.microsoft.rest.v2.LogLevel;
-import com.microsoft.rest.v2.RequestPolicy;
 import com.microsoft.rest.v2.http.ByteArrayHttpRequestBody;
 import com.microsoft.rest.v2.http.HttpHeader;
 import com.microsoft.rest.v2.http.HttpRequest;

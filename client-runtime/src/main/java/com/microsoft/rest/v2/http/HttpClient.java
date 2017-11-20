@@ -6,7 +6,7 @@
 
 package com.microsoft.rest.v2.http;
 
-import com.microsoft.rest.v2.RequestPolicy;
+import com.microsoft.rest.v2.policy.RequestPolicy;
 import rx.Single;
 
 import java.net.Proxy;
@@ -18,60 +18,18 @@ import java.util.List;
  * A generic interface for sending HTTP requests and getting responses.
  */
 public abstract class HttpClient {
-    private final List<RequestPolicy.Factory> policyFactories;
-
-    private final RequestPolicy lastRequestPolicy = new RequestPolicy() {
-        @Override
-        public Single<HttpResponse> sendAsync(HttpRequest request) {
-            return sendRequestInternalAsync(request);
-        }
-    };
-
-    protected HttpClient() {
-        this.policyFactories = Collections.emptyList();
-    }
-
-    protected HttpClient(Configuration configuration) {
-        this.policyFactories = new ArrayList<>(configuration.policyFactories());
-
-        // Reversing the list facilitates the creation of the RequestPolicy linked list per-request.
-        Collections.reverse(this.policyFactories);
-    }
-
     /**
      * Send the provided request asynchronously, applying any request policies provided to the HttpClient instance.
      * @param request The HTTP request to send.
      * @return A {@link Single} representing the HTTP response that will arrive asynchronously.
      */
-    public final Single<HttpResponse> sendRequestAsync(HttpRequest request) {
-        // Builds a linked list starting from the end.
-        RequestPolicy next = lastRequestPolicy;
-        for (RequestPolicy.Factory factory : policyFactories) {
-            next = factory.create(next);
-        }
-        return next.sendAsync(request);
-    }
-
-    /**
-     * Send the provided request asynchronously through the concrete HTTP client implementation.
-     * @param request The HTTP request to send.
-     * @return A {@link Single} representing the HTTP response that will arrive asynchronously.
-     */
-    protected abstract Single<HttpResponse> sendRequestInternalAsync(HttpRequest request);
+    public abstract Single<HttpResponse> sendRequestAsync(HttpRequest request);
 
     /**
      * The set of parameters used to create an HTTP client.
      */
     public static final class Configuration {
-        private final List<RequestPolicy.Factory> policyFactories;
         private final Proxy proxy;
-
-        /**
-         * @return The policy factories to use when creating RequestPolicies to intercept requests.
-         */
-        public List<RequestPolicy.Factory> policyFactories() {
-            return policyFactories;
-        }
 
         /**
          * @return The optional proxy to use.
@@ -82,11 +40,9 @@ public abstract class HttpClient {
 
         /**
          * Creates a Configuration.
-         * @param policyFactories The policy factories to use when creating RequestPolicies to intercept requests.
          * @param proxy The optional proxy to use.
          */
-        public Configuration(List<RequestPolicy.Factory> policyFactories, Proxy proxy) {
-            this.policyFactories = policyFactories;
+        public Configuration(Proxy proxy) {
             this.proxy = proxy;
         }
     }

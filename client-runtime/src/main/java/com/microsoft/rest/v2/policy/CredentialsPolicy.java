@@ -6,7 +6,6 @@
 
 package com.microsoft.rest.v2.policy;
 
-import com.microsoft.rest.v2.RequestPolicy;
 import com.microsoft.rest.v2.credentials.ServiceClientCredentials;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;

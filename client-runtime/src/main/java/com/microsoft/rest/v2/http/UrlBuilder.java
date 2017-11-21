@@ -6,6 +6,8 @@
 
 package com.microsoft.rest.v2.http;
 
+import java.net.URL;
+
 /**
  * A builder class that is used to create URLs.
  */
@@ -124,6 +126,19 @@ public class UrlBuilder {
     }
 
     /**
+     * Set the query that will be used to build the final URL.
+     * @param query The query that will be used to build the final URL.
+     * @return This UrlBuilder so that multiple setters can be chained together.
+     */
+    public UrlBuilder withQuery(String query) {
+        if (query != null && !query.startsWith("/")) {
+            query = "?" + query;
+        }
+        this.query = query;
+        return this;
+    }
+
+    /**
      * Get the query that has been assigned to this UrlBuilder.
      * @return the query that has been assigned to this UrlBuilder.
      */
@@ -178,99 +193,45 @@ public class UrlBuilder {
      * @return The UrlBuilder that was parsed from the string.
      */
     public static UrlBuilder parse(String url) {
-        final UrlBuilder result = new UrlBuilder();
+        UrlBuilder result = null;
 
-        if (url != null) {
-            int startIndex = 0;
-
-            final int protocolEndIndex = url.indexOf("://", startIndex);
-            if (protocolEndIndex != -1) {
-                result.withScheme(url.substring(startIndex, protocolEndIndex));
-                startIndex = protocolEndIndex + 3;
+        if (url != null && !url.isEmpty()) {
+            boolean addedProtocol = false;
+            if (!url.contains("://")) {
+                url = "http://" + url;
+                addedProtocol = true;
             }
 
-            final int portColonIndex = url.indexOf(':', startIndex);
-            if (portColonIndex != -1) {
-                result.withHost(url.substring(startIndex, portColonIndex));
-                startIndex = portColonIndex + 1;
-
-                final int pathStartSlashIndex = url.indexOf('/', startIndex);
-                if (pathStartSlashIndex != -1) {
-                    result.withPort(Integer.valueOf(url.substring(portColonIndex + 1, pathStartSlashIndex)));
-                    parsePathAndQueryParameters(url, pathStartSlashIndex, result);
-                }
-                else {
-                    final int queryQuestionMarkIndex = url.indexOf('?', startIndex);
-                    if (queryQuestionMarkIndex != -1) {
-                        result.withPort(Integer.valueOf(url.substring(startIndex, queryQuestionMarkIndex)));
-                        parseQueryParameters(url, queryQuestionMarkIndex, result);
-                    }
-                    else {
-                        result.withPort(Integer.valueOf(url.substring(portColonIndex + 1)));
-                    }
-                }
+            URL javaUrl = null;
+            try {
+                javaUrl = new URL(url);
             }
-            else {
-                final int pathStartSlashIndex = url.indexOf('/', startIndex);
-                if (pathStartSlashIndex != -1) {
-                    result.withHost(url.substring(startIndex, pathStartSlashIndex));
-                    parsePathAndQueryParameters(url, pathStartSlashIndex, result);
+            catch (Exception ignored) {
+            }
+
+            if (javaUrl != null) {
+                result = new UrlBuilder();
+
+                if (!addedProtocol) {
+                    result.withScheme(javaUrl.getProtocol());
                 }
-                else {
-                    final int queryQuestionMarkIndex = url.indexOf('?', startIndex);
-                    if (queryQuestionMarkIndex != -1) {
-                        result.withHost(url.substring(startIndex, queryQuestionMarkIndex));
-                        parseQueryParameters(url, queryQuestionMarkIndex, result);
-                    }
-                    else {
-                        result.withHost(url.substring(startIndex));
-                    }
+
+                result.withHost(javaUrl.getHost());
+
+                final int port = javaUrl.getPort();
+                if (port != -1) {
+                    result.withPort(port);
                 }
+
+                final String path = javaUrl.getPath();
+                if (path != null && !path.isEmpty()) {
+                    result.withPath(path);
+                }
+
+                result.withQuery(javaUrl.getQuery());
             }
         }
 
         return result;
-    }
-
-    private static int parsePathAndQueryParameters(String url, int pathSlashIndex, UrlBuilder builder) {
-        int startIndex = pathSlashIndex + 1;
-
-        final int queryQuestionMarkIndex = url.indexOf('?', startIndex);
-        if (queryQuestionMarkIndex != -1) {
-            builder.withPath(url.substring(pathSlashIndex, queryQuestionMarkIndex));
-            parseQueryParameters(url, queryQuestionMarkIndex, builder);
-        }
-        else {
-            builder.withPath(url.substring(pathSlashIndex));
-        }
-
-        return startIndex;
-    }
-
-    private static int parseQueryParameters(String url, int questionMarkIndex, UrlBuilder builder) {
-        int startIndex = questionMarkIndex + 1;
-
-        int queryAmpersandIndex = -1;
-        do {
-            final int queryEqualsSignIndex = url.indexOf('=', startIndex);
-            if (queryEqualsSignIndex != -1) {
-                final String queryParameterName = url.substring(startIndex, queryEqualsSignIndex);
-                startIndex = queryEqualsSignIndex + 1;
-
-                queryAmpersandIndex = url.indexOf('&', startIndex);
-
-                String queryParameterValue;
-                if (queryAmpersandIndex != -1) {
-                    queryParameterValue = url.substring(startIndex, queryAmpersandIndex);
-                    startIndex = queryAmpersandIndex + 1;
-                } else {
-                    queryParameterValue = url.substring(startIndex);
-                    startIndex = -1;
-                }
-                builder.withQueryParameter(queryParameterName, queryParameterValue);
-            }
-        } while (queryAmpersandIndex != -1);
-
-        return startIndex;
     }
 }

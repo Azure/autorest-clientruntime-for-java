@@ -195,14 +195,12 @@ public class UrlBuilderTests {
 
     @Test
     public void parseWithNull() {
-        final UrlBuilder builder = UrlBuilder.parse(null);
-        assertEquals("", builder.toString());
+        assertNull(UrlBuilder.parse(null));
     }
 
     @Test
     public void parseWithEmpty() {
-        final UrlBuilder builder = UrlBuilder.parse("");
-        assertEquals("", builder.toString());
+        assertNull(UrlBuilder.parse(""));
     }
 
     @Test
@@ -347,5 +345,11 @@ public class UrlBuilderTests {
     public void parseWithProtocolAndHostAndPortAndPathAndTwoQueryParameters() {
         final UrlBuilder builder = UrlBuilder.parse("https://www.bing.com:987/my/path/again?a=1&b=2");
         assertEquals("https://www.bing.com:987/my/path/again?a=1&b=2", builder.toString());
+    }
+
+    @Test
+    public void parseWithColonInPath() {
+        final UrlBuilder builder = UrlBuilder.parse("https://www.bing.com/my:/path");
+        assertEquals("https://www.bing.com/my:/path", builder.toString());
     }
 }

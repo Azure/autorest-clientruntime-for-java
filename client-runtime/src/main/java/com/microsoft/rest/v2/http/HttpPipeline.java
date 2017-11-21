@@ -24,23 +24,33 @@ public final class HttpPipeline {
      * The factories appear in this list in the order that they will be applied to outgoing
      * requests.
      */
-    private final List<RequestPolicy.Factory> requestPolicyFactories;
+    private final RequestPolicy.Factory[] requestPolicyFactories;
 
     /**
      * The HttpClient that will be used to send requests unless the sendRequestAsync() method is
      * called with a different HttpClient.
      */
-    private HttpClientRequestPolicyAdapter httpClientRequestPolicyAdapter;
+    private final HttpClientRequestPolicyAdapter httpClientRequestPolicyAdapter;
+
+    /**
+     * The optional properties that will be passed to each RequestPolicy as it is being created.
+     */
+    private final RequestPolicy.Options requestPolicyOptions;
 
     /**
      * Create a new HttpPipeline with the provided RequestPolicy factories.
      * @param requestPolicyFactories The RequestPolicy factories to apply to HTTP requests and
      *                               responses that pass through this HttpPipeline.
-     * @param httpClient The HttpClient that this HttpPipeline will use to send HTTP requests.
+     * @param options The optional properties that will be set on this HTTP pipelines.
      */
-    private HttpPipeline(List<RequestPolicy.Factory> requestPolicyFactories, HttpClient httpClient) {
+    private HttpPipeline(RequestPolicy.Factory[] requestPolicyFactories, Options options) {
         this.requestPolicyFactories = requestPolicyFactories;
+
+        final HttpClient httpClient = (options != null && options.httpClient() != null ? options.httpClient() : HttpClient.createDefault());
         this.httpClientRequestPolicyAdapter = new HttpClientRequestPolicyAdapter(httpClient);
+
+        final Logger logger = (options != null ? options.logger() : null);
+        this.requestPolicyOptions = new RequestPolicy.Options(logger);
     }
 
     /**
@@ -52,54 +62,38 @@ public final class HttpPipeline {
     public Single<HttpResponse> sendRequestAsync(HttpRequest httpRequest) {
         RequestPolicy requestPolicy = httpClientRequestPolicyAdapter;
         for (final RequestPolicy.Factory requestPolicyFactory : requestPolicyFactories) {
-            requestPolicy = requestPolicyFactory.create(requestPolicy);
+            requestPolicy = requestPolicyFactory.create(requestPolicy, requestPolicyOptions);
         }
         return requestPolicy.sendAsync(httpRequest);
     }
 
     /**
-     * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
-     * @param httpClient The HttpClient to use.
-     * @return The built HttpPipeline.
-     */
-    public static HttpPipeline build(HttpClient httpClient) {
-        return build((RequestPolicy.Factory[]) null, httpClient);
-    }
-
-    /**
-     * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
-     * @param requestPolicyFactory The RequestPolicy factory to use.
-     * @param httpClient The HttpClient to use.
-     * @return The built HttpPipeline.
-     */
-    public static HttpPipeline build(RequestPolicy.Factory requestPolicyFactory, HttpClient httpClient) {
-        return build(new RequestPolicy.Factory[] {requestPolicyFactory}, httpClient);
-    }
-
-    /**
-     * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
-     * @param requestPolicyFactory1 The first RequestPolicy factory to use.
-     * @param requestPolicyFactory2 The second RequestPolicy factory to use.
-     * @param httpClient The HttpClient to use.
-     * @return The built HttpPipeline.
-     */
-    public static HttpPipeline build(RequestPolicy.Factory requestPolicyFactory1, RequestPolicy.Factory requestPolicyFactory2, HttpClient httpClient) {
-        return build(
-            new RequestPolicy.Factory[] {
-                requestPolicyFactory1,
-                requestPolicyFactory2
-            },
-            httpClient);
-    }
-
-    /**
-     * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
+     * Build a new HttpPipeline that will use the provided RequestPolicy factories.
      * @param requestPolicyFactories The RequestPolicy factories to use.
-     * @param httpClient The HttpClient to use.
      * @return The built HttpPipeline.
      */
-    public static HttpPipeline build(RequestPolicy.Factory[] requestPolicyFactories, HttpClient httpClient) {
-        final HttpPipeline.Builder builder = new HttpPipeline.Builder(httpClient);
+    public static HttpPipeline build(RequestPolicy.Factory... requestPolicyFactories) {
+        return build((Options) null, requestPolicyFactories);
+    }
+
+    /**
+     * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
+     * @param httpClient The HttpClient to use.
+     * @param requestPolicyFactories The RequestPolicy factories to use.
+     * @return The built HttpPipeline.
+     */
+    public static HttpPipeline build(HttpClient httpClient, RequestPolicy.Factory... requestPolicyFactories) {
+        return build(new Options().withHttpClient(httpClient), requestPolicyFactories);
+    }
+
+    /**
+     * Build a new HttpPipeline that will use the provided HttpClient and RequestPolicy factories.
+     * @param pipelineOptions The optional properties that can be set on the created HttpPipeline.
+     * @param requestPolicyFactories The RequestPolicy factories to use.
+     * @return The built HttpPipeline.
+     */
+    public static HttpPipeline build(Options pipelineOptions, RequestPolicy.Factory... requestPolicyFactories) {
+        final HttpPipeline.Builder builder = new HttpPipeline.Builder(pipelineOptions);
         if (requestPolicyFactories != null) {
             for (final RequestPolicy.Factory requestPolicyFactory : requestPolicyFactories) {
                 builder.withRequestPolicy(requestPolicyFactory);
@@ -113,6 +107,11 @@ public final class HttpPipeline {
      */
     public static class Builder {
         /**
+         * The optional properties that will be set on the created HTTP pipelines.
+         */
+        private Options options;
+
+        /**
          * The list of RequestPolicy factories that will be applied to HTTP requests and responses.
          * The factories appear in this list in the reverse order that they will be applied to
          * outgoing requests.
@@ -120,20 +119,46 @@ public final class HttpPipeline {
         private final List<RequestPolicy.Factory> requestPolicyFactories;
 
         /**
-         * The HttpClient that will be used to send requests from Pipelines that are built from this
-         * Builder.
+         * Create a new HttpPipeline builder.
          */
-        private final HttpClient httpClient;
+        public Builder() {
+            this(null);
+        }
 
         /**
-         * Create a new HttpPipeline builder with no RequestPolicy factories.
+         * Create a new HttpPipeline builder.
          *
-         * @param httpClient The HttpClient that will be used to send requests from Pipelines that
-         *                   are built from this Builder.
+         * @param options The optional properties that will be set on the created HTTP pipelines.
          */
-        public Builder(HttpClient httpClient) {
+        public Builder(Options options) {
+            this.options = options;
             this.requestPolicyFactories = new ArrayList<>();
-            this.httpClient = httpClient;
+        }
+
+        /**
+         * Set the HttpClient that will be used by HttpPipelines that are created by this Builder.
+         * @param httpClient The HttpClient to use.
+         * @return This HttpPipeline builder.
+         */
+        public Builder withHttpClient(HttpClient httpClient) {
+            if (options == null) {
+                options = new Options();
+            }
+            options.withHttpClient(httpClient);
+            return this;
+        }
+
+        /**
+         * Set the Logger that will be used for each RequestPolicy within the created HttpPipeline.
+         * @param logger The Logger to provide to each RequestPolicy.
+         * @return This HttpPipeline options object.
+         */
+        public Builder withLogger(Logger logger) {
+            if (options == null) {
+                options = new Options();
+            }
+            options.withLogger(logger);
+            return this;
         }
 
         /**
@@ -162,7 +187,68 @@ public final class HttpPipeline {
          * @return The created HttpPipeline.
          */
         public HttpPipeline build() {
-            return new HttpPipeline(new ArrayList<>(requestPolicyFactories), httpClient);
+            final int requestPolicyCount = requestPolicyFactories.size();
+            final RequestPolicy.Factory[] requestPolicyFactoryArray = new RequestPolicy.Factory[requestPolicyCount];
+            return new HttpPipeline(requestPolicyFactories.toArray(requestPolicyFactoryArray), options);
+        }
+    }
+
+    /**
+     * A Logger that can be added to an HttpPipeline. This enables each RequestPolicy to log
+     * messages that can be used for debugging purposes.
+     */
+    public interface Logger {
+        /**
+         * Log the provided message.
+         * @param message The message to log.
+         */
+        void log(String message);
+    }
+
+    /**
+     * The optional properties that can be set on an HttpPipeline.
+     */
+    public static class Options {
+        private HttpClient httpClient;
+        private Logger logger;
+
+        /**
+         * Configure the HttpClient that will be used for the created HttpPipeline. If no HttpClient
+         * is set (or if null is set), then a default HttpClient will be created for the
+         * HttpPipeline.
+         * @param httpClient the HttpClient to use for the created HttpPipeline.
+         * @return This HttpPipeline options object.
+         */
+        public Options withHttpClient(HttpClient httpClient) {
+            this.httpClient = httpClient;
+            return this;
+        }
+
+        /**
+         * Get the HttpClient that was set.
+         * @return The HttpClient that was set.
+         */
+        HttpClient httpClient() {
+            return httpClient;
+        }
+
+        /**
+         * Configure the Logger that will be used for each RequestPolicy within the created
+         * HttpPipeline.
+         * @param logger The Logger to provide to each RequestPolicy.
+         * @return This HttpPipeline options object.
+         */
+        public Options withLogger(Logger logger) {
+            this.logger = logger;
+            return this;
+        }
+
+        /**
+         * Get the Logger that was set.
+         * @return The Logger that was set.
+         */
+        Logger logger() {
+            return logger;
         }
     }
 }

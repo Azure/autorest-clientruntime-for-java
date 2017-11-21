@@ -21,6 +21,31 @@ public abstract class HttpClient {
      */
     public abstract Single<HttpResponse> sendRequestAsync(HttpRequest request);
 
+    private static HttpClient.Factory defaultFactory;
+    private static HttpClient.Factory defaultHttpClientFactory() {
+        if (defaultFactory == null) {
+            defaultFactory = new NettyClient.Factory();
+        }
+        return defaultFactory;
+    }
+
+    /**
+     * Create an instance of the default HttpClient type.
+     * @return an instance of the default HttpClient type.
+     */
+    public static HttpClient createDefault() {
+        return createDefault(null);
+    }
+
+    /**
+     * Create an instance of the default HttpClient type with the provided configuration.
+     * @param configuration The configuration to apply to the HttpClient.
+     * @return an instance of the default HttpClient type.
+     */
+    public static HttpClient createDefault(HttpClient.Configuration configuration) {
+        return defaultHttpClientFactory().create(configuration);
+    }
+
     /**
      * The set of parameters used to create an HTTP client.
      */

@@ -11,13 +11,11 @@ import com.microsoft.rest.v2.credentials.ServiceClientCredentials;
 import com.microsoft.rest.v2.http.ContentType;
 import com.microsoft.rest.v2.http.FileRequestBody;
 import com.microsoft.rest.v2.http.FileSegment;
-import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpHeader;
 import com.microsoft.rest.v2.http.HttpHeaders;
 import com.microsoft.rest.v2.http.HttpPipeline;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
-import com.microsoft.rest.v2.http.NettyClient;
 import com.microsoft.rest.v2.http.UrlBuilder;
 import com.microsoft.rest.v2.policy.CredentialsPolicy;
 import com.microsoft.rest.v2.policy.LoggingPolicy;
@@ -545,31 +543,6 @@ public class RestProxy implements InvocationHandler {
         return new JacksonAdapter();
     }
 
-    private static HttpClient.Factory defaultHttpClientFactory;
-    private static HttpClient.Factory defaultHttpClientFactory() {
-        if (defaultHttpClientFactory == null) {
-            defaultHttpClientFactory = new NettyClient.Factory();
-        }
-        return defaultHttpClientFactory;
-    }
-
-    /**
-     * Create an instance of the default HttpClient type.
-     * @return an instance of the default HttpClient type.
-     */
-    public static HttpClient createDefaultHttpClient() {
-        return createDefaultHttpClient(null);
-    }
-
-    /**
-     * Create an instance of the default HttpClient type with the provided configuration.
-     * @param configuration The configuration to apply to the HttpClient.
-     * @return an instance of the default HttpClient type.
-     */
-    public static HttpClient createDefaultHttpClient(HttpClient.Configuration configuration) {
-        return defaultHttpClientFactory().create(configuration);
-    }
-
     /**
      * Create the default HttpPipeline.
      * @return the default HttpPipeline.
@@ -594,8 +567,7 @@ public class RestProxy implements InvocationHandler {
      * @return the default HttpPipeline.
      */
     public static HttpPipeline createDefaultPipeline(RequestPolicy.Factory credentialsPolicy) {
-        final HttpClient httpClient = defaultHttpClientFactory().create(null);
-        final HttpPipeline.Builder builder = new HttpPipeline.Builder(httpClient);
+        final HttpPipeline.Builder builder = new HttpPipeline.Builder();
         if (credentialsPolicy != null) {
             builder.withRequestPolicy(credentialsPolicy);
         }

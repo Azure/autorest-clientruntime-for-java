@@ -70,9 +70,9 @@ public class RequestIdPolicyTests {
 
     @Test
     public void newRequestIdForEachCall() throws Exception {
-        HttpPipeline pipeline = HttpPipeline.build(
-            new RequestIdPolicy.Factory(),
-            new MockHttpClient() {
+        HttpPipeline pipeline = new HttpPipeline.Builder()
+            .withRequestPolicy(new RequestIdPolicy.Factory())
+            .withHttpClient(new MockHttpClient() {
                 String firstRequestId = null;
                 @Override
                 public Single<HttpResponse> sendRequestAsync(HttpRequest request) {
@@ -89,7 +89,8 @@ public class RequestIdPolicyTests {
 
                     return Single.just(mockResponse);
                 }
-            });
+            })
+            .build();
 
         pipeline.sendRequestAsync(new HttpRequest("newRequestIdForEachCall", "GET", "http://localhost/")).toBlocking().value();
         pipeline.sendRequestAsync(new HttpRequest("newRequestIdForEachCall", "GET", "http://localhost/")).toBlocking().value();
@@ -98,8 +99,6 @@ public class RequestIdPolicyTests {
     @Test
     public void sameRequestIdForRetry() throws Exception {
         HttpPipeline pipeline = HttpPipeline.build(
-            new RequestIdPolicy.Factory(),
-            new RetryPolicy.Factory(1),
             new MockHttpClient() {
                 String firstRequestId = null;
                 @Override
@@ -117,7 +116,9 @@ public class RequestIdPolicyTests {
 
                     return Single.just(mockResponse);
                 }
-            });
+            },
+            new RequestIdPolicy.Factory(),
+            new RetryPolicy.Factory(1));
 
         pipeline.sendRequestAsync(new HttpRequest("sameRequestIdForRetry", "GET", "http://localhost/")).toBlocking().value();
     }

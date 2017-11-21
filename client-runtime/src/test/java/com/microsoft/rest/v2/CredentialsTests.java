@@ -27,7 +27,7 @@ public class CredentialsTests {
 
         RequestPolicy.Factory auditorFactory = new RequestPolicy.Factory() {
             @Override
-            public RequestPolicy create(final RequestPolicy next) {
+            public RequestPolicy create(final RequestPolicy next, RequestPolicy.Options options) {
                 return new RequestPolicy() {
                     @Override
                     public Single<HttpResponse> sendAsync(HttpRequest request) {
@@ -40,9 +40,9 @@ public class CredentialsTests {
         };
 
         final HttpPipeline pipeline = HttpPipeline.build(
+                new MockHttpClient(),
                 new CredentialsPolicy.Factory(credentials),
-                auditorFactory,
-                new MockHttpClient());
+                auditorFactory);
 
         HttpRequest request = new HttpRequest("basicCredentialsTest", "GET", "http://localhost");
         pipeline.sendRequestAsync(request).toBlocking().value();
@@ -54,7 +54,7 @@ public class CredentialsTests {
 
         RequestPolicy.Factory auditorFactory = new RequestPolicy.Factory() {
             @Override
-            public RequestPolicy create(final RequestPolicy next) {
+            public RequestPolicy create(final RequestPolicy next, RequestPolicy.Options options) {
                 return new RequestPolicy() {
                     @Override
                     public Single<HttpResponse> sendAsync(HttpRequest request) {
@@ -67,9 +67,9 @@ public class CredentialsTests {
         };
 
         HttpPipeline pipeline = HttpPipeline.build(
+                new MockHttpClient(),
                 new CredentialsPolicy.Factory(credentials),
-                auditorFactory,
-                new MockHttpClient());
+                auditorFactory);
 
         HttpRequest request = new HttpRequest("basicCredentialsTest", "GET", "http://localhost");
         pipeline.sendRequestAsync(request).toBlocking().value();

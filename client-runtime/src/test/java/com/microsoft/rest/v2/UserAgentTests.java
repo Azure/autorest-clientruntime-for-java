@@ -24,7 +24,6 @@ public class UserAgentTests {
     @Test
     public void defaultUserAgentTests() throws Exception {
         HttpPipeline pipeline = HttpPipeline.build(
-            new UserAgentPolicy.Factory("AutoRest-Java"),
             new MockHttpClient() {
                 @Override
                 public Single<HttpResponse> sendRequestAsync(HttpRequest request) {
@@ -33,7 +32,8 @@ public class UserAgentTests {
                             "AutoRest-Java");
                     return Single.<HttpResponse>just(new MockHttpResponse(200));
                 }
-            });
+            },
+            new UserAgentPolicy.Factory("AutoRest-Java"));
 
         HttpResponse response = pipeline.sendRequestAsync(new HttpRequest(
                 "defaultUserAgentTests",
@@ -45,7 +45,6 @@ public class UserAgentTests {
     @Test
     public void customUserAgentTests() throws Exception {
         HttpPipeline pipeline = HttpPipeline.build(
-            new UserAgentPolicy.Factory("Awesome"),
             new MockHttpClient() {
                 @Override
                 public Single<HttpResponse> sendRequestAsync(HttpRequest request) {
@@ -53,7 +52,8 @@ public class UserAgentTests {
                     Assert.assertEquals("Awesome", header);
                     return Single.<HttpResponse>just(new MockHttpResponse(200));
                 }
-            });
+            },
+            new UserAgentPolicy.Factory("Awesome"));
 
         HttpResponse response = pipeline.sendRequestAsync(new HttpRequest("customUserAgentTests", "GET", "http://localhost")).toBlocking().value();
         Assert.assertEquals(200, response.statusCode());

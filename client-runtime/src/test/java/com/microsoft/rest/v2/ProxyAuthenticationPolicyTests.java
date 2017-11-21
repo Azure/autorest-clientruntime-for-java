@@ -22,10 +22,11 @@ public class ProxyAuthenticationPolicyTests {
         final String password = "testpass";
 
         final HttpPipeline pipeline = HttpPipeline.build(
+                new MockHttpClient(),
                 new ProxyAuthenticationPolicy.Factory(username, password),
                 new RequestPolicy.Factory() {
                     @Override
-                    public RequestPolicy create(final RequestPolicy next) {
+                    public RequestPolicy create(final RequestPolicy next, RequestPolicy.Options options) {
                         return new RequestPolicy() {
                             @Override
                             public Single<HttpResponse> sendAsync(HttpRequest request) {
@@ -35,8 +36,7 @@ public class ProxyAuthenticationPolicyTests {
                             }
                         };
                     }
-                },
-                new MockHttpClient());
+                });
 
         pipeline.sendRequestAsync(new HttpRequest("test", "GET", "localhost"))
                 .toBlocking().value();

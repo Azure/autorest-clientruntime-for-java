@@ -30,7 +30,7 @@ public class PortPolicy implements RequestPolicy {
     public Single<HttpResponse> sendAsync(HttpRequest request) {
         final UrlBuilder urlBuilder = UrlBuilder.parse(request.url());
         if (overwrite || urlBuilder.port() == null) {
-            request.withUrl(urlBuilder.withPort(3000).toString());
+            request.withUrl(urlBuilder.withPort(port).toString());
         }
         return nextPolicy.sendAsync(request);
     }

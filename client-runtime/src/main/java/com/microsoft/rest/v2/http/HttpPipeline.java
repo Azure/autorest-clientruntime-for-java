@@ -269,8 +269,8 @@ public final class HttpPipeline {
             if (searchIndex == factoryCount) {
                 withRequestPolicy(requestPolicyFactory);
             } else {
-                final int insertIndex = factoryCount - (searchIndex + 1);
-                withRequestPolicy(insertIndex, requestPolicyFactory);
+                final int insertIndex = searchIndex + 1;
+                requestPolicyFactories.add(insertIndex, requestPolicyFactory);
             }
 
             return this;
@@ -302,8 +302,7 @@ public final class HttpPipeline {
             if (searchIndex == factoryCount) {
                 withRequestPolicy(requestPolicyFactory);
             } else {
-                final int insertIndex = factoryCount - searchIndex;
-                withRequestPolicy(insertIndex, requestPolicyFactory);
+                requestPolicyFactories.add(searchIndex, requestPolicyFactory);
             }
 
             return this;

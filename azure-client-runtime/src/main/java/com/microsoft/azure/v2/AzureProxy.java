@@ -195,6 +195,20 @@ public final class AzureProxy extends RestProxy {
     /**
      * Create a proxy implementation of the provided Swagger interface.
      * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
+     * @param httpPipeline The HTTP httpPipeline will be used to make REST calls.
+     * @param serializer The serializer that will be used to convert POJOs to and from request and
+     *                   response bodies.
+     * @param <A> The type of the Swagger interface.
+     * @return A proxy implementation of the provided Swagger interface.
+     */
+    @SuppressWarnings("unchecked")
+    public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline, SerializerAdapter<?> serializer) {
+        return AzureProxy.create(swaggerInterface, (AzureEnvironment) null, httpPipeline, serializer);
+    }
+
+    /**
+     * Create a proxy implementation of the provided Swagger interface.
+     * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
      * @param azureEnvironment The azure environment that the proxy implementation will target.
      * @param httpPipeline The HTTP httpPipeline will be used to make REST calls.
      * @param serializer The serializer that will be used to convert POJOs to and from request and
@@ -213,21 +227,6 @@ public final class AzureProxy extends RestProxy {
             }
         }
 
-        return AzureProxy.create(swaggerInterface, baseUrl, httpPipeline, serializer);
-    }
-
-    /**
-     * Create a proxy implementation of the provided Swagger interface.
-     * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
-     * @param baseUrl The base URL (protocol and host) that the proxy implementation will target.
-     * @param httpPipeline The internal HTTP httpPipeline that will be used to make REST calls.
-     * @param serializer The serializer that will be used to convert POJOs to and from request and
-     *                   response bodies.
-     * @param <A> The type of the Swagger interface.
-     * @return A proxy implementation of the provided Swagger interface.
-     */
-    @SuppressWarnings("unchecked")
-    public static <A> A create(Class<A> swaggerInterface, String baseUrl, HttpPipeline httpPipeline, SerializerAdapter<?> serializer) {
         final SwaggerInterfaceParser interfaceParser = new SwaggerInterfaceParser(swaggerInterface, baseUrl);
         final AzureProxy azureProxy = new AzureProxy(httpPipeline, serializer, interfaceParser);
         return (A) Proxy.newProxyInstance(swaggerInterface.getClassLoader(), new Class[]{swaggerInterface}, azureProxy);

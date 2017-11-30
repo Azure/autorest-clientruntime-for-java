@@ -203,7 +203,7 @@ public final class AzureProxy extends RestProxy {
      */
     @SuppressWarnings("unchecked")
     public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline, SerializerAdapter<?> serializer) {
-        return AzureProxy.create(swaggerInterface, (AzureEnvironment) null, httpPipeline, serializer);
+        return AzureProxy.create(swaggerInterface, null, httpPipeline, serializer);
     }
 
     /**

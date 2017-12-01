@@ -15,19 +15,19 @@ The runtime libraries for [AutoRest](https://github.com/azure/autorest) generate
 <dependency>
   <groupId>com.microsoft.rest</groupId>
   <artifactId>client-runtime</artifactId>
-  <version>1.0.0</version>
+  <version>1.2.0</version>
 </dependency>
 
 <dependency>
   <groupId>com.microsoft.azure</groupId>
   <artifactId>azure-client-runtime</artifactId>
-  <version>1.0.0</version>
+  <version>1.2.0</version>
 </dependency>
 
 <dependency>
   <groupId>com.microsoft.azure</groupId>
   <artifactId>azure-client-authentication</artifactId>
-  <version>1.0.0-beta6-SNAPSHOT</version>
+  <version>1.2.0</version>
 </dependency>
 ```
 

@@ -27,7 +27,6 @@ public class HostPolicy implements RequestPolicy {
     @Override
     public Single<HttpResponse> sendAsync(HttpRequest request) {
         final UrlBuilder urlBuilder = UrlBuilder.parse(request.url());
-        urlBuilder.withHost(host);
         request.withUrl(urlBuilder.withHost(host).toString());
         return nextPolicy.sendAsync(request);
     }

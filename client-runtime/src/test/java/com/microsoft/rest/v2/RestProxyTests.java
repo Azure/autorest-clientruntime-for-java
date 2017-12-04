@@ -1279,28 +1279,6 @@ public abstract class RestProxyTests {
         assertNotEquals(0, headers.xProcessedTime);
     }
 
-    @Host("http://{host}")
-    private interface Service21 {
-        @GET("bytes/100")
-        byte[] getBytes(@HostParam("host") String host);
-    }
-
-    @Test
-    public void service21GetBytesWithHost() {
-        final byte[] bytes = createService(Service21.class)
-                .getBytes("httpbin.org");
-        assertNotNull(bytes);
-        assertEquals(100, bytes.length);
-    }
-
-    @Test
-    public void service21GetBytesWithProtocolAndHost() {
-        final byte[] bytes = createService(Service21.class)
-                .getBytes("https://httpbin.org");
-        assertNotNull(bytes);
-        assertEquals(100, bytes.length);
-    }
-
     // Helpers
     protected <T> T createService(Class<T> serviceClass) {
         final HttpClient httpClient = createHttpClient();

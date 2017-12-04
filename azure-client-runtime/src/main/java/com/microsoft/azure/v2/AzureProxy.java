@@ -10,7 +10,6 @@ import com.google.common.hash.Hashing;
 import com.google.common.reflect.TypeToken;
 import com.microsoft.azure.v2.annotations.AzureHost;
 import com.microsoft.azure.v2.serializer.AzureJacksonAdapter;
-import com.microsoft.rest.v2.LogLevel;
 import com.microsoft.rest.v2.credentials.ServiceClientCredentials;
 import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpPipeline;

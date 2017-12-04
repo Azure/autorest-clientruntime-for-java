@@ -1,6 +1,5 @@
 package com.microsoft.rest.v2.http;
 
-import com.microsoft.rest.v2.LogLevel;
 import com.microsoft.rest.v2.policy.LoggingPolicy;
 import com.microsoft.rest.v2.policy.PortPolicy;
 import com.microsoft.rest.v2.policy.ProtocolPolicy;

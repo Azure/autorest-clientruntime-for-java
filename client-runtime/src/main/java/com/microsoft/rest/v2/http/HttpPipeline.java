@@ -335,11 +335,68 @@ public final class HttpPipeline {
      * messages that can be used for debugging purposes.
      */
     public interface Logger {
+        LogLevel minimumLogLevel();
+
         /**
          * Log the provided message.
+         * @param logLevel The LogLevel associated with this message.
          * @param message The message to log.
+         * @param formattedArguments A variadic list of arguments that should be formatted into the
+         *                           provided message.
          */
-        void log(String message);
+        void log(LogLevel logLevel, String message, Object... formattedArguments);
+    }
+
+    /**
+     * An abstract Logger for HttpPipeline RequestPolicies that contains functionality that is
+     * common to Loggers.
+     */
+    public static abstract class AbstractLogger implements Logger {
+        private HttpPipeline.LogLevel minimumLogLevel = HttpPipeline.LogLevel.INFO;
+
+        /**
+         * Set the minimum log level that this logger should log. Anything with a higher log level
+         * should be ignored.
+         * @param minimumLogLevel The minimum log level to set.
+         * @return This StandardOutLogger.
+         */
+        public AbstractLogger withMinimumLogLevel(HttpPipeline.LogLevel minimumLogLevel) {
+            this.minimumLogLevel = minimumLogLevel;
+            return this;
+        }
+
+        @Override
+        public HttpPipeline.LogLevel minimumLogLevel() {
+            return minimumLogLevel;
+        }
+
+        protected String format(String message, Object... formattedMessageArguments) {
+            if (formattedMessageArguments != null && formattedMessageArguments.length >= 1) {
+                message = String.format(message, formattedMessageArguments);
+            }
+            return message;
+        }
+    }
+
+    /**
+     * The different levels of logs from HttpPipeline's RequestPolicies.
+     */
+    public enum LogLevel {
+        ERROR(2),
+
+        WARNING(3),
+
+        INFO(4);
+
+        private final int id;
+
+        LogLevel(int id) {
+            this.id = id;
+        }
+
+        int getValue() {
+            return id;
+        }
     }
 
     /**

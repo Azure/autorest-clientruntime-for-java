@@ -32,6 +32,7 @@ import rx.Observable;
 import rx.Single;
 import rx.exceptions.Exceptions;
 import rx.functions.Func1;
+import sun.plugin.dom.exception.InvalidStateException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -248,11 +249,6 @@ public class RestProxy implements InvocationHandler {
 
         for (final EncodedParameter queryParameter : methodParser.encodedQueryParameters(args)) {
             urlBuilder.withQueryParameter(queryParameter.name(), queryParameter.encodedValue());
-        }
-
-        final String scheme = urlBuilder.scheme();
-        if (scheme == null || scheme.isEmpty()) {
-            urlBuilder.withScheme("http");
         }
 
         final String url = urlBuilder.toString();

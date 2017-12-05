@@ -185,7 +185,7 @@ public class UrlBuilder {
             result.append(port);
         }
 
-        if (path != null) {
+        if (path != null && !path.isEmpty()) {
             if (result.length() != 0 && !path.startsWith("/") && !host.endsWith("/")) {
                 result.append('/');
             }

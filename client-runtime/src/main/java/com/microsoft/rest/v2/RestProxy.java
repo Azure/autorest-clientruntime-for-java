@@ -32,7 +32,6 @@ import rx.Observable;
 import rx.Single;
 import rx.exceptions.Exceptions;
 import rx.functions.Func1;
-import sun.plugin.dom.exception.InvalidStateException;
 
 import java.io.IOException;
 import java.io.InputStream;

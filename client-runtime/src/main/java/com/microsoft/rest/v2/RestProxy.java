@@ -250,6 +250,11 @@ public class RestProxy implements InvocationHandler {
             urlBuilder.withQueryParameter(queryParameter.name(), queryParameter.encodedValue());
         }
 
+        final String scheme = urlBuilder.scheme();
+        if (scheme == null || scheme.isEmpty()) {
+            urlBuilder.withScheme("http");
+        }
+
         final String url = urlBuilder.toString();
         final HttpRequest request = new HttpRequest(methodParser.fullyQualifiedMethodName(), methodParser.httpMethod(), url);
 

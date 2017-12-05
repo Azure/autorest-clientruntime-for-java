@@ -174,7 +174,7 @@ public final class AzureProxy extends RestProxy {
         if (credentialsPolicy != null) {
             builder.withRequestPolicy(credentialsPolicy);
         }
-        builder.withRequestPolicy(new LoggingPolicy.Factory(LogLevel.HEADERS));
+        builder.withRequestPolicy(new LoggingPolicy.Factory(LoggingPolicy.LogLevel.HEADERS));
         return builder.build();
     }
 

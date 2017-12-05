@@ -335,6 +335,10 @@ public final class HttpPipeline {
      * messages that can be used for debugging purposes.
      */
     public interface Logger {
+        /**
+         * The log level threshold for what logs will be logged.
+         * @return The log level threshold for what logs will be logged.
+         */
         LogLevel minimumLogLevel();
 
         /**
@@ -351,14 +355,14 @@ public final class HttpPipeline {
      * An abstract Logger for HttpPipeline RequestPolicies that contains functionality that is
      * common to Loggers.
      */
-    public static abstract class AbstractLogger implements Logger {
+    public abstract static class AbstractLogger implements Logger {
         private HttpPipeline.LogLevel minimumLogLevel = HttpPipeline.LogLevel.INFO;
 
         /**
          * Set the minimum log level that this logger should log. Anything with a higher log level
          * should be ignored.
          * @param minimumLogLevel The minimum log level to set.
-         * @return This StandardOutLogger.
+         * @return This Logger.
          */
         public AbstractLogger withMinimumLogLevel(HttpPipeline.LogLevel minimumLogLevel) {
             this.minimumLogLevel = minimumLogLevel;
@@ -370,7 +374,7 @@ public final class HttpPipeline {
             return minimumLogLevel;
         }
 
-        protected String format(String message, Object... formattedMessageArguments) {
+        protected static String format(String message, Object... formattedMessageArguments) {
             if (formattedMessageArguments != null && formattedMessageArguments.length >= 1) {
                 message = String.format(message, formattedMessageArguments);
             }
@@ -382,21 +386,20 @@ public final class HttpPipeline {
      * The different levels of logs from HttpPipeline's RequestPolicies.
      */
     public enum LogLevel {
-        ERROR(2),
+        /**
+         * An error log.
+         */
+        ERROR,
 
-        WARNING(3),
+        /**
+         * A warning log.
+         */
+        WARNING,
 
-        INFO(4);
-
-        private final int id;
-
-        LogLevel(int id) {
-            this.id = id;
-        }
-
-        int getValue() {
-            return id;
-        }
+        /**
+         * An information log.
+         */
+        INFO
     }
 
     /**

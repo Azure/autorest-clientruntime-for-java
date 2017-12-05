@@ -174,6 +174,22 @@ public class UrlBuilderTests {
     }
 
     @Test
+    public void withQueryInHostAndPath() {
+        final UrlBuilder builder = new UrlBuilder()
+                .withHost("http://www.example.com/?name=value")
+                .withPath("mypath?thing=stuff");
+        assertEquals("http://www.example.com/mypath?name=value&thing=stuff", builder.toString());
+    }
+
+    @Test
+    public void withQueryInHostAndOnlyQueryPath() {
+        final UrlBuilder builder = new UrlBuilder()
+                .withHost("http://www.example.com/mypath?name=value")
+                .withPath("?thing=stuff");
+        assertEquals("http://www.example.com/mypath?name=value&thing=stuff", builder.toString());
+    }
+
+    @Test
     public void withQueryInPath() {
         final UrlBuilder builder = new UrlBuilder()
                 .withScheme("http")

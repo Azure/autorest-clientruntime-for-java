@@ -42,8 +42,16 @@ public class UrlBuilder {
      * @return This UrlBuilder so that multiple setters can be chained together.
      */
     public UrlBuilder withHost(String host) {
-        if (host != null && host.endsWith("/")) {
-            host = host.substring(0, host.length() - 1);
+        if (host != null) {
+            if (host.endsWith("/")) {
+                host = host.substring(0, host.length() - 1);
+            }
+
+            String[] parts = host.split("\\?");
+            host = parts[0];
+            if (parts.length > 1) {
+                parseQuery(parts[1]);
+            }
         }
         this.host = host;
         return this;
@@ -75,6 +83,18 @@ public class UrlBuilder {
         return port;
     }
 
+    private void parseQuery(String query) {
+        String[] queryPairs = query.split("&");
+        for (String queryPair : queryPairs) {
+            String[] nameAndValue = queryPair.split("=");
+            if (nameAndValue.length != 2) {
+                throw new IllegalArgumentException("Path contained malformed query: " + path);
+            }
+
+            withQueryParameter(nameAndValue[0], nameAndValue[1]);
+        }
+    }
+
     /**
      * Set the path that will be used to build the final URL.
      * @param path The path that will be used to build the final URL.
@@ -85,15 +105,7 @@ public class UrlBuilder {
             String[] parts = path.split("\\?");
             this.path = parts[0];
             if (parts.length > 1) {
-                String[] queryPairs = parts[1].split("&");
-                for (String queryPair : queryPairs) {
-                    String[] nameAndValue = queryPair.split("=");
-                    if (nameAndValue.length != 2) {
-                        throw new IllegalArgumentException("Path contained malformed query: " + path);
-                    }
-
-                    withQueryParameter(nameAndValue[0], nameAndValue[1]);
-                }
+                parseQuery(parts[1]);
             }
         }
         return this;
@@ -173,8 +185,8 @@ public class UrlBuilder {
             result.append(port);
         }
 
-        if (path != null) {
-            if (result.length() != 0 && !path.startsWith("/")) {
+        if (path != null && !path.isEmpty()) {
+            if (result.length() != 0 && !path.startsWith("/") && !host.endsWith("/")) {
                 result.append('/');
             }
             result.append(path);

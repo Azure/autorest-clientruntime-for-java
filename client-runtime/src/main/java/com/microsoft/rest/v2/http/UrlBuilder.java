@@ -148,7 +148,10 @@ public class UrlBuilder {
                     break;
 
                 case PATH:
-                    path = emptyToNull(tokenText);
+                    final String tokenPath = emptyToNull(tokenText);
+                    if (path == null || (tokenPath != null && (path.equals("/") || !tokenPath.equals("/")))) {
+                        path = tokenPath;
+                    }
                     break;
 
                 case QUERY:

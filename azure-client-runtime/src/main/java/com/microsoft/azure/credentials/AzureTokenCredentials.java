@@ -9,12 +9,17 @@ package com.microsoft.azure.credentials;
 import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.AzureEnvironment.Endpoint;
 import com.microsoft.rest.credentials.TokenCredentials;
+import okhttp3.Authenticator;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.Route;
 
 import java.io.IOException;
 import java.net.Proxy;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * AzureTokenCredentials represents a credentials object with access to Azure
@@ -122,5 +127,23 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
     @Override
     public void applyCredentialsFilter(OkHttpClient.Builder clientBuilder) {
         clientBuilder.interceptors().add(new AzureTokenCredentialsInterceptor(this));
+        clientBuilder.authenticator(new Authenticator() {
+            @Override
+            public Request authenticate(Route route, Response response) throws IOException {
+                String authenticateHeader = response.header("WWW-Authenticate");
+                if (authenticateHeader != null && !authenticateHeader.isEmpty()) {
+                    Pattern pattern = Pattern.compile("resource=\"([a-zA-Z0-9.:/-_]+)\"");
+                    Matcher matcher = pattern.matcher(authenticateHeader);
+                    if (matcher.find()) {
+                        String resource = matcher.group(1);
+                        return response.request().newBuilder()
+                                .header("Authorization", "Bearer " + getToken(resource))
+                                .build();
+                    }
+                }
+                // Otherwise cannot satisfy the challenge
+                return null;
+            }
+        });
     }
 }

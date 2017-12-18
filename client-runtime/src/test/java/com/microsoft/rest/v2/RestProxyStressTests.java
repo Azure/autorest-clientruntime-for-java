@@ -128,7 +128,7 @@ public class RestProxyStressTests {
         deleteRecursive(Paths.get("temp"));
     }
 
-    @Host("https://javasdktest.blob.core.windows.net")
+    @Host("http://javasdktest.blob.core.windows.net")
     interface IOService {
         @GET("/javasdktest/download/1k.dat?{sas}")
         Single<RestResponse<Void, Flowable<byte[]>>> download1KB(@PathParam(value = "sas", encoded = true) String sas);

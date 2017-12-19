@@ -13,7 +13,7 @@ import java.io.IOException;
 /**
  * An HTTP request body which is given by subscribing to a Flowable.
  */
-public final class FlowableHttpRequestBody implements HttpRequestBody {
+public final class FlowableHttpRequestBody extends HttpRequestBody {
     private final long contentLength;
     private final String contentType;
 

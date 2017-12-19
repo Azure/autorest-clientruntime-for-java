@@ -21,7 +21,7 @@ import java.util.concurrent.Callable;
 /**
  * A HTTP request body that contains a chunk of a file.
  */
-public class FileRequestBody implements HttpRequestBody {
+public class FileRequestBody extends HttpRequestBody {
     private static final int CHUNK_SIZE = 8192;
     private final FileSegment fileSegment;
 
@@ -84,12 +84,8 @@ public class FileRequestBody implements HttpRequestBody {
         return stream;
     }
 
-    /**
-     * Creates a Flowable which streams file content using pooled Netty buffers.
-     * Buffers emitted by this Flowable must be released to avoid memory leaks.
-     * @return the Flowable
-     */
-    Flowable<ByteBuf> pooledContent() {
+    @Override
+    Flowable<ByteBuf> byteBufContent() {
         final long offset = fileSegment.offset();
         final long length = fileSegment.length();
 

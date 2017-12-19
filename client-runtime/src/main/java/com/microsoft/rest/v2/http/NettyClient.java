@@ -86,9 +86,9 @@ public final class NettyClient extends HttpClient {
 
                 MultithreadEventLoopGroup result;
                 if (osName.contains("Linux")) {
-                    result = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.epoll.EpollSocketChannel").newInstance();
+                    result = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.epoll.EpollSocketChannel").getConstructor().newInstance();
                 } else if (osName.contains("Mac")) {
-                    result = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.kqueue.KQueueEventLoopGroup").newInstance();
+                    result = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.kqueue.KQueueEventLoopGroup").getConstructor().newInstance();
                 } else {
                     result = new NioEventLoopGroup();
                 }

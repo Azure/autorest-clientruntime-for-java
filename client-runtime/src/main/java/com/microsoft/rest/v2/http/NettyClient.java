@@ -98,7 +98,15 @@ public final class NettyClient extends HttpClient {
                     channelClass = NioSocketChannel.class;
                 }
             } catch (Exception e) {
-                LoggerFactory.getLogger(NettyAdapter.class).info("Exception when obtaining native EventLoopGroup and SocketChannel: " + e.getMessage());
+                String message = e.getMessage();
+                if (message == null) {
+                    Throwable cause = e.getCause();
+                    if (cause != null) {
+                        message = cause.getMessage();
+                    }
+                }
+
+                LoggerFactory.getLogger(NettyAdapter.class).info("Exception when obtaining native EventLoopGroup and SocketChannel: " + message);
                 this.eventLoopGroup = new NioEventLoopGroup();
                 channelClass = NioSocketChannel.class;
             }

@@ -88,7 +88,7 @@ public final class NettyClient extends HttpClient {
             try {
                 final String osName = System.getProperty("os.name");
                 if (osName.contains("Linux")) {
-                    this.eventLoopGroup = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.epoll.EpollSocketChannel").getConstructor().newInstance();
+                    this.eventLoopGroup = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.epoll.EpollEventLoopGroup").getConstructor().newInstance();
                     channelClass = (Class<? extends SocketChannel>) Class.forName("io.netty.channel.epoll.EpollSocketChannel");
                 } else if (osName.contains("Mac")) {
                     this.eventLoopGroup = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.kqueue.KQueueEventLoopGroup").getConstructor().newInstance();

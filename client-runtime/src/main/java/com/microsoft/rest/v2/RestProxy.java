@@ -283,7 +283,9 @@ public class RestProxy implements InvocationHandler {
         }
 
         final Object bodyContentObject = methodParser.body(args);
-        if (bodyContentObject != null) {
+        if (bodyContentObject == null) {
+            request.headers().set("Content-Length", "0");
+        } else {
             String contentType = methodParser.bodyContentType();
             if (contentType == null || contentType.isEmpty()) {
                 contentType = request.headers().value("Content-Type");
@@ -490,6 +492,12 @@ public class RestProxy implements InvocationHandler {
                 });
             }
             asyncResult = responseBodyBytesAsync;
+        } else if (entityTypeToken.isSubtypeOf(AsyncInputStream.class)) {
+            AsyncInputStream stream = new AsyncInputStream(
+                    response.streamBodyAsync(),
+                    Integer.parseInt(response.headerValue("Content-Length")),
+                    false);
+            asyncResult = Maybe.just(stream);
         } else if (isFlowableByteArray(entityTypeToken)) {
             asyncResult = Maybe.just(response.streamBodyAsync());
         } else {
@@ -652,6 +660,19 @@ public class RestProxy implements InvocationHandler {
     @SuppressWarnings("unchecked")
     public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline) {
         return create(swaggerInterface, httpPipeline, createDefaultSerializer());
+    }
+
+    /**
+     * Create a proxy implementation of the provided Swagger interface.
+     * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
+     * @param serviceClient The ServiceClient that contains the details to use to create the
+     *                      RestProxy implementation of the swagger interface.
+     * @param <A> The type of the Swagger interface.
+     * @return A proxy implementation of the provided Swagger interface.
+     */
+    @SuppressWarnings("unchecked")
+    public static <A> A create(Class<A> swaggerInterface, ServiceClient serviceClient) {
+        return create(swaggerInterface, serviceClient.httpPipeline(), serviceClient.serializerAdapter());
     }
 
     /**

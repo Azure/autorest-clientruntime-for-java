@@ -205,6 +205,20 @@ public class SharedChannelPool implements ChannelPool {
         throw new UnsupportedOperationException("Please pass host & port to shared channel pool.");
     }
 
+    /**
+     * Closes the channel and releases it back to the pool.
+     * @param channel the channel to close and release.
+     * @return a Future representing the operation.
+     */
+    public Future<Void> closeAndRelease(final Channel channel) {
+        return channel.close().addListener(new GenericFutureListener<Future<? super Void>>() {
+            @Override
+            public void operationComplete(Future<? super Void> future) throws Exception {
+                release(channel);
+            }
+        });
+    }
+
     @Override
     public Future<Void> release(final Channel channel) {
         return this.release(channel, this.bootstrap.config().group().next().<Void>newPromise());

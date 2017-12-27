@@ -6,44 +6,29 @@
 
 package com.microsoft.rest.v2.http;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.reactivex.Flowable;
-import io.reactivex.functions.Function;
 
 import java.io.IOException;
 
 /**
  * The body of an HTTP request.
  */
-public abstract class HttpRequestBody {
+public interface HttpRequestBody {
     /**
      * The length of this request body in bytes.
      * @return The length of this request body in bytes.
      */
-    public abstract long contentLength();
+    long contentLength();
 
     /**
      * @return the MIME Content-Type of this request body.
      */
-    public abstract String contentType();
+    String contentType();
 
     /**
      * @return A Flowable which provides this request body's content upon subscription.
      */
-    public abstract Flowable<byte[]> content();
-
-    /**
-     * @return a Flowable which provides this request body's content in Netty ByteBufs upon subscription.
-     */
-    Flowable<ByteBuf> byteBufContent() {
-        return content().map(new Function<byte[], ByteBuf>() {
-            @Override
-            public ByteBuf apply(byte[] bytes) throws Exception {
-                return Unpooled.wrappedBuffer(bytes);
-            }
-        });
-    }
+    Flowable<byte[]> content();
 
     /**
      * Get a buffered version of this HttpRequestBody. If this HttpRequestBody
@@ -52,5 +37,5 @@ public abstract class HttpRequestBody {
      * @return A buffered version of this HttpRequestBody.
      * @throws IOException if there is a problem buffering.
      */
-    public abstract HttpRequestBody buffer() throws IOException;
+    HttpRequestBody buffer() throws IOException;
 }

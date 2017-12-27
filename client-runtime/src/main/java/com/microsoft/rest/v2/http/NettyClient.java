@@ -78,55 +78,33 @@ public final class NettyClient extends HttpClient {
     }
 
     private static final class NettyAdapter {
-        private final MultithreadEventLoopGroup eventLoopGroup;
-        private final SharedChannelPool channelPool;
-
-        private static MultithreadEventLoopGroup getEventLoopGroup() {
-            try {
-                final String osName = System.getProperty("os.name");
-
-                MultithreadEventLoopGroup result;
-                if (osName.contains("Linux")) {
-                    result = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.epoll.EpollSocketChannel").getConstructor().newInstance();
-                } else if (osName.contains("Mac")) {
-                    result = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.kqueue.KQueueEventLoopGroup").getConstructor().newInstance();
-                } else {
-                    result = new NioEventLoopGroup();
-                }
-
-                return result;
-            } catch (Exception e) {
-                LoggerFactory.getLogger(NettyAdapter.class).info("Exception when obtaining EventLoopGroup: " + e.getMessage());
-                return new NioEventLoopGroup();
-            }
-        }
+        private MultithreadEventLoopGroup eventLoopGroup;
+        private SharedChannelPool channelPool;
 
         @SuppressWarnings("unchecked")
-        private static Class<? extends SocketChannel> getSocketChannelClass() {
+        private NettyAdapter() {
+            Bootstrap bootstrap = new Bootstrap();
+            Class<? extends SocketChannel> channelClass;
             try {
                 final String osName = System.getProperty("os.name");
-
-                Class<? extends SocketChannel> result;
                 if (osName.contains("Linux")) {
-                    result = (Class<? extends SocketChannel>) Class.forName("io.netty.channel.epoll.EpollSocketChannel");
+                    this.eventLoopGroup = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.epoll.EpollSocketChannel").getConstructor().newInstance();
+                    channelClass = (Class<? extends SocketChannel>) Class.forName("io.netty.channel.epoll.EpollSocketChannel");
                 } else if (osName.contains("Mac")) {
-                    result = (Class<? extends SocketChannel>) Class.forName("io.netty.channel.kqueue.KQueueSocketChannel");
+                    this.eventLoopGroup = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.kqueue.KQueueEventLoopGroup").getConstructor().newInstance();
+                    channelClass = (Class<? extends SocketChannel>) Class.forName("io.netty.channel.kqueue.KQueueSocketChannel");
                 } else {
-                    result = NioSocketChannel.class;
+                    this.eventLoopGroup = new NioEventLoopGroup();
+                    channelClass = NioSocketChannel.class;
                 }
-
-                return result;
             } catch (Exception e) {
-                LoggerFactory.getLogger(NettyAdapter.class).info("Exception when obtaining SocketChannel class: " + e.getMessage());
-                return NioSocketChannel.class;
+                LoggerFactory.getLogger(NettyAdapter.class).info("Exception when obtaining native EventLoopGroup and SocketChannel: " + e.getMessage());
+                this.eventLoopGroup = new NioEventLoopGroup();
+                channelClass = NioSocketChannel.class;
             }
-        }
 
-        private NettyAdapter() {
-            this.eventLoopGroup = getEventLoopGroup();
-            Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(eventLoopGroup);
-            bootstrap.channel(getSocketChannelClass());
+            bootstrap.channel(channelClass);
             bootstrap.option(ChannelOption.AUTO_READ, false);
             bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
             bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) TimeUnit.MINUTES.toMillis(3L));
@@ -141,6 +119,7 @@ public final class NettyClient extends HttpClient {
         }
 
         private NettyAdapter(int eventLoopGroupSize, int channelPoolSize) {
+            // TODO: native transport with specified eventLoopGroupSize
             this.eventLoopGroup = new NioEventLoopGroup(eventLoopGroupSize);
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(eventLoopGroup);

@@ -35,7 +35,6 @@ import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.PeriodFormat;
-import org.junit.AfterClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
@@ -186,7 +185,7 @@ public class RestProxyStressTests {
     private static final byte[] MD5_90MB = { 44, 39, 103, 103, -88, 8, -94, 85, 53, 79, -115, -70, 14, 82, -68, -63 };
     private static final byte[] MD5_1GB = { 43, -104, -23, 103, 42, 34, -49, 42, 57, -127, -128, 89, -36, -81, 67, 5 };
 
-    private static final Path tempFolderPath = Paths.get("temp");
+    private static final Path TEMP_FOLDER_PATH = Paths.get("temp");
 
     @Test
     public void upload100MTest() throws Exception {
@@ -241,8 +240,8 @@ public class RestProxyStressTests {
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
-        deleteRecursive(tempFolderPath);
-        Files.createDirectory(tempFolderPath);
+        deleteRecursive(TEMP_FOLDER_PATH);
+        Files.createDirectory(TEMP_FOLDER_PATH);
 
         final byte[] buf = new byte[1024 * 1024];
         Flowable.range(0, 100)
@@ -250,7 +249,7 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(Integer i) throws Exception {
                         final int id = i;
-                        final Path filePath = tempFolderPath.resolve("1m-" + id + ".dat");
+                        final Path filePath = TEMP_FOLDER_PATH.resolve("1m-" + id + ".dat");
 
                         Files.deleteIfExists(filePath);
                         Files.createFile(filePath);
@@ -291,8 +290,8 @@ public class RestProxyStressTests {
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
-        deleteRecursive(tempFolderPath);
-        Files.createDirectory(tempFolderPath);
+        deleteRecursive(TEMP_FOLDER_PATH);
+        Files.createDirectory(TEMP_FOLDER_PATH);
 
         final byte[] buf = new byte[1024 * 1024];
         Flowable.range(0, 1)
@@ -300,7 +299,7 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(Integer i) throws Exception {
                         final int id = i;
-                        final Path filePath = tempFolderPath.resolve("1m-" + id + ".dat");
+                        final Path filePath = TEMP_FOLDER_PATH.resolve("1m-" + id + ".dat");
 
                         Files.deleteIfExists(filePath);
                         Files.createFile(filePath);
@@ -343,8 +342,8 @@ public class RestProxyStressTests {
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
-        deleteRecursive(tempFolderPath);
-        Files.createDirectory(tempFolderPath);
+        deleteRecursive(TEMP_FOLDER_PATH);
+        Files.createDirectory(TEMP_FOLDER_PATH);
 
         final byte[] buf = new byte[1024 * 1024 * 10];
         Flowable.range(0, 50)
@@ -352,7 +351,7 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(Integer i) throws Exception {
                         final int id = i;
-                        final Path filePath = tempFolderPath.resolve("10m-" + id + ".dat");
+                        final Path filePath = TEMP_FOLDER_PATH.resolve("10m-" + id + ".dat");
 
                         Files.deleteIfExists(filePath);
                         Files.createFile(filePath);
@@ -395,8 +394,8 @@ public class RestProxyStressTests {
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
-        deleteRecursive(tempFolderPath);
-        Files.createDirectory(tempFolderPath);
+        deleteRecursive(TEMP_FOLDER_PATH);
+        Files.createDirectory(TEMP_FOLDER_PATH);
 
         final byte[] buf = new byte[1024 * 1024 * 100];
         Flowable.range(0, 100)
@@ -404,7 +403,7 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(Integer i) throws Exception {
                         final int id = i;
-                        final Path filePath = tempFolderPath.resolve("100m-" + id + ".dat");
+                        final Path filePath = TEMP_FOLDER_PATH.resolve("100m-" + id + ".dat");
 
                         Files.deleteIfExists(filePath);
                         Files.createFile(filePath);
@@ -471,9 +470,8 @@ public class RestProxyStressTests {
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
-        final Path tempFolderPath = Paths.get("temp");
-        deleteRecursive(tempFolderPath);
-        Files.createDirectory(tempFolderPath);
+        deleteRecursive(TEMP_FOLDER_PATH);
+        Files.createDirectory(TEMP_FOLDER_PATH);
 
         final byte[] buf = new byte[1024 * 1024 * 10];
         Flowable.range(0, 50)
@@ -481,7 +479,7 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(Integer i) throws Exception {
                         final int id = i;
-                        final Path filePath = tempFolderPath.resolve("10m-" + id + ".dat");
+                        final Path filePath = TEMP_FOLDER_PATH.resolve("10m-" + id + ".dat");
 
                         Files.deleteIfExists(filePath);
                         Files.createFile(filePath);
@@ -524,8 +522,8 @@ public class RestProxyStressTests {
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
-        deleteRecursive(tempFolderPath);
-        Files.createDirectory(tempFolderPath);
+        deleteRecursive(TEMP_FOLDER_PATH);
+        Files.createDirectory(TEMP_FOLDER_PATH);
 
         final byte[] buf = new byte[1024 * 1024 * 100];
         Flowable.range(0, 100)
@@ -533,7 +531,7 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(Integer i) throws Exception {
                         final int id = i;
-                        final Path filePath = tempFolderPath.resolve("100m-" + id + ".dat");
+                        final Path filePath = TEMP_FOLDER_PATH.resolve("100m-" + id + ".dat");
 
                         Files.deleteIfExists(filePath);
                         Files.createFile(filePath);
@@ -564,10 +562,12 @@ public class RestProxyStressTests {
                 }).blockingAwait();
     }
 
-    private final static int NUM_FILES = 100;
+    private static final int NUM_FILES = 100;
+    private static final int CHUNKS_PER_FILE = 1024 * 1024 * 100 / 8192;
 
     @Test
     public void prepareFiles() throws Exception {
+
         final Flowable<byte[]> contentGenerator = Flowable.generate(new Callable<Random>() {
             @Override
             public Random call() throws Exception {
@@ -580,41 +580,40 @@ public class RestProxyStressTests {
                 random.nextBytes(buf);
                 emitter.onNext(buf);
             }
-        }).take(1024 * 1024 * 100 / 8192); // enough chunks to make a 100 MB file
+        }); // enough chunks to make a 100 MB file
 
-        deleteRecursive(tempFolderPath);
-        Files.createDirectory(tempFolderPath);
+        deleteRecursive(TEMP_FOLDER_PATH);
+        Files.createDirectory(TEMP_FOLDER_PATH);
 
         Flowable.range(0, NUM_FILES).flatMapCompletable(new Function<Integer, Completable>() {
             @Override
             public Completable apply(Integer integer) throws Exception {
                 final int i = integer;
-                final Path filePath = tempFolderPath.resolve("100m-" + i + ".dat");
+                final Path filePath = TEMP_FOLDER_PATH.resolve("100m-" + i + ".dat");
 
                 Files.deleteIfExists(filePath);
                 Files.createFile(filePath);
-                final AsynchronousFileChannel file = AsynchronousFileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
+                final FileChannel file = FileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
                 final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-                return contentGenerator.flatMapCompletable(new Function<byte[], CompletableSource>() {
-                    long position = 0;
-
-                    @Override
-                    public CompletableSource apply(byte[] bytes) throws Exception {
-                        messageDigest.update(bytes);
-                        Future<Integer> future = file.write(ByteBuffer.wrap(bytes), position);
-                        position += bytes.length;
-                        return Completable.fromFuture(future);
-                    }
-                }).andThen(Completable.defer(new Callable<CompletableSource>() {
+                return Flowable.range(0, CHUNKS_PER_FILE)
+                        .zipWith(contentGenerator, new BiFunction<Integer, byte[], Completable>() {
+                            @Override
+                            public Completable apply(final Integer chunkNo, final byte[] bytes) throws Exception {
+                                messageDigest.update(bytes);
+                                file.write(ByteBuffer.wrap(bytes), chunkNo * 8192);
+                                return Completable.complete();
+                            }
+                        }).flatMapCompletable(Functions.<Completable>identity())
+                        .andThen(Completable.defer(new Callable<CompletableSource>() {
                     @Override
                     public CompletableSource call() throws Exception {
                         LoggerFactory.getLogger(getClass()).info("Finished writing file " + i);
-                        Files.write(tempFolderPath.resolve("100m-" + i + "-md5.dat"), messageDigest.digest());
+                        Files.write(TEMP_FOLDER_PATH.resolve("100m-" + i + "-md5.dat"), messageDigest.digest());
                         return Completable.complete();
                     }
                 })).subscribeOn(Schedulers.io());
             }
-        }, false, 30).blockingAwait();
+        }).blockingAwait();
     }
 
     @Test
@@ -635,7 +634,7 @@ public class RestProxyStressTests {
                 .map(new Function<Integer, byte[]>() {
                     @Override
                     public byte[] apply(Integer integer) throws Exception {
-                        final Path filePath = tempFolderPath.resolve("100m-" + integer + "-md5.dat");
+                        final Path filePath = TEMP_FOLDER_PATH.resolve("100m-" + integer + "-md5.dat");
                         return Files.readAllBytes(filePath);
                     }
                 }).toList().blockingGet();
@@ -646,7 +645,7 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(Integer integer, final byte[] md5) throws Exception {
                         final int id = integer;
-                        final Path filePath = tempFolderPath.resolve("100m-" + id + ".dat");
+                        final Path filePath = TEMP_FOLDER_PATH.resolve("100m-" + id + ".dat");
                         final FileChannel fileChannel = FileChannel.open(filePath);
                         FileSegment fileSegment = new FileSegment(fileChannel, 0, fileChannel.size());
                         return service.upload100MBFile(String.valueOf(id), sas, "BlockBlob", fileSegment).flatMapCompletable(new Function<RestResponse<Void, Void>, CompletableSource>() {

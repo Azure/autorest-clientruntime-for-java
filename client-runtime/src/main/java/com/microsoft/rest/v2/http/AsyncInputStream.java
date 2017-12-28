@@ -10,13 +10,19 @@ import io.reactivex.Emitter;
 import io.reactivex.Flowable;
 import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.Function;
+import io.reactivex.internal.util.BackpressureHelper;
+import io.reactivex.schedulers.Schedulers;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.CompletionHandler;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Represents an asynchronous input stream with a content length.
@@ -71,6 +77,10 @@ public final class AsyncInputStream {
      * @return The AsyncInputStream.
      */
     public static AsyncInputStream create(final AsynchronousFileChannel fileChannel, final long offset, final long length) {
+        if (true) {
+            return new AsyncInputStream(new FlowableNio2(fileChannel, offset, length), length, true);
+        }
+
         int numChunks = (int) length / CHUNK_SIZE + (length % CHUNK_SIZE == 0 ? 0 : 1);
         Flowable<byte[]> fileStream = Flowable.range(0, numChunks).concatMap(new Function<Integer, Flowable<byte[]>>() {
             ByteBuffer innerBuf = ByteBuffer.wrap(new byte[CHUNK_SIZE]);
@@ -102,6 +112,80 @@ public final class AsyncInputStream {
     public static AsyncInputStream create(AsynchronousFileChannel fileChannel) throws IOException {
         long size = fileChannel.size();
         return create(fileChannel, 0, size);
+    }
+
+    private static class FlowableNio2 extends Flowable<byte[]> {
+        private final AsynchronousFileChannel fileChannel;
+        private final long offset;
+        private final long length;
+
+        FlowableNio2(AsynchronousFileChannel fileChannel, long offset, long length) {
+            this.fileChannel = fileChannel;
+            this.offset = offset;
+            this.length = length;
+        }
+
+        @Override
+        protected void subscribeActual(Subscriber<? super byte[]> s) {
+            s.onSubscribe(new Nio2Subscription(s));
+        }
+
+        private class Nio2Subscription implements Subscription {
+            final Subscriber<? super byte[]> subscriber;
+            final ByteBuffer innerBuf = ByteBuffer.wrap(new byte[8192]);
+            final AtomicLong requested = new AtomicLong();
+            long position = offset;
+            volatile boolean cancelled = false;
+
+            Nio2Subscription(Subscriber<? super byte[]> subscriber) {
+                this.subscriber = subscriber;
+            }
+
+            @Override
+            public void request(long n) {
+                if (BackpressureHelper.add(requested, n) == 0L) {
+                    doRead();
+                }
+            }
+
+            void doRead() {
+                innerBuf.clear();
+                fileChannel.read(innerBuf, position, null, onReadComplete);
+            }
+
+            CompletionHandler<Integer, Object> onReadComplete = new CompletionHandler<Integer, Object>() {
+                @Override
+                public void completed(Integer bytesRead, Object attachment) {
+                    if (!cancelled) {
+                        if (bytesRead == -1) {
+                            subscriber.onComplete();
+                        } else {
+                            long remaining = requested.decrementAndGet();
+                            int bytesWanted = (int) Math.min(CHUNK_SIZE, offset + length - position);
+                            subscriber.onNext(Arrays.copyOf(innerBuf.array(), bytesWanted));
+                            position += bytesRead;
+                            if (position >= offset + length) {
+                                subscriber.onComplete();
+                            } else if (remaining > 0) {
+                                doRead();
+                            }
+                        }
+                    }
+                }
+
+                @Override
+                public void failed(Throwable exc, Object attachment) {
+                    if (!cancelled) {
+                        subscriber.onError(exc);
+                    }
+                }
+            };
+
+            @Override
+            public void cancel() {
+                cancelled = true;
+            }
+        }
     }
 
     /**
@@ -136,7 +220,7 @@ public final class AsyncInputStream {
                             emitter.onError(e);
                         }
                     }
-                });
+                }).subscribeOn(Schedulers.io());
 
         return new AsyncInputStream(content, contentLength, false);
     }

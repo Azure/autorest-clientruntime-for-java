@@ -126,6 +126,7 @@ public final class NettyClient extends HttpClient {
             }, eventLoopGroup.executorCount() * 2);
         }
 
+        @SuppressWarnings("unchecked")
         private NettyAdapter(int eventLoopGroupSize, int channelPoolSize) {
             Class<? extends SocketChannel> channelClass;
             try {

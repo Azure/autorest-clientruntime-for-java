@@ -28,6 +28,7 @@ import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.internal.functions.Functions;
+import io.reactivex.schedulers.Schedulers;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
@@ -132,11 +133,6 @@ public class RestProxyStressTests {
                 });
             }
         }
-    }
-
-    @AfterClass
-    public static void teardown() throws IOException {
-        deleteRecursive(Paths.get("temp"));
     }
 
     @Host("http://javasdktest.blob.core.windows.net")
@@ -568,22 +564,10 @@ public class RestProxyStressTests {
                 }).blockingAwait();
     }
 
+    private final static int NUM_FILES = 100;
+
     @Test
-    public void uploadDownload100MParallelPooledTest() throws Exception {
-        final String sas = System.getenv("JAVA_SDK_TEST_SAS");
-        HttpHeaders headers = new HttpHeaders()
-                .set("x-ms-version", "2017-04-17");
-
-        HttpPipeline pipeline = HttpPipeline.build(
-                new AddDatePolicy.Factory(),
-                new AddHeadersPolicy.Factory(headers),
-                new ThrottlingRetryPolicyFactory(),
-                new LoggingPolicy.Factory(LogLevel.BASIC));
-
-        final IOService service = RestProxy.create(IOService.class, pipeline);
-        deleteRecursive(tempFolderPath);
-        Files.createDirectory(tempFolderPath);
-
+    public void prepareFiles() throws Exception {
         final Flowable<byte[]> contentGenerator = Flowable.generate(new Callable<Random>() {
             @Override
             public Random call() throws Exception {
@@ -598,39 +582,66 @@ public class RestProxyStressTests {
             }
         }).take(1024 * 1024 * 100 / 8192); // enough chunks to make a 100 MB file
 
-        final int numFiles = 100;
-        List<byte[]> md5s = Flowable.range(0, numFiles)
-                .flatMapSingle(new Function<Integer, Single<byte[]>>() {
-                    @Override
-                    public Single<byte[]> apply(Integer integer) throws Exception {
-                        final int i = integer;
-                        final Path filePath = tempFolderPath.resolve("100m-" + i + ".dat");
+        deleteRecursive(tempFolderPath);
+        Files.createDirectory(tempFolderPath);
 
-                        Files.deleteIfExists(filePath);
-                        Files.createFile(filePath);
-                        final AsynchronousFileChannel file = AsynchronousFileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
-                        final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-                        return contentGenerator.flatMapCompletable(new Function<byte[], CompletableSource>() {
-                            long position = 0;
-                            @Override
-                            public CompletableSource apply(byte[] bytes) throws Exception {
-                                messageDigest.update(bytes);
-                                Future<Integer> future = file.write(ByteBuffer.wrap(bytes), position);
-                                position += bytes.length;
-                                return Completable.fromFuture(future);
-                            }
-                        }).andThen(Single.defer(new Callable<SingleSource<? extends byte[]>>() {
-                            @Override
-                            public SingleSource<? extends byte[]> call() throws Exception {
-                                LoggerFactory.getLogger(getClass()).info("Finished writing file " + i);
-                                return Single.just(messageDigest.digest());
-                            }
-                        }));
+        Flowable.range(0, NUM_FILES).flatMapCompletable(new Function<Integer, Completable>() {
+            @Override
+            public Completable apply(Integer integer) throws Exception {
+                final int i = integer;
+                final Path filePath = tempFolderPath.resolve("100m-" + i + ".dat");
+
+                Files.deleteIfExists(filePath);
+                Files.createFile(filePath);
+                final AsynchronousFileChannel file = AsynchronousFileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
+                final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+                return contentGenerator.flatMapCompletable(new Function<byte[], CompletableSource>() {
+                    long position = 0;
+
+                    @Override
+                    public CompletableSource apply(byte[] bytes) throws Exception {
+                        messageDigest.update(bytes);
+                        Future<Integer> future = file.write(ByteBuffer.wrap(bytes), position);
+                        position += bytes.length;
+                        return Completable.fromFuture(future);
+                    }
+                }).andThen(Completable.defer(new Callable<CompletableSource>() {
+                    @Override
+                    public CompletableSource call() throws Exception {
+                        LoggerFactory.getLogger(getClass()).info("Finished writing file " + i);
+                        Files.write(tempFolderPath.resolve("100m-" + i + "-md5.dat"), messageDigest.digest());
+                        return Completable.complete();
+                    }
+                })).subscribeOn(Schedulers.io());
+            }
+        }, false, 30).blockingAwait();
+    }
+
+    @Test
+    public void uploadDownload100MParallelPooledTest() throws Exception {
+        final String sas = System.getenv("JAVA_SDK_TEST_SAS");
+        HttpHeaders headers = new HttpHeaders()
+                .set("x-ms-version", "2017-04-17");
+
+        HttpPipeline pipeline = HttpPipeline.build(
+                new AddDatePolicy.Factory(),
+                new AddHeadersPolicy.Factory(headers),
+                new ThrottlingRetryPolicyFactory(),
+                new LoggingPolicy.Factory(LogLevel.BASIC));
+
+        final IOService service = RestProxy.create(IOService.class, pipeline);
+
+        List<byte[]> md5s = Flowable.range(0, NUM_FILES)
+                .map(new Function<Integer, byte[]>() {
+                    @Override
+                    public byte[] apply(Integer integer) throws Exception {
+                        final Path filePath = tempFolderPath.resolve("100m-" + integer + "-md5.dat");
+                        return Files.readAllBytes(filePath);
                     }
                 }).toList().blockingGet();
 
         Instant start = Instant.now();
-        Flowable.range(0, numFiles)
+        Flowable.range(0, NUM_FILES)
                 .zipWith(md5s, new BiFunction<Integer, byte[], Completable>() {
                     @Override
                     public Completable apply(Integer integer, final byte[] md5) throws Exception {
@@ -656,7 +667,7 @@ public class RestProxyStressTests {
         LoggerFactory.getLogger(getClass()).info("Upload took " + timeTakenString);
 
         Instant downloadStart = Instant.now();
-        Flowable.range(0, numFiles)
+        Flowable.range(0, NUM_FILES)
                 .zipWith(md5s, new BiFunction<Integer, byte[], Completable>() {
                     @Override
                     public Completable apply(Integer integer, final byte[] md5) throws Exception {

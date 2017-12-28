@@ -18,8 +18,11 @@ import com.microsoft.rest.v2.policy.RequestPolicyOptions;
 import com.microsoft.rest.v2.policy.RetryPolicy;
 import io.reactivex.Completable;
 import io.reactivex.CompletableSource;
+import io.reactivex.Emitter;
 import io.reactivex.Flowable;
 import io.reactivex.Single;
+import io.reactivex.SingleSource;
+import io.reactivex.exceptions.Exceptions;
 import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Consumer;
@@ -34,7 +37,6 @@ import org.joda.time.format.PeriodFormat;
 import org.junit.AfterClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -117,6 +119,15 @@ public class RestProxyStressTests {
                             return Completable.complete().delay(waitTimeSeconds, TimeUnit.SECONDS)
                                     .andThen(sendAsync(request, waitTimeSeconds * 2));
                         }
+                    }
+                }).onErrorResumeNext(new Function<Throwable, SingleSource<? extends HttpResponse>>() {
+                    @Override
+                    public SingleSource<? extends HttpResponse> apply(Throwable throwable) throws Exception {
+                        if (throwable instanceof IOException) {
+                            LoggerFactory.getLogger(getClass()).warn("I/O exception occurred: " + throwable.getMessage());
+                            return next.sendAsync(request);
+                        }
+                        throw Exceptions.propagate(throwable);
                     }
                 });
             }
@@ -573,27 +584,50 @@ public class RestProxyStressTests {
         deleteRecursive(tempFolderPath);
         Files.createDirectory(tempFolderPath);
 
+        final Flowable<byte[]> contentGenerator = Flowable.generate(new Callable<Random>() {
+            @Override
+            public Random call() throws Exception {
+                return new Random();
+            }
+        }, new BiConsumer<Random, Emitter<byte[]>>() {
+            @Override
+            public void accept(Random random, Emitter<byte[]> emitter) throws Exception {
+                byte[] buf = new byte[8192];
+                random.nextBytes(buf);
+                emitter.onNext(buf);
+            }
+        }).take(1024 * 1024 * 100 / 8192); // enough chunks to make a 100 MB file
+
         final int numFiles = 100;
-        List<byte[]> md5s = new ArrayList<>(numFiles);
-        final byte[] buf = new byte[1024 * 1024 * 100];
-        for (int i = 0; i < numFiles; i++) {
+        List<byte[]> md5s = Flowable.range(0, numFiles)
+                .flatMapSingle(new Function<Integer, Single<byte[]>>() {
+                    @Override
+                    public Single<byte[]> apply(Integer integer) throws Exception {
+                        final int i = integer;
+                        final Path filePath = tempFolderPath.resolve("100m-" + i + ".dat");
 
-            final Path filePath = tempFolderPath.resolve("100m-" + i + ".dat");
-
-            Files.deleteIfExists(filePath);
-            Files.createFile(filePath);
-            FileChannel file = FileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
-
-            Random random = new Random();
-            random.nextBytes(buf);
-
-            final byte[] md5 = MessageDigest.getInstance("MD5").digest(buf);
-            file.write(ByteBuffer.wrap(buf));
-            file.close();
-
-            LoggerFactory.getLogger(getClass()).info("Wrote file id " + i + " to disk");
-            md5s.add(md5);
-        }
+                        Files.deleteIfExists(filePath);
+                        Files.createFile(filePath);
+                        final AsynchronousFileChannel file = AsynchronousFileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
+                        final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+                        return contentGenerator.flatMapCompletable(new Function<byte[], CompletableSource>() {
+                            long position = 0;
+                            @Override
+                            public CompletableSource apply(byte[] bytes) throws Exception {
+                                messageDigest.update(bytes);
+                                Future<Integer> future = file.write(ByteBuffer.wrap(bytes), position);
+                                position += bytes.length;
+                                return Completable.fromFuture(future);
+                            }
+                        }).andThen(Single.defer(new Callable<SingleSource<? extends byte[]>>() {
+                            @Override
+                            public SingleSource<? extends byte[]> call() throws Exception {
+                                LoggerFactory.getLogger(getClass()).info("Finished writing file " + i);
+                                return Single.just(messageDigest.digest());
+                            }
+                        }));
+                    }
+                }).toList().blockingGet();
 
         Instant start = Instant.now();
         Flowable.range(0, numFiles)

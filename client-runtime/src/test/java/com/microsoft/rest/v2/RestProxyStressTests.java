@@ -15,6 +15,7 @@ import com.microsoft.rest.v2.policy.LoggingPolicy.LogLevel;
 import com.microsoft.rest.v2.policy.RequestPolicy;
 import com.microsoft.rest.v2.policy.RequestPolicyFactory;
 import com.microsoft.rest.v2.policy.RequestPolicyOptions;
+import com.microsoft.rest.v2.util.FlowableUtil;
 import io.reactivex.Completable;
 import io.reactivex.CompletableSource;
 import io.reactivex.Emitter;
@@ -25,6 +26,7 @@ import io.reactivex.exceptions.Exceptions;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.BiFunction;
+import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.internal.functions.Functions;
 import io.reactivex.schedulers.Schedulers;
@@ -206,25 +208,25 @@ public class RestProxyStressTests {
 
                 Files.deleteIfExists(filePath);
                 Files.createFile(filePath);
-                final FileChannel file = FileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
+                final AsynchronousFileChannel file = AsynchronousFileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
                 final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-                return Flowable.range(0, CHUNKS_PER_FILE)
-                        .zipWith(contentGenerator, new BiFunction<Integer, byte[], Completable>() {
-                            @Override
-                            public Completable apply(final Integer chunkNo, final byte[] bytes) throws Exception {
-                                messageDigest.update(bytes);
-                                file.write(ByteBuffer.wrap(bytes), chunkNo * CHUNK_SIZE);
-                                return Completable.complete();
-                            }
-                        }).flatMapCompletable(Functions.<Completable>identity())
-                        .andThen(Completable.defer(new Callable<CompletableSource>() {
-                            @Override
-                            public CompletableSource call() throws Exception {
-                                LoggerFactory.getLogger(getClass()).info("Finished writing file " + i);
-                                Files.write(TEMP_FOLDER_PATH.resolve("100m-" + i + "-md5.dat"), messageDigest.digest());
-                                return Completable.complete();
-                            }
-                        })).subscribeOn(Schedulers.io());
+
+                Flowable<byte[]> fileContent = contentGenerator.take(CHUNKS_PER_FILE).doOnNext(new Consumer<byte[]>() {
+                    @Override
+                    public void accept(byte[] bytes) throws Exception {
+                        messageDigest.update(bytes);
+                    }
+                });
+
+                return FlowableUtil.writeContentToFile(fileContent, file).andThen(Completable.defer(new Callable<CompletableSource>() {
+                    @Override
+                    public CompletableSource call() throws Exception {
+                        file.close();
+                        LoggerFactory.getLogger(getClass()).info("Finished writing file " + i);
+                        Files.write(TEMP_FOLDER_PATH.resolve("100m-" + i + "-md5.dat"), messageDigest.digest());
+                        return Completable.complete();
+                    }
+                }));
             }
         }).blockingAwait();
     }
@@ -354,22 +356,25 @@ public class RestProxyStressTests {
         Flowable.range(0, NUM_FILES)
                 .zipWith(md5s, new BiFunction<Integer, byte[], Completable>() {
                     @Override
-                    public Completable apply(Integer integer, final byte[] md5) throws Exception {
+                    public Completable apply(final Integer integer, final byte[] md5) throws Exception {
                         final int id = integer;
                         return service.download100M(String.valueOf(id), sas).flatMapCompletable(new Function<RestResponse<Void, Flowable<byte[]>>, CompletableSource>() {
                             @Override
                             public CompletableSource apply(RestResponse<Void, Flowable<byte[]>> response) throws Exception {
-                                return response.body().collectInto(MessageDigest.getInstance("MD5"), new BiConsumer<MessageDigest, byte[]>() {
+                                final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+                                Flowable<byte[]> content = response.body().doOnNext(new Consumer<byte[]>() {
                                     @Override
-                                    public void accept(MessageDigest messageDigest, byte[] bytes) throws Exception {
+                                    public void accept(byte[] bytes) throws Exception {
                                         messageDigest.update(bytes);
                                     }
-                                }).flatMapCompletable(new Function<MessageDigest, CompletableSource>() {
+                                });
+
+                                AsynchronousFileChannel file = AsynchronousFileChannel.open(TEMP_FOLDER_PATH.resolve("100m-" + integer + ".dat"), StandardOpenOption.WRITE);
+                                return FlowableUtil.writeContentToFile(content, file).doOnComplete(new Action() {
                                     @Override
-                                    public CompletableSource apply(MessageDigest messageDigest) throws Exception {
+                                    public void run() throws Exception {
                                         assertArrayEquals(md5, messageDigest.digest());
                                         LoggerFactory.getLogger(getClass()).info("Finished downloading and MD5 validated for " + id);
-                                        return Completable.complete();
                                     }
                                 });
                             }

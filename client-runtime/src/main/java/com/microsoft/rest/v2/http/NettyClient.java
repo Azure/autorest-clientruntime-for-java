@@ -393,14 +393,14 @@ public final class NettyClient extends HttpClient {
         }
     }
 
-    private static final class ResponseContentFlowable extends Flowable<ByteBuf> {
+    private static final class ResponseContentFlowable extends Flowable<ByteBuf> implements Subscription {
         final Queue<HttpContent> queuedContent = new ArrayDeque<>();
         final Subscription handlerSubscription;
         long chunksRequested = 0;
         Subscriber<? super ByteBuf> subscriber;
 
-        ResponseContentFlowable(Subscription subscription) {
-            handlerSubscription = subscription;
+        ResponseContentFlowable(Subscription handlerSubscription) {
+            this.handlerSubscription = handlerSubscription;
         }
 
         long chunksRequested() {
@@ -414,25 +414,22 @@ public final class NettyClient extends HttpClient {
             }
 
             subscriber = s;
+            s.onSubscribe(this);
+        }
 
-            s.onSubscribe(new Subscription() {
-                @Override
-                public void request(long l) {
-                    chunksRequested += l;
+        @Override
+        public void request(long l) {
+            chunksRequested += l;
+            while (!queuedContent.isEmpty() && chunksRequested > 0) {
+                emitContent(queuedContent.remove());
+            }
 
+            handlerSubscription.request(l);
+        }
 
-                    while (!queuedContent.isEmpty() && chunksRequested > 0) {
-                        emitContent(queuedContent.remove());
-                    }
-
-                    handlerSubscription.request(l);
-                }
-
-                @Override
-                public void cancel() {
-                    handlerSubscription.cancel();
-                }
-            });
+        @Override
+        public void cancel() {
+            handlerSubscription.cancel();
         }
 
         private void emitContent(HttpContent data) {
@@ -520,7 +517,7 @@ public final class NettyClient extends HttpClient {
 
                 // Prevents channel from being closed when the Single<HttpResponse> is disposed
                 didEmitHttpResponse = true;
-                responseEmitter.onSuccess(new NettyResponse(response, contentEmitter));
+                responseEmitter.onSuccess(new NettyResponse(response, contentEmitter.subscribeOn(Schedulers.from(ctx.channel().eventLoop()))));
             }
 
             if (msg instanceof HttpContent) {

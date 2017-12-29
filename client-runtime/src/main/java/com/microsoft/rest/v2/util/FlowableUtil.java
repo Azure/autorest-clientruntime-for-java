@@ -56,6 +56,9 @@ public class FlowableUtil {
             @Override
             public void subscribe(final CompletableEmitter emitter) throws Exception {
                 content.subscribe(new FlowableSubscriber<byte[]>() {
+                    boolean isWriting = false;
+                    boolean isCompleted = false;
+
                     Subscription subscription;
                     long position = 0;
 
@@ -67,12 +70,17 @@ public class FlowableUtil {
 
                     @Override
                     public void onNext(byte[] bytes) {
+                        isWriting = true;
                         fileChannel.write(ByteBuffer.wrap(bytes), position, null, onWriteCompleted);
                     }
 
                     CompletionHandler<Integer, Object> onWriteCompleted = new CompletionHandler<Integer, Object>() {
                         @Override
                         public void completed(Integer bytesRead, Object attachment) {
+                            if (isCompleted) {
+                                emitter.onComplete();
+                            }
+                            isWriting = false;
                             position += bytesRead;
                             subscription.request(1);
                         }
@@ -92,7 +100,10 @@ public class FlowableUtil {
 
                     @Override
                     public void onComplete() {
-                        emitter.onComplete();
+                        isCompleted = true;
+                        if (!isWriting) {
+                            emitter.onComplete();
+                        }
                     }
                 });
             }

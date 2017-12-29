@@ -74,13 +74,14 @@ public class FlowableUtil {
                         fileChannel.write(ByteBuffer.wrap(bytes), position, null, onWriteCompleted);
                     }
 
+
                     CompletionHandler<Integer, Object> onWriteCompleted = new CompletionHandler<Integer, Object>() {
                         @Override
                         public void completed(Integer bytesRead, Object attachment) {
+                            isWriting = false;
                             if (isCompleted) {
                                 emitter.onComplete();
                             }
-                            isWriting = false;
                             position += bytesRead;
                             subscription.request(1);
                         }

@@ -380,7 +380,7 @@ public class RestProxyStressTests {
                             }
                         });
                     }
-                }).flatMapCompletable(Functions.<Completable>identity()).blockingAwait();
+                }).flatMapCompletable(Functions.<Completable>identity(), false, 30).blockingAwait();
         String downloadTimeTakenString = PeriodFormat.getDefault().print(new Duration(downloadStart, Instant.now()).toPeriod());
         LoggerFactory.getLogger(getClass()).info("Download took " + downloadTimeTakenString);
     }

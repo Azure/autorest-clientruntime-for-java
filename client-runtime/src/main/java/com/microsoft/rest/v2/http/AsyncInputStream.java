@@ -9,7 +9,6 @@ package com.microsoft.rest.v2.http;
 import io.reactivex.Emitter;
 import io.reactivex.Flowable;
 import io.reactivex.functions.BiConsumer;
-import io.reactivex.functions.Function;
 import io.reactivex.internal.util.BackpressureHelper;
 import io.reactivex.schedulers.Schedulers;
 import org.reactivestreams.Subscriber;
@@ -77,29 +76,7 @@ public final class AsyncInputStream {
      * @return The AsyncInputStream.
      */
     public static AsyncInputStream create(final AsynchronousFileChannel fileChannel, final long offset, final long length) {
-        if (true) {
-            return new AsyncInputStream(new FlowableNio2(fileChannel, offset, length), length, true);
-        }
-
-        int numChunks = (int) length / CHUNK_SIZE + (length % CHUNK_SIZE == 0 ? 0 : 1);
-        Flowable<byte[]> fileStream = Flowable.range(0, numChunks).concatMap(new Function<Integer, Flowable<byte[]>>() {
-            ByteBuffer innerBuf = ByteBuffer.wrap(new byte[CHUNK_SIZE]);
-
-            @Override
-            public Flowable<byte[]> apply(Integer chunkNo) throws Exception {
-                final long position = offset + (chunkNo * CHUNK_SIZE);
-                innerBuf.clear();
-                return Flowable.fromFuture(fileChannel.read(innerBuf, position))
-                        .map(new Function<Integer, byte[]>() {
-                            @Override
-                            public byte[] apply(Integer bytesRead) throws Exception {
-                                int bytesWanted = (int) Math.min(offset + length - position, bytesRead);
-                                return Arrays.copyOf(innerBuf.array(), bytesWanted);
-                            }
-                        });
-            }
-        });
-
+        Flowable<byte[]> fileStream = new FileReadFlowable(fileChannel, offset, length);
         return new AsyncInputStream(fileStream, length, true);
     }
 
@@ -114,12 +91,12 @@ public final class AsyncInputStream {
         return create(fileChannel, 0, size);
     }
 
-    private static class FlowableNio2 extends Flowable<byte[]> {
+    private static class FileReadFlowable extends Flowable<byte[]> {
         private final AsynchronousFileChannel fileChannel;
         private final long offset;
         private final long length;
 
-        FlowableNio2(AsynchronousFileChannel fileChannel, long offset, long length) {
+        FileReadFlowable(AsynchronousFileChannel fileChannel, long offset, long length) {
             this.fileChannel = fileChannel;
             this.offset = offset;
             this.length = length;
@@ -127,17 +104,17 @@ public final class AsyncInputStream {
 
         @Override
         protected void subscribeActual(Subscriber<? super byte[]> s) {
-            s.onSubscribe(new Nio2Subscription(s));
+            s.onSubscribe(new FileReadSubscription(s));
         }
 
-        private class Nio2Subscription implements Subscription {
+        private class FileReadSubscription implements Subscription {
             final Subscriber<? super byte[]> subscriber;
-            final ByteBuffer innerBuf = ByteBuffer.wrap(new byte[8192]);
+            final ByteBuffer innerBuf = ByteBuffer.wrap(new byte[CHUNK_SIZE]);
             final AtomicLong requested = new AtomicLong();
             long position = offset;
-            volatile boolean cancelled = false;
+            boolean cancelled = false;
 
-            Nio2Subscription(Subscriber<? super byte[]> subscriber) {
+            FileReadSubscription(Subscriber<? super byte[]> subscriber) {
                 this.subscriber = subscriber;
             }
 
@@ -160,13 +137,12 @@ public final class AsyncInputStream {
                         if (bytesRead == -1) {
                             subscriber.onComplete();
                         } else {
-                            long remaining = requested.decrementAndGet();
-                            int bytesWanted = (int) Math.min(CHUNK_SIZE, offset + length - position);
+                            int bytesWanted = (int) Math.min(bytesRead, offset + length - position);
+                            position += bytesWanted;
                             subscriber.onNext(Arrays.copyOf(innerBuf.array(), bytesWanted));
-                            position += bytesRead;
                             if (position >= offset + length) {
                                 subscriber.onComplete();
-                            } else if (remaining > 0) {
+                            } else if (requested.decrementAndGet() > 0) {
                                 doRead();
                             }
                         }

@@ -125,6 +125,7 @@ public class RestProxyStressTests {
                             LoggerFactory.getLogger(getClass()).warn("I/O exception occurred: " + throwable.getMessage());
                             return next.sendAsync(request);
                         }
+                        LoggerFactory.getLogger(getClass()).warn("Unrecoverable exception occurred: " + throwable.getMessage());
                         throw Exceptions.propagate(throwable);
                     }
                 });

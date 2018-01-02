@@ -321,7 +321,7 @@ public final class NettyClient extends HttpClient {
                                         }
                                     });
                                 }
-                                bodyContent.subscribe(new FlowableSubscriber<ByteBuf>() {
+                                bodyContent.observeOn(Schedulers.from(channel.eventLoop())).subscribe(new FlowableSubscriber<ByteBuf>() {
                                     Subscription subscription;
                                     @Override
                                     public void onSubscribe(Subscription s) {
@@ -344,6 +344,9 @@ public final class NettyClient extends HttpClient {
 
                                     @Override
                                     public void onNext(ByteBuf buf) {
+                                        if (!channel.eventLoop().inEventLoop()) {
+                                            throw new IllegalStateException("onNext must be called from the event loop managing the channel.");
+                                        }
                                         channel.writeAndFlush(new DefaultHttpContent(buf))
                                                 .addListener(onChannelWriteComplete);
 
@@ -429,6 +432,9 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void request(long l) {
+            if (!currentEventLoop.inEventLoop()) {
+                throw new IllegalStateException("request() must be called from the event loop managing the channel.");
+            }
 
             chunksRequested += l;
             while (!queuedContent.isEmpty() && chunksRequested > 0 && !isCanceled) {
@@ -530,7 +536,7 @@ public final class NettyClient extends HttpClient {
                     @Override
                     public void request(long n) {
                         if (!ctx.channel().eventLoop().inEventLoop()) {
-                            LoggerFactory.getLogger(getClass()).warn("request() not called on current event loop!");
+                            throw new IllegalStateException("request() must be called the event loop managing the channel.");
                         }
                         ctx.channel().read();
                     }

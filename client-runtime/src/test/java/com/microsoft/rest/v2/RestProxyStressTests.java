@@ -65,7 +65,6 @@ import java.util.Random;
 import java.util.concurrent.*;
 
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
 
 @SuppressWarnings("Duplicates")
 @Ignore("Should only be run manually")
@@ -420,23 +419,12 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(final Integer integer, final byte[] diskMd5) throws Exception {
                         final int id = integer;
-                        final MessageDigest md5 = MessageDigest.getInstance("MD5");
                         Flowable<byte[]> downloadContent = service.download100M(String.valueOf(id), sas).flatMapPublisher(new Function<RestResponse<Void, AsyncInputStream>, Publisher<? extends byte[]>>() {
                             @Override
                             public Publisher<? extends byte[]> apply(RestResponse<Void, AsyncInputStream> response) throws Exception {
-                                Flowable<byte[]> newContent = response.body().content().doOnNext(new Consumer<byte[]>() {
-                                    @Override
-                                    public void accept(byte[] bytes) throws Exception {
-                                        md5.update(bytes);
-                                    }
-                                }).doOnCancel(new Action() {
-                                    @Override
-                                    public void run() throws Exception {
-                                        md5.reset();
-                                    }
-                                });
-
-                                return newContent;
+                                // Ideally we would intercept this content to load an MD5 to check consistency between download and upload directly,
+                                // but it's sufficient to demonstrate that no corruption occurred between preparation->upload->download->upload.
+                                return response.body().content();
                             }
                         });
 
@@ -446,12 +434,9 @@ public class RestProxyStressTests {
                         return service.upload100MB("copy-" + integer, sas, "BlockBlob", toSend).flatMapCompletable(new Function<RestResponse<Void, Void>, CompletableSource>() {
                             @Override
                             public CompletableSource apply(RestResponse<Void, Void> uploadResponse) throws Exception {
-                                byte[] downloadMD5 = md5.digest();
-                                assertArrayEquals(diskMd5, downloadMD5);
-
                                 String base64MD5 = uploadResponse.rawHeaders().get("Content-MD5");
                                 byte[] uploadMD5 = BaseEncoding.base64().decode(base64MD5);
-                                assertArrayEquals(downloadMD5, uploadMD5);
+                                assertArrayEquals(diskMd5, uploadMD5);
                                 LoggerFactory.getLogger(getClass()).info("Finished upload and validation for id " + id);
                                 return Completable.complete();
                             }

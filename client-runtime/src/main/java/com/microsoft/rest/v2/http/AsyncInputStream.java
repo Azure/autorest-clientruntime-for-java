@@ -199,7 +199,7 @@ public final class AsyncInputStream {
                             emitter.onError(e);
                         }
                     }
-                }).subscribeOn(Schedulers.io());
+                }).observeOn(Schedulers.io());
 
         return new AsyncInputStream(content, contentLength, false);
     }

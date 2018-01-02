@@ -39,6 +39,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.PeriodFormat;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
@@ -109,7 +110,7 @@ public class RestProxyStressTests {
 
             @Override
             public Single<HttpResponse> sendAsync(HttpRequest request) {
-                return sendAsync(request, 1);
+                return sendAsync(request, 10 + ThreadLocalRandom.current().nextInt(10));
             }
 
             Single<HttpResponse> sendAsync(final HttpRequest request, final int waitTimeSeconds) {
@@ -120,8 +121,9 @@ public class RestProxyStressTests {
                             return Single.just(httpResponse);
                         } else {
                             LoggerFactory.getLogger(getClass()).warn("Received " + httpResponse.statusCode() + " for request. Waiting " + waitTimeSeconds + " seconds before retry.");
+                            final int nextWaitTime = 10 + ThreadLocalRandom.current().nextInt(10);
                             return Completable.complete().delay(waitTimeSeconds, TimeUnit.SECONDS)
-                                    .andThen(sendAsync(request, waitTimeSeconds * 2));
+                                    .andThen(sendAsync(request, nextWaitTime));
                         }
                     }
                 }).onErrorResumeNext(new Function<Throwable, SingleSource<? extends HttpResponse>>() {
@@ -226,8 +228,8 @@ public class RestProxyStressTests {
                     @Override
                     public CompletableSource call() throws Exception {
                         file.close();
-                        LoggerFactory.getLogger(getClass()).info("Finished writing file " + i);
                         Files.write(TEMP_FOLDER_PATH.resolve("100m-" + i + "-md5.dat"), messageDigest.digest());
+                        LoggerFactory.getLogger(getClass()).info("Finished writing file " + i);
                         return Completable.complete();
                     }
                 }));
@@ -418,36 +420,73 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(final Integer integer, final byte[] diskMd5) throws Exception {
                         final int id = integer;
-                        return service.download100M(String.valueOf(id), sas).flatMapCompletable(new Function<RestResponse<Void, AsyncInputStream>, Completable>() {
+                        final MessageDigest md5 = MessageDigest.getInstance("MD5");
+                        Flowable<byte[]> downloadContent = service.download100M(String.valueOf(id), sas).flatMapPublisher(new Function<RestResponse<Void, AsyncInputStream>, Publisher<? extends byte[]>>() {
                             @Override
-                            public Completable apply(RestResponse<Void, AsyncInputStream> response) throws Exception {
-                                final MessageDigest md5 = MessageDigest.getInstance("MD5");
+                            public Publisher<? extends byte[]> apply(RestResponse<Void, AsyncInputStream> response) throws Exception {
                                 Flowable<byte[]> newContent = response.body().content().doOnNext(new Consumer<byte[]>() {
                                     @Override
                                     public void accept(byte[] bytes) throws Exception {
                                         md5.update(bytes);
                                     }
-                                });
-
-                                AsyncInputStream toSend = new AsyncInputStream(newContent, response.body().contentLength(), response.body().isReplayable());
-                                return service.upload100MB("copy-" + integer, sas, "BlockBlob", toSend).flatMapCompletable(new Function<RestResponse<Void, Void>, CompletableSource>() {
+                                }).doOnCancel(new Action() {
                                     @Override
-                                    public CompletableSource apply(RestResponse<Void, Void> uploadResponse) throws Exception {
-                                        byte[] downloadMD5 = md5.digest();
-                                        assertArrayEquals(diskMd5, downloadMD5);
-
-                                        String base64MD5 = uploadResponse.rawHeaders().get("Content-MD5");
-                                        byte[] uploadMD5 = BaseEncoding.base64().decode(base64MD5);
-                                        assertArrayEquals(downloadMD5, uploadMD5);
-                                        LoggerFactory.getLogger(getClass()).info("Finished upload and validation for id " + id);
-                                        return Completable.complete();
+                                    public void run() throws Exception {
+                                        md5.reset();
                                     }
                                 });
+
+                                return newContent;
+                            }
+                        });
+
+                        // A download stream which is allowed to issue an HTTP request when subscribed
+                        // can't know for certain what the content length is each time a request is made.
+                        AsyncInputStream toSend = new AsyncInputStream(downloadContent, FILE_SIZE, true);
+                        return service.upload100MB("copy-" + integer, sas, "BlockBlob", toSend).flatMapCompletable(new Function<RestResponse<Void, Void>, CompletableSource>() {
+                            @Override
+                            public CompletableSource apply(RestResponse<Void, Void> uploadResponse) throws Exception {
+                                byte[] downloadMD5 = md5.digest();
+                                assertArrayEquals(diskMd5, downloadMD5);
+
+                                String base64MD5 = uploadResponse.rawHeaders().get("Content-MD5");
+                                byte[] uploadMD5 = BaseEncoding.base64().decode(base64MD5);
+                                assertArrayEquals(downloadMD5, uploadMD5);
+                                LoggerFactory.getLogger(getClass()).info("Finished upload and validation for id " + id);
+                                return Completable.complete();
                             }
                         });
                     }
                 }).flatMapCompletable(Functions.<Completable>identity(), false, 30).blockingAwait();
         String downloadTimeTakenString = PeriodFormat.getDefault().print(new Duration(downloadStart, Instant.now()).toPeriod());
         LoggerFactory.getLogger(getClass()).info("Download/upload took " + downloadTimeTakenString);
+    }
+
+    @Test
+    public void cancellationTest() {
+        final String sas = System.getenv("JAVA_SDK_TEST_SAS");
+        HttpHeaders headers = new HttpHeaders()
+                .set("x-ms-version", "2017-04-17");
+
+        HttpPipeline pipeline = HttpPipeline.build(
+                new AddDatePolicy.Factory(),
+                new AddHeadersPolicy.Factory(headers),
+                new ThrottlingRetryPolicyFactory(),
+                new LoggingPolicy.Factory(LogLevel.BASIC));
+
+        final IOService service = RestProxy.create(IOService.class, pipeline);
+
+        Flowable.range(0, NUM_FILES)
+                .flatMap(new Function<Integer, Publisher<?>>() {
+                    @Override
+                    public Publisher<?> apply(Integer integer) throws Exception {
+                        return service.download100M(String.valueOf(integer), sas).flatMapPublisher(new Function<RestResponse<Void, AsyncInputStream>, Publisher<?>>() {
+                            @Override
+                            public Publisher<?> apply(RestResponse<Void, AsyncInputStream> response) throws Exception {
+                                return response.body().content().timeout(100, TimeUnit.MILLISECONDS);
+                            }
+                        });
+                    }
+                }).blockingLast();
     }
 }

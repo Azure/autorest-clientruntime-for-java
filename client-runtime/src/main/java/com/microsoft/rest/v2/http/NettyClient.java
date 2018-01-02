@@ -14,6 +14,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -173,7 +174,6 @@ public final class NettyClient extends HttpClient {
 
         private boolean useZeroCopy(Channel channel) {
             boolean isSSL = channel.pipeline().get(SslHandler.class) != null;
-            // TODO: is it necessary to prevent using FileChannel for NioEventLoopGroup?
             return !isSSL && !(eventLoopGroup instanceof NioEventLoopGroup);
         }
 
@@ -321,7 +321,7 @@ public final class NettyClient extends HttpClient {
                                         }
                                     });
                                 }
-                                bodyContent.subscribeOn(Schedulers.io()).subscribe(new FlowableSubscriber<ByteBuf>() {
+                                bodyContent.subscribe(new FlowableSubscriber<ByteBuf>() {
                                     Subscription subscription;
                                     @Override
                                     public void onSubscribe(Subscription s) {
@@ -393,13 +393,23 @@ public final class NettyClient extends HttpClient {
         }
     }
 
+    /**
+     * Emits HTTP response content from Netty. This class is not thread safe.
+     * It must be observed on the same event loop associated with the Netty channel providing the data.
+     * Only cancel() may be called on a different thread.
+     */
     private static final class ResponseContentFlowable extends Flowable<ByteBuf> implements Subscription {
+        final EventLoop currentEventLoop;
         final Queue<HttpContent> queuedContent = new ArrayDeque<>();
         final Subscription handlerSubscription;
         long chunksRequested = 0;
         Subscriber<? super ByteBuf> subscriber;
 
-        ResponseContentFlowable(Subscription handlerSubscription) {
+        // Cancellation is triggered by a non-observing thread.
+        volatile boolean isCanceled = false;
+
+        ResponseContentFlowable(EventLoop currentEventLoop, Subscription handlerSubscription) {
+            this.currentEventLoop = currentEventLoop;
             this.handlerSubscription = handlerSubscription;
         }
 
@@ -419,17 +429,30 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void request(long l) {
+
             chunksRequested += l;
-            while (!queuedContent.isEmpty() && chunksRequested > 0) {
+            while (!queuedContent.isEmpty() && chunksRequested > 0 && !isCanceled) {
                 emitContent(queuedContent.remove());
             }
 
-            handlerSubscription.request(l);
+            if (chunksRequested > 0 && !isCanceled) {
+                handlerSubscription.request(l);
+            }
         }
 
         @Override
         public void cancel() {
+            isCanceled = true;
             handlerSubscription.cancel();
+
+            currentEventLoop.execute(new Runnable() {
+                @Override
+                public void run() {
+                    while (!queuedContent.isEmpty()) {
+                        queuedContent.remove().release();
+                    }
+                }
+            });
         }
 
         private void emitContent(HttpContent data) {
@@ -500,24 +523,38 @@ public final class NettyClient extends HttpClient {
                     return;
                 }
 
-                contentEmitter = new ResponseContentFlowable(new Subscription() {
+                contentEmitter = new ResponseContentFlowable(ctx.channel().eventLoop(), new Subscription() {
+                    /**
+                     * Required to run on this thread.
+                     */
                     @Override
                     public void request(long n) {
+                        if (!ctx.channel().eventLoop().inEventLoop()) {
+                            LoggerFactory.getLogger(getClass()).warn("request() not called on current event loop!");
+                        }
                         ctx.channel().read();
                     }
 
+                    /**
+                     * May be run on a different thread.
+                     */
                     @Override
                     public void cancel() {
-                        if (contentEmitter != null) {
-                            adapter.channelPool.closeAndRelease(ctx.channel());
-                            contentEmitter = null;
-                        }
+                        ctx.channel().eventLoop().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (contentEmitter != null) {
+                                    adapter.channelPool.closeAndRelease(ctx.channel());
+                                    contentEmitter = null;
+                                }
+                            }
+                        });
                     }
                 });
 
                 // Prevents channel from being closed when the Single<HttpResponse> is disposed
                 didEmitHttpResponse = true;
-                responseEmitter.onSuccess(new NettyResponse(response, contentEmitter.subscribeOn(Schedulers.from(ctx.channel().eventLoop()))));
+                responseEmitter.onSuccess(new NettyResponse(response, contentEmitter.observeOn(Schedulers.from(ctx.channel().eventLoop()))));
             }
 
             if (msg instanceof HttpContent) {

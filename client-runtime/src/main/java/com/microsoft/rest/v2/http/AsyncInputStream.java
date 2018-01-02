@@ -111,8 +111,10 @@ public final class AsyncInputStream {
             final Subscriber<? super byte[]> subscriber;
             final ByteBuffer innerBuf = ByteBuffer.wrap(new byte[CHUNK_SIZE]);
             final AtomicLong requested = new AtomicLong();
-            long position = offset;
-            boolean cancelled = false;
+            volatile boolean cancelled = false;
+
+            // I/O callbacks are serialized, but not guaranteed to happen on the same thread, which makes volatile necessary.
+            volatile long position = offset;
 
             FileReadSubscription(Subscriber<? super byte[]> subscriber) {
                 this.subscriber = subscriber;
@@ -138,6 +140,7 @@ public final class AsyncInputStream {
                             subscriber.onComplete();
                         } else {
                             int bytesWanted = (int) Math.min(bytesRead, offset + length - position);
+                            //noinspection NonAtomicOperationOnVolatileField
                             position += bytesWanted;
                             subscriber.onNext(Arrays.copyOf(innerBuf.array(), bytesWanted));
                             if (position >= offset + length) {

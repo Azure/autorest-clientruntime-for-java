@@ -56,8 +56,12 @@ public class FlowableUtil {
             @Override
             public void subscribe(final CompletableEmitter emitter) throws Exception {
                 content.subscribe(new FlowableSubscriber<byte[]>() {
-                    boolean isWriting = false;
-                    boolean isCompleted = false;
+
+                    // volatile ensures that writes to these flags will be immediately visible to other threads.
+                    // An I/O pool thread will write to isWriting and read isCompleted,
+                    // while a Netty pool thread will read isWriting and write to isCompleted.
+                    volatile boolean isWriting = false;
+                    volatile boolean isCompleted = false;
 
                     Subscription subscription;
                     long position = 0;

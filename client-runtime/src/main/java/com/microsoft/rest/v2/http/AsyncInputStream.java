@@ -132,7 +132,7 @@ public final class AsyncInputStream {
                 fileChannel.read(innerBuf, position, null, onReadComplete);
             }
 
-            CompletionHandler<Integer, Object> onReadComplete = new CompletionHandler<Integer, Object>() {
+            private final CompletionHandler<Integer, Object> onReadComplete = new CompletionHandler<Integer, Object>() {
                 @Override
                 public void completed(Integer bytesRead, Object attachment) {
                     if (!cancelled) {

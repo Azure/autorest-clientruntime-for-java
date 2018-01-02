@@ -79,6 +79,13 @@ public final class NettyClient extends HttpClient {
     }
 
     private static final class NettyAdapter {
+        private static final String EPOLL_GROUP_CLASS_NAME = "io.netty.channel.epoll.EpollEventLoopGroup";
+        private static final String EPOLL_SOCKET_CLASS_NAME = "io.netty.channel.epoll.EpollSocketChannel";
+
+        private static final String KQUEUE_GROUP_CLASS_NAME = "io.netty.channel.kqueue.KQueueEventLoopGroup";
+        private static final String KQUEUE_SOCKET_CLASS_NAME = "io.netty.channel.kqueue.KQueueSocketChannel";
+
+
         private final MultithreadEventLoopGroup eventLoopGroup;
         private final SharedChannelPool channelPool;
 
@@ -89,11 +96,11 @@ public final class NettyClient extends HttpClient {
             try {
                 final String osName = System.getProperty("os.name");
                 if (osName.contains("Linux")) {
-                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.epoll.EpollEventLoopGroup").getConstructor().newInstance();
-                    channelClass = (Class<? extends SocketChannel>) Class.forName("io.netty.channel.epoll.EpollSocketChannel");
+                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName(EPOLL_GROUP_CLASS_NAME).getConstructor().newInstance();
+                    channelClass = (Class<? extends SocketChannel>) Class.forName(EPOLL_SOCKET_CLASS_NAME);
                 } else if (osName.contains("Mac")) {
-                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.kqueue.KQueueEventLoopGroup").getConstructor().newInstance();
-                    channelClass = (Class<? extends SocketChannel>) Class.forName("io.netty.channel.kqueue.KQueueSocketChannel");
+                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName(KQUEUE_GROUP_CLASS_NAME).getConstructor().newInstance();
+                    channelClass = (Class<? extends SocketChannel>) Class.forName(KQUEUE_SOCKET_CLASS_NAME);
                 } else {
                     eventLoopGroup = new NioEventLoopGroup();
                     channelClass = NioSocketChannel.class;
@@ -136,11 +143,11 @@ public final class NettyClient extends HttpClient {
             try {
                 final String osName = System.getProperty("os.name");
                 if (osName.contains("Linux")) {
-                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.epoll.EpollEventLoopGroup").getConstructor(Integer.TYPE).newInstance(eventLoopGroupSize);
-                    channelClass = (Class<? extends SocketChannel>) Class.forName("io.netty.channel.epoll.EpollSocketChannel");
+                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName(EPOLL_GROUP_CLASS_NAME).getConstructor(Integer.TYPE).newInstance(eventLoopGroupSize);
+                    channelClass = (Class<? extends SocketChannel>) Class.forName(EPOLL_SOCKET_CLASS_NAME);
                 } else if (osName.contains("Mac")) {
-                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName("io.netty.channel.kqueue.KQueueEventLoopGroup").getConstructor(Integer.TYPE).newInstance(eventLoopGroupSize);
-                    channelClass = (Class<? extends SocketChannel>) Class.forName("io.netty.channel.kqueue.KQueueSocketChannel");
+                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName(KQUEUE_GROUP_CLASS_NAME).getConstructor(Integer.TYPE).newInstance(eventLoopGroupSize);
+                    channelClass = (Class<? extends SocketChannel>) Class.forName(KQUEUE_SOCKET_CLASS_NAME);
                 } else {
                     eventLoopGroup = new NioEventLoopGroup();
                     channelClass = NioSocketChannel.class;
@@ -178,7 +185,8 @@ public final class NettyClient extends HttpClient {
 
         private boolean useZeroCopy(Channel channel) {
             boolean isSSL = channel.pipeline().get(SslHandler.class) != null;
-            return !isSSL && !(eventLoopGroup instanceof NioEventLoopGroup);
+            boolean isNativeTransport = eventLoopGroup.getClass().getName().equals(EPOLL_GROUP_CLASS_NAME) || eventLoopGroup.getClass().getName().equals(KQUEUE_GROUP_CLASS_NAME);
+            return !isSSL && isNativeTransport;
         }
 
         private Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request, final Proxy proxy) {

@@ -144,7 +144,10 @@
     <profile>
       <id>osx</id>
       <activation>
-        <os><name>Mac OS X</name></os>
+        <os>
+          <name>Mac OS X</name>
+          <arch>x86_64</arch>
+        </os>
       </activation>
       <dependencies>
         <dependency>
@@ -159,7 +162,10 @@
     <profile>
       <id>linux</id>
       <activation>
-        <os><name>Linux</name></os>
+        <os>
+          <name>Linux</name>
+          <arch>x86_64</arch>
+        </os>
       </activation>
       <dependencies>
         <dependency>

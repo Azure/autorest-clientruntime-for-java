@@ -6,23 +6,13 @@
 
 package com.microsoft.azure;
 
-import com.microsoft.azure.CloudError;
 import com.microsoft.azure.serializer.AzureJacksonAdapter;
 import com.microsoft.rest.interceptors.RequestIdHeaderInterceptor;
 import com.microsoft.rest.RestClient;
-import com.microsoft.rest.retry.RetryHandler;
-import okhttp3.Interceptor;
-import okhttp3.Protocol;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class CloudErrorDeserializerTests {
-    private static final String REQUEST_ID_HEADER = "x-ms-client-request-id";
-
     @Test
     public void errorDeserializedFully() throws Exception {
         RestClient restClient = new RestClient.Builder()

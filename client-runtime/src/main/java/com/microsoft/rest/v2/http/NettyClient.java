@@ -37,6 +37,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
+import io.reactivex.Scheduler;
 import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
 import io.reactivex.SingleOnSubscribe;
@@ -572,7 +573,9 @@ public final class NettyClient extends HttpClient {
 
                 // Prevents channel from being closed when the Single<HttpResponse> is disposed
                 didEmitHttpResponse = true;
-                responseEmitter.onSuccess(new NettyResponse(response, contentEmitter.observeOn(Schedulers.from(ctx.channel().eventLoop()))));
+
+                Scheduler scheduler = Schedulers.from(ctx.channel().eventLoop());
+                responseEmitter.onSuccess(new NettyResponse(response, contentEmitter.subscribeOn(scheduler)));
             }
 
             if (msg instanceof HttpContent) {

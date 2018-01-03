@@ -86,72 +86,42 @@ public final class NettyClient extends HttpClient {
         private static final String KQUEUE_GROUP_CLASS_NAME = "io.netty.channel.kqueue.KQueueEventLoopGroup";
         private static final String KQUEUE_SOCKET_CLASS_NAME = "io.netty.channel.kqueue.KQueueSocketChannel";
 
-
         private final MultithreadEventLoopGroup eventLoopGroup;
         private final SharedChannelPool channelPool;
 
-        @SuppressWarnings("unchecked")
-        private NettyAdapter() {
-            MultithreadEventLoopGroup eventLoopGroup;
-            Class<? extends SocketChannel> channelClass;
-            try {
-                final String osName = System.getProperty("os.name");
-                if (osName.contains("Linux")) {
-                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName(EPOLL_GROUP_CLASS_NAME).getConstructor().newInstance();
-                    channelClass = (Class<? extends SocketChannel>) Class.forName(EPOLL_SOCKET_CLASS_NAME);
-                } else if (osName.contains("Mac")) {
-                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName(KQUEUE_GROUP_CLASS_NAME).getConstructor().newInstance();
-                    channelClass = (Class<? extends SocketChannel>) Class.forName(KQUEUE_SOCKET_CLASS_NAME);
-                } else {
-                    eventLoopGroup = new NioEventLoopGroup();
-                    channelClass = NioSocketChannel.class;
-                }
-            } catch (Exception e) {
-                String message = e.getMessage();
-                if (message == null) {
-                    Throwable cause = e.getCause();
-                    if (cause != null) {
-                        message = cause.getMessage();
-                    }
-                }
+        private static final class TransportConfig {
+            final MultithreadEventLoopGroup eventLoopGroup;
+            final Class<? extends SocketChannel> channelClass;
 
-                LoggerFactory.getLogger(NettyAdapter.class).debug("Exception when obtaining native EventLoopGroup and SocketChannel: " + message);
-                eventLoopGroup = new NioEventLoopGroup();
-                channelClass = NioSocketChannel.class;
+            private TransportConfig(MultithreadEventLoopGroup eventLoopGroup, Class<? extends SocketChannel> channelClass) {
+                this.eventLoopGroup = eventLoopGroup;
+                this.channelClass = channelClass;
             }
-            this.eventLoopGroup = eventLoopGroup;
+        }
 
-            Bootstrap bootstrap = new Bootstrap();
-            bootstrap.group(eventLoopGroup);
-            bootstrap.channel(channelClass);
-            bootstrap.option(ChannelOption.AUTO_READ, false);
-            bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
-            bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) TimeUnit.MINUTES.toMillis(3L));
-            this.channelPool = new SharedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
-                @Override
-                public void channelCreated(Channel ch) throws Exception {
-                    ch.pipeline().addLast("HttpResponseDecoder", new HttpResponseDecoder());
-                    ch.pipeline().addLast("HttpRequestEncoder", new HttpRequestEncoder());
-                    ch.pipeline().addLast("HttpClientInboundHandler", new HttpClientInboundHandler(NettyAdapter.this));
-                }
-            }, eventLoopGroup.executorCount() * 2);
+        private static MultithreadEventLoopGroup loadEventLoopGroup(String className, Integer optionalSize) throws ReflectiveOperationException {
+            MultithreadEventLoopGroup result;
+            if (optionalSize == null) {
+                result = (MultithreadEventLoopGroup) Class.forName(className).getConstructor().newInstance();
+            } else {
+                result = (MultithreadEventLoopGroup) Class.forName(className).getConstructor(Integer.TYPE).newInstance(optionalSize);
+            }
+            return result;
         }
 
         @SuppressWarnings("unchecked")
-        private NettyAdapter(int eventLoopGroupSize, int channelPoolSize) {
-            MultithreadEventLoopGroup eventLoopGroup;
-            Class<? extends SocketChannel> channelClass;
+        private static TransportConfig loadTransport(Integer optionalGroupSize) {
+            TransportConfig result = null;
             try {
                 final String osName = System.getProperty("os.name");
                 if (osName.contains("Linux")) {
-                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName(EPOLL_GROUP_CLASS_NAME).getConstructor(Integer.TYPE).newInstance(eventLoopGroupSize);
-                    channelClass = (Class<? extends SocketChannel>) Class.forName(EPOLL_SOCKET_CLASS_NAME);
+                    result = new TransportConfig(
+                            loadEventLoopGroup(EPOLL_GROUP_CLASS_NAME, optionalGroupSize),
+                            (Class<? extends SocketChannel>) Class.forName(EPOLL_SOCKET_CLASS_NAME));
                 } else if (osName.contains("Mac")) {
-                    eventLoopGroup = (MultithreadEventLoopGroup) Class.forName(KQUEUE_GROUP_CLASS_NAME).getConstructor(Integer.TYPE).newInstance(eventLoopGroupSize);
-                    channelClass = (Class<? extends SocketChannel>) Class.forName(KQUEUE_SOCKET_CLASS_NAME);
-                } else {
-                    eventLoopGroup = new NioEventLoopGroup();
-                    channelClass = NioSocketChannel.class;
+                    result = new TransportConfig(
+                            loadEventLoopGroup(KQUEUE_GROUP_CLASS_NAME, optionalGroupSize),
+                            (Class<? extends SocketChannel>) Class.forName(KQUEUE_SOCKET_CLASS_NAME));
                 }
             } catch (Exception e) {
                 String message = e.getMessage();
@@ -161,27 +131,43 @@ public final class NettyClient extends HttpClient {
                         message = cause.getMessage();
                     }
                 }
-
                 LoggerFactory.getLogger(NettyAdapter.class).debug("Exception when obtaining native EventLoopGroup and SocketChannel: " + message);
-                eventLoopGroup = new NioEventLoopGroup();
-                channelClass = NioSocketChannel.class;
             }
-            this.eventLoopGroup = eventLoopGroup;
 
+            if (result == null) {
+                result = new TransportConfig(new NioEventLoopGroup(), NioSocketChannel.class);
+            }
+
+            return result;
+        }
+
+        private static SharedChannelPool createChannelPool(final NettyAdapter adapter, TransportConfig config, int poolSize) {
             Bootstrap bootstrap = new Bootstrap();
-            bootstrap.group(eventLoopGroup);
-            bootstrap.channel(channelClass);
+            bootstrap.group(config.eventLoopGroup);
+            bootstrap.channel(config.channelClass);
             bootstrap.option(ChannelOption.AUTO_READ, false);
             bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
             bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) TimeUnit.MINUTES.toMillis(3L));
-            this.channelPool = new SharedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
+            return new SharedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
                 @Override
                 public void channelCreated(Channel ch) throws Exception {
                     ch.pipeline().addLast("HttpResponseDecoder", new HttpResponseDecoder());
                     ch.pipeline().addLast("HttpRequestEncoder", new HttpRequestEncoder());
-                    ch.pipeline().addLast("HttpClientInboundHandler", new HttpClientInboundHandler(NettyAdapter.this));
+                    ch.pipeline().addLast("HttpClientInboundHandler", new HttpClientInboundHandler(adapter));
                 }
-            }, channelPoolSize);
+            }, poolSize);
+        }
+
+        private NettyAdapter() {
+            TransportConfig config = loadTransport(null);
+            this.eventLoopGroup = config.eventLoopGroup;
+            this.channelPool = createChannelPool(this, config, eventLoopGroup.executorCount() * 2);
+        }
+
+        private NettyAdapter(int eventLoopGroupSize, int channelPoolSize) {
+            TransportConfig config = loadTransport(eventLoopGroupSize);
+            this.eventLoopGroup = config.eventLoopGroup;
+            this.channelPool = createChannelPool(this, config, channelPoolSize);
         }
 
         private boolean useZeroCopy(Channel channel) {

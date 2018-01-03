@@ -109,7 +109,7 @@ public class RestProxyStressTests {
 
             @Override
             public Single<HttpResponse> sendAsync(HttpRequest request) {
-                return sendAsync(request, 10 + ThreadLocalRandom.current().nextInt(10));
+                return sendAsync(request, 5 + ThreadLocalRandom.current().nextInt(10));
             }
 
             Single<HttpResponse> sendAsync(final HttpRequest request, final int waitTimeSeconds) {
@@ -120,7 +120,7 @@ public class RestProxyStressTests {
                             return Single.just(httpResponse);
                         } else {
                             LoggerFactory.getLogger(getClass()).warn("Received " + httpResponse.statusCode() + " for request. Waiting " + waitTimeSeconds + " seconds before retry.");
-                            final int nextWaitTime = 10 + ThreadLocalRandom.current().nextInt(10);
+                            final int nextWaitTime = 5 + ThreadLocalRandom.current().nextInt(10);
                             return Completable.complete().delay(waitTimeSeconds, TimeUnit.SECONDS)
                                     .andThen(sendAsync(request, nextWaitTime));
                         }
@@ -130,7 +130,7 @@ public class RestProxyStressTests {
                     public SingleSource<? extends HttpResponse> apply(Throwable throwable) throws Exception {
                         if (throwable instanceof IOException) {
                             LoggerFactory.getLogger(getClass()).warn("I/O exception occurred: " + throwable.getMessage());
-                            return next.sendAsync(request);
+                            return sendAsync(request);
                         }
                         LoggerFactory.getLogger(getClass()).warn("Unrecoverable exception occurred: " + throwable.getMessage());
                         throw Exceptions.propagate(throwable);

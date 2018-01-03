@@ -549,7 +549,7 @@ public final class NettyClient extends HttpClient {
                     @Override
                     public void request(long n) {
                         if (!ctx.channel().eventLoop().inEventLoop()) {
-                            throw new IllegalStateException("request() must be called the event loop managing the channel.");
+                            throw new IllegalStateException("request() must be called from the event loop managing the channel.");
                         }
                         ctx.channel().read();
                     }

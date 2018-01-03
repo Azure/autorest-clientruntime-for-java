@@ -6,21 +6,16 @@
 
 package com.microsoft.azure;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.azure.serializer.AzureJacksonAdapter;
-import com.microsoft.rest.interceptors.RequestIdHeaderInterceptor;
-import com.microsoft.rest.RestClient;
+import com.microsoft.rest.protocol.SerializerAdapter;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class CloudErrorDeserializerTests {
     @Test
     public void errorDeserializedFully() throws Exception {
-        RestClient restClient = new RestClient.Builder()
-                .withBaseUrl("http://localhost")
-                .withSerializerAdapter(new AzureJacksonAdapter())
-                .withResponseBuilderFactory(new AzureResponseBuilder.Factory())
-                .withInterceptor(new RequestIdHeaderInterceptor())
-                .build();
+        SerializerAdapter<ObjectMapper> serializerAdapter = new AzureJacksonAdapter();
         String bodyString =
             "{" +
             "    \"error\": {" +
@@ -39,7 +34,7 @@ public class CloudErrorDeserializerTests {
             "        }" +
             "    }" +
             "}";
-        CloudError cloudError = restClient.serializerAdapter().deserialize(bodyString, CloudError.class);
+        CloudError cloudError = serializerAdapter.deserialize(bodyString, CloudError.class);
 
         Assert.assertEquals("BadArgument", cloudError.code());
         Assert.assertEquals("The provided database ‘foo’ has an invalid username.", cloudError.message());

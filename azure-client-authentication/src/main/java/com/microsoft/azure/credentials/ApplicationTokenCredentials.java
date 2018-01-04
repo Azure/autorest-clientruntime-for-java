@@ -52,7 +52,7 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
     /**
      * Initializes a new instance of the ApplicationTokenCredentials.
      *
-     * @param clientId the active directory application client id.
+     * @param clientId the active directory application client id. Also known as Application Id which Identifies the application that is using the token.
      * @param domain the domain or tenant id containing this application.
      * @param secret the authentication secret for the application.
      * @param environment the Azure environment to authenticate with.
@@ -68,7 +68,7 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
     /**
      * Initializes a new instance of the ApplicationTokenCredentials.
      *
-     * @param clientId the active directory application client id.
+     * @param clientId the active directory application client id. Also known as Application Id which Identifies the application that is using the token.
      * @param domain the domain or tenant id containing this application.
      * @param certificate the PKCS12 certificate file content
      * @param password the password to the certificate file
@@ -112,7 +112,7 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
     }
 
     /**
-     * Gets the active directory application client id.
+     * Gets the active directory application client id. Also known as Application Id which Identifies the application that is using the token.
      *
      * @return the active directory application client id.
      */

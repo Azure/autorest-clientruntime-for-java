@@ -36,6 +36,7 @@ import io.reactivex.Flowable;
 import io.reactivex.Maybe;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.exceptions.Exceptions;
 import io.reactivex.functions.Function;
 import org.joda.time.DateTime;
 
@@ -229,15 +230,19 @@ public class RestProxy implements InvocationHandler {
     }
 
     @Override
-    public Object invoke(Object proxy, final Method method, Object[] args) throws IOException, InterruptedException {
-        final SwaggerMethodParser methodParser = methodParser(method);
+    public Object invoke(Object proxy, final Method method, Object[] args) {
+        try {
+            final SwaggerMethodParser methodParser = methodParser(method);
 
-        final HttpRequest request = createHttpRequest(methodParser, args);
+            final HttpRequest request = createHttpRequest(methodParser, args);
 
-        final Single<HttpResponse> asyncResponse = sendHttpRequestAsync(request);
+            final Single<HttpResponse> asyncResponse = sendHttpRequestAsync(request);
 
-        final Type returnType = methodParser.returnType();
-        return handleAsyncHttpResponse(request, asyncResponse, methodParser, returnType);
+            final Type returnType = methodParser.returnType();
+            return handleAsyncHttpResponse(request, asyncResponse, methodParser, returnType);
+        } catch (Exception e) {
+            throw Exceptions.propagate(e);
+        }
     }
 
     /**

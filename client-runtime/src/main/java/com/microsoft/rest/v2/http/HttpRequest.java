@@ -182,9 +182,8 @@ public class HttpRequest {
      * that the buffered HttpHeaders and body must not be able to change from side effects of
      * this HttpRequest.
      * @return A new HTTP request instance with cloned instances of all mutable properties.
-     * @throws IOException if the request body fails to buffer.
      */
-    public HttpRequest buffer() throws IOException {
+    public HttpRequest buffer() {
         final HttpHeaders bufferedHeaders = new HttpHeaders(headers);
         // If calling buffer() will consume the body, then we need to set this
         // HttpRequest's body to be the buffered body too.

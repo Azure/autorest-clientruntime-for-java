@@ -3,7 +3,7 @@ package com.microsoft.rest.v2.http;
 import com.microsoft.rest.v2.policy.LoggingPolicy;
 import com.microsoft.rest.v2.policy.PortPolicy;
 import com.microsoft.rest.v2.policy.ProtocolPolicyFactory;
-import com.microsoft.rest.v2.policy.RetryPolicy;
+import com.microsoft.rest.v2.policy.RetryPolicyFactory;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -30,9 +30,9 @@ public class HttpPipelineBuilderTests {
         assertEquals(ProtocolPolicyFactory.class, builder.requestPolicyFactories().get(0).getClass());
         assertEquals(PortPolicy.Factory.class, builder.requestPolicyFactories().get(1).getClass());
 
-        builder.withRequestPolicy(new RetryPolicy.Factory());
+        builder.withRequestPolicy(new RetryPolicyFactory());
         assertEquals(3, builder.requestPolicyFactories().size());
-        assertEquals(RetryPolicy.Factory.class, builder.requestPolicyFactories().get(0).getClass());
+        assertEquals(RetryPolicyFactory.class, builder.requestPolicyFactories().get(0).getClass());
         assertEquals(ProtocolPolicyFactory.class, builder.requestPolicyFactories().get(1).getClass());
         assertEquals(PortPolicy.Factory.class, builder.requestPolicyFactories().get(2).getClass());
     }
@@ -50,10 +50,10 @@ public class HttpPipelineBuilderTests {
         assertEquals(PortPolicy.Factory.class, builder.requestPolicyFactories().get(0).getClass());
         assertEquals(ProtocolPolicyFactory.class, builder.requestPolicyFactories().get(1).getClass());
 
-        builder.withRequestPolicy(1, new RetryPolicy.Factory());
+        builder.withRequestPolicy(1, new RetryPolicyFactory());
         assertEquals(3, builder.requestPolicyFactories().size());
         assertEquals(PortPolicy.Factory.class, builder.requestPolicyFactories().get(0).getClass());
-        assertEquals(RetryPolicy.Factory.class, builder.requestPolicyFactories().get(1).getClass());
+        assertEquals(RetryPolicyFactory.class, builder.requestPolicyFactories().get(1).getClass());
         assertEquals(ProtocolPolicyFactory.class, builder.requestPolicyFactories().get(2).getClass());
     }
 
@@ -76,7 +76,7 @@ public class HttpPipelineBuilderTests {
     public void appendingRequestPolicyArray() {
         final HttpPipelineBuilder builder = new HttpPipelineBuilder();
 
-        builder.withRequestPolicy(new RetryPolicy.Factory());
+        builder.withRequestPolicy(new RetryPolicyFactory());
         builder.withRequestPolicies(
                 new ProtocolPolicyFactory("http"),
                 new PortPolicy.Factory(80),
@@ -86,7 +86,7 @@ public class HttpPipelineBuilderTests {
         assertEquals(LoggingPolicy.Factory.class, builder.requestPolicyFactories().get(0).getClass());
         assertEquals(PortPolicy.Factory.class, builder.requestPolicyFactories().get(1).getClass());
         assertEquals(ProtocolPolicyFactory.class, builder.requestPolicyFactories().get(2).getClass());
-        assertEquals(RetryPolicy.Factory.class, builder.requestPolicyFactories().get(3).getClass());
+        assertEquals(RetryPolicyFactory.class, builder.requestPolicyFactories().get(3).getClass());
 
     }
 }

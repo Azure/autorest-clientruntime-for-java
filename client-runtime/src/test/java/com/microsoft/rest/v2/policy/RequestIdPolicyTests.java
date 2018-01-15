@@ -16,7 +16,7 @@ import com.microsoft.rest.v2.http.HttpResponse;
 import com.microsoft.rest.v2.http.MockHttpClient;
 import com.microsoft.rest.v2.policy.RequestIdPolicy;
 import com.microsoft.rest.v2.policy.RequestPolicy;
-import com.microsoft.rest.v2.policy.RetryPolicy;
+import com.microsoft.rest.v2.policy.RetryPolicyFactory;
 import io.reactivex.Flowable;
 import org.junit.Assert;
 import org.junit.Test;
@@ -121,7 +121,7 @@ public class RequestIdPolicyTests {
                 }
             },
             new RequestIdPolicy.Factory(),
-            new RetryPolicy.Factory(1));
+            new RetryPolicyFactory(1));
 
         pipeline.sendRequestAsync(new HttpRequest("sameRequestIdForRetry", HttpMethod.GET, new URL("http://localhost/"))).blockingGet();
     }

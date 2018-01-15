@@ -7,9 +7,20 @@
 package com.microsoft.rest.v2;
 
 import com.google.common.io.BaseEncoding;
-import com.microsoft.rest.v2.annotations.*;
-import com.microsoft.rest.v2.http.*;
-import com.microsoft.rest.v2.http.HttpClient.Configuration;
+import com.microsoft.rest.v2.annotations.BodyParam;
+import com.microsoft.rest.v2.annotations.ExpectedResponses;
+import com.microsoft.rest.v2.annotations.GET;
+import com.microsoft.rest.v2.annotations.HeaderParam;
+import com.microsoft.rest.v2.annotations.Host;
+import com.microsoft.rest.v2.annotations.PUT;
+import com.microsoft.rest.v2.annotations.PathParam;
+import com.microsoft.rest.v2.http.AsyncInputStream;
+import com.microsoft.rest.v2.http.ContentType;
+import com.microsoft.rest.v2.http.FileSegment;
+import com.microsoft.rest.v2.http.HttpHeaders;
+import com.microsoft.rest.v2.http.HttpPipeline;
+import com.microsoft.rest.v2.http.HttpRequest;
+import com.microsoft.rest.v2.http.HttpResponse;
 import com.microsoft.rest.v2.policy.AddHeadersPolicyFactory;
 import com.microsoft.rest.v2.policy.LoggingPolicy;
 import com.microsoft.rest.v2.policy.LoggingPolicy.LogLevel;
@@ -23,14 +34,12 @@ import io.reactivex.Emitter;
 import io.reactivex.Flowable;
 import io.reactivex.Single;
 import io.reactivex.SingleSource;
-import io.reactivex.exceptions.Exceptions;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.internal.functions.Functions;
-import io.reactivex.schedulers.Schedulers;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
@@ -42,12 +51,7 @@ import org.junit.Test;
 import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.Proxy.Type;
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
 import java.nio.file.FileVisitResult;
@@ -62,45 +66,47 @@ import java.security.MessageDigest;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertArrayEquals;
 
-@SuppressWarnings("Duplicates")
 @Ignore("Should only be run manually")
 public class RestProxyStressTests {
-    static class AddDatePolicy implements RequestPolicy {
-        private final DateTimeFormatter format = DateTimeFormat
-                .forPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'")
-                .withZoneUTC()
-                .withLocale(Locale.US);
 
-        private final RequestPolicy next;
-        AddDatePolicy(RequestPolicy next) {
-            this.next = next;
-        }
-
+    private static final class AddDatePolicyFactory implements RequestPolicyFactory {
         @Override
-        public Single<HttpResponse> sendAsync(HttpRequest request) {
-            request.headers().set("Date", format.print(DateTime.now()));
-            return next.sendAsync(request);
+        public RequestPolicy create(RequestPolicy next, RequestPolicyOptions options) {
+            return new AddDatePolicy(next);
         }
 
-        static class Factory implements RequestPolicyFactory {
+        private static final class AddDatePolicy implements RequestPolicy {
+            private final DateTimeFormatter format = DateTimeFormat
+                    .forPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'")
+                    .withZoneUTC()
+                    .withLocale(Locale.US);
+
+            private final RequestPolicy next;
+            AddDatePolicy(RequestPolicy next) {
+                this.next = next;
+            }
+
             @Override
-            public RequestPolicy create(RequestPolicy next, RequestPolicyOptions options) {
-                return new AddDatePolicy(next);
+            public Single<HttpResponse> sendAsync(HttpRequest request) {
+                request.headers().set("Date", format.print(DateTime.now()));
+                return next.sendAsync(request);
             }
         }
     }
 
-    static class ThrottlingRetryPolicyFactory implements RequestPolicyFactory {
+    private static final class ThrottlingRetryPolicyFactory implements RequestPolicyFactory {
         @Override
         public RequestPolicy create(RequestPolicy next, RequestPolicyOptions options) {
             return new ThrottlingRetryPolicy(next);
         }
 
-        static class ThrottlingRetryPolicy implements RequestPolicy {
+        private static final class ThrottlingRetryPolicy implements RequestPolicy {
             private final RequestPolicy next;
 
             ThrottlingRetryPolicy(RequestPolicy next) {
@@ -243,7 +249,7 @@ public class RestProxyStressTests {
                 .set("x-ms-version", "2017-04-17");
 
         HttpPipeline pipeline = HttpPipeline.build(
-                new AddDatePolicy.Factory(),
+                new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));
@@ -288,7 +294,7 @@ public class RestProxyStressTests {
                 .set("x-ms-version", "2017-04-17");
 
         HttpPipeline pipeline = HttpPipeline.build(
-                new AddDatePolicy.Factory(),
+                new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));
@@ -341,7 +347,7 @@ public class RestProxyStressTests {
                 .set("x-ms-version", "2017-04-17");
 
         HttpPipeline pipeline = HttpPipeline.build(
-                new AddDatePolicy.Factory(),
+                new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));
@@ -397,7 +403,7 @@ public class RestProxyStressTests {
                 .set("x-ms-version", "2017-04-17");
 
         HttpPipeline pipeline = HttpPipeline.build(
-                new AddDatePolicy.Factory(),
+                new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));
@@ -454,7 +460,7 @@ public class RestProxyStressTests {
                 .set("x-ms-version", "2017-04-17");
 
         HttpPipeline pipeline = HttpPipeline.build(
-                new AddDatePolicy.Factory(),
+                new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));

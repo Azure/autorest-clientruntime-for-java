@@ -19,11 +19,13 @@ import com.microsoft.rest.v2.http.ContentType;
 import com.microsoft.rest.v2.http.FileSegment;
 import com.microsoft.rest.v2.http.HttpHeaders;
 import com.microsoft.rest.v2.http.HttpPipeline;
+import com.microsoft.rest.v2.http.HttpPipelineBuilder;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
+import com.microsoft.rest.v2.http.Slf4jLogger;
 import com.microsoft.rest.v2.policy.AddHeadersPolicyFactory;
-import com.microsoft.rest.v2.policy.LoggingPolicy;
-import com.microsoft.rest.v2.policy.LoggingPolicy.LogLevel;
+import com.microsoft.rest.v2.policy.HttpLogDetailLevel;
+import com.microsoft.rest.v2.policy.HttpLoggingPolicyFactory;
 import com.microsoft.rest.v2.policy.RequestPolicy;
 import com.microsoft.rest.v2.policy.RequestPolicyFactory;
 import com.microsoft.rest.v2.policy.RequestPolicyOptions;
@@ -252,7 +254,7 @@ public class RestProxyStressTests {
                 new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
-                new LoggingPolicy.Factory(LogLevel.BASIC));
+                new HttpLoggingPolicyFactory(HttpLogDetailLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
 
@@ -297,7 +299,7 @@ public class RestProxyStressTests {
                 new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
-                new LoggingPolicy.Factory(LogLevel.BASIC));
+                new HttpLoggingPolicyFactory(HttpLogDetailLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
 
@@ -350,7 +352,7 @@ public class RestProxyStressTests {
                 new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
-                new LoggingPolicy.Factory(LogLevel.BASIC));
+                new HttpLoggingPolicyFactory(HttpLogDetailLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
 
@@ -406,7 +408,7 @@ public class RestProxyStressTests {
                 new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
-                new LoggingPolicy.Factory(LogLevel.BASIC));
+                new HttpLoggingPolicyFactory(HttpLogDetailLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
 
@@ -463,7 +465,7 @@ public class RestProxyStressTests {
                 new AddDatePolicyFactory(),
                 new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
-                new LoggingPolicy.Factory(LogLevel.BASIC));
+                new HttpLoggingPolicyFactory(HttpLogDetailLevel.BASIC));
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
 

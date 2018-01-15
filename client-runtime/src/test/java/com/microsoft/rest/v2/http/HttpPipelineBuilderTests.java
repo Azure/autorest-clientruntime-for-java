@@ -1,6 +1,7 @@
 package com.microsoft.rest.v2.http;
 
-import com.microsoft.rest.v2.policy.LoggingPolicy;
+import com.microsoft.rest.v2.policy.HttpLogDetailLevel;
+import com.microsoft.rest.v2.policy.HttpLoggingPolicyFactory;
 import com.microsoft.rest.v2.policy.PortPolicyFactory;
 import com.microsoft.rest.v2.policy.ProtocolPolicyFactory;
 import com.microsoft.rest.v2.policy.RetryPolicyFactory;
@@ -64,10 +65,10 @@ public class HttpPipelineBuilderTests {
         builder.withRequestPolicies(
                 new ProtocolPolicyFactory("http"),
                 new PortPolicyFactory(80),
-                new LoggingPolicy.Factory(LoggingPolicy.LogLevel.BODY));
+                new HttpLoggingPolicyFactory(HttpLogDetailLevel.BODY));
 
         assertEquals(3, builder.requestPolicyFactories().size());
-        assertEquals(LoggingPolicy.Factory.class, builder.requestPolicyFactories().get(0).getClass());
+        assertEquals(HttpLoggingPolicyFactory.class, builder.requestPolicyFactories().get(0).getClass());
         assertEquals(PortPolicyFactory.class, builder.requestPolicyFactories().get(1).getClass());
         assertEquals(ProtocolPolicyFactory.class, builder.requestPolicyFactories().get(2).getClass());
     }
@@ -80,10 +81,10 @@ public class HttpPipelineBuilderTests {
         builder.withRequestPolicies(
                 new ProtocolPolicyFactory("http"),
                 new PortPolicyFactory(80),
-                new LoggingPolicy.Factory(LoggingPolicy.LogLevel.BODY));
+                new HttpLoggingPolicyFactory(HttpLogDetailLevel.BODY));
 
         assertEquals(4, builder.requestPolicyFactories().size());
-        assertEquals(LoggingPolicy.Factory.class, builder.requestPolicyFactories().get(0).getClass());
+        assertEquals(HttpLoggingPolicyFactory.class, builder.requestPolicyFactories().get(0).getClass());
         assertEquals(PortPolicyFactory.class, builder.requestPolicyFactories().get(1).getClass());
         assertEquals(ProtocolPolicyFactory.class, builder.requestPolicyFactories().get(2).getClass());
         assertEquals(RetryPolicyFactory.class, builder.requestPolicyFactories().get(3).getClass());

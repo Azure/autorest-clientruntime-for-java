@@ -10,7 +10,7 @@ import com.google.common.io.BaseEncoding;
 import com.microsoft.rest.v2.annotations.*;
 import com.microsoft.rest.v2.http.*;
 import com.microsoft.rest.v2.http.HttpClient.Configuration;
-import com.microsoft.rest.v2.policy.AddHeadersPolicy;
+import com.microsoft.rest.v2.policy.AddHeadersPolicyFactory;
 import com.microsoft.rest.v2.policy.LoggingPolicy;
 import com.microsoft.rest.v2.policy.LoggingPolicy.LogLevel;
 import com.microsoft.rest.v2.policy.RequestPolicy;
@@ -244,7 +244,7 @@ public class RestProxyStressTests {
 
         HttpPipeline pipeline = HttpPipeline.build(
                 new AddDatePolicy.Factory(),
-                new AddHeadersPolicy.Factory(headers),
+                new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
@@ -289,7 +289,7 @@ public class RestProxyStressTests {
 
         HttpPipeline pipeline = HttpPipeline.build(
                 new AddDatePolicy.Factory(),
-                new AddHeadersPolicy.Factory(headers),
+                new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
@@ -342,7 +342,7 @@ public class RestProxyStressTests {
 
         HttpPipeline pipeline = HttpPipeline.build(
                 new AddDatePolicy.Factory(),
-                new AddHeadersPolicy.Factory(headers),
+                new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
@@ -398,7 +398,7 @@ public class RestProxyStressTests {
 
         HttpPipeline pipeline = HttpPipeline.build(
                 new AddDatePolicy.Factory(),
-                new AddHeadersPolicy.Factory(headers),
+                new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 
@@ -455,7 +455,7 @@ public class RestProxyStressTests {
 
         HttpPipeline pipeline = HttpPipeline.build(
                 new AddDatePolicy.Factory(),
-                new AddHeadersPolicy.Factory(headers),
+                new AddHeadersPolicyFactory(headers),
                 new ThrottlingRetryPolicyFactory(),
                 new LoggingPolicy.Factory(LogLevel.BASIC));
 

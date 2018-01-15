@@ -16,7 +16,7 @@ import com.microsoft.rest.v2.http.HttpMethod;
 import com.microsoft.rest.v2.http.HttpPipeline;
 import com.microsoft.rest.v2.http.HttpPipelineBuilder;
 import com.microsoft.rest.v2.http.NettyClient;
-import com.microsoft.rest.v2.policy.AddCookiesPolicy;
+import com.microsoft.rest.v2.policy.CookiePolicyFactory;
 import com.microsoft.rest.v2.policy.CredentialsPolicyFactory;
 import com.microsoft.rest.v2.policy.LoggingPolicy;
 import com.microsoft.rest.v2.policy.RequestPolicyFactory;
@@ -172,7 +172,7 @@ public final class AzureProxy extends RestProxy {
         final HttpPipelineBuilder builder = new HttpPipelineBuilder().withHttpClient(httpClient);
         builder.withUserAgent(getDefaultUserAgentString(swaggerInterface));
         builder.withRequestPolicy(new RetryPolicyFactory());
-        builder.withRequestPolicy(new AddCookiesPolicy.Factory());
+        builder.withRequestPolicy(new CookiePolicyFactory());
         if (credentialsPolicy != null) {
             builder.withRequestPolicy(credentialsPolicy);
         }

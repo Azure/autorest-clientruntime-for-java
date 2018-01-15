@@ -22,7 +22,7 @@ import com.microsoft.rest.v2.http.HttpPipelineBuilder;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
 import com.microsoft.rest.v2.http.UrlBuilder;
-import com.microsoft.rest.v2.policy.AddCookiesPolicy;
+import com.microsoft.rest.v2.policy.CookiePolicyFactory;
 import com.microsoft.rest.v2.policy.CredentialsPolicyFactory;
 import com.microsoft.rest.v2.policy.RequestPolicyFactory;
 import com.microsoft.rest.v2.policy.RetryPolicyFactory;
@@ -638,7 +638,7 @@ public class RestProxy implements InvocationHandler {
         final HttpPipelineBuilder builder = new HttpPipelineBuilder();
         builder.withRequestPolicy(new UserAgentPolicyFactory());
         builder.withRequestPolicy(new RetryPolicyFactory());
-        builder.withRequestPolicy(new AddCookiesPolicy.Factory());
+        builder.withRequestPolicy(new CookiePolicyFactory());
         if (credentialsPolicy != null) {
             builder.withRequestPolicy(credentialsPolicy);
         }

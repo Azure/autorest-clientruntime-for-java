@@ -8,8 +8,6 @@ package com.microsoft.rest.v2.http;
 
 import io.reactivex.Flowable;
 
-import java.io.IOException;
-
 /**
  * The body of an HTTP request.
  */

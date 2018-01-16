@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
+
 package com.microsoft.rest.v2.policy;
 
 import com.microsoft.rest.v2.http.HttpRequest;
@@ -7,14 +13,14 @@ import io.reactivex.Single;
 import java.util.concurrent.TimeUnit;
 
 /**
- * RequestPolicy which limits the time allowed between sending a request and receiving the response.
+ * Creates a RequestPolicy that limits the time allowed between sending a request and receiving the response.
  */
 public final class TimeoutPolicyFactory implements RequestPolicyFactory {
     private final long timeout;
     private final TimeUnit unit;
 
     /**
-     * Creates a TimeoutPolicyFactory
+     * Creates a TimeoutPolicyFactory.
      * @param timeout the length of the timeout
      * @param unit the unit of the timeout
      */

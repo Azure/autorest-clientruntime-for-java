@@ -6,7 +6,6 @@
 
 package com.microsoft.rest.v2.policy;
 
-import com.google.common.base.Charsets;
 import com.microsoft.rest.v2.http.HttpHeader;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
@@ -21,6 +20,7 @@ import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -43,7 +43,7 @@ public class HttpLoggingPolicyFactory implements RequestPolicyFactory {
         return new LoggingPolicy(next);
     }
 
-    public final class LoggingPolicy implements RequestPolicy {
+    private final class LoggingPolicy implements RequestPolicy {
         private static final int MAX_BODY_LOG_SIZE = 1024 * 16;
         private final RequestPolicy next;
 
@@ -92,7 +92,7 @@ public class HttpLoggingPolicyFactory implements RequestPolicyFactory {
                             bodyLoggingTask = collectedBytes.flatMapCompletable(new Function<byte[], CompletableSource>() {
                                 @Override
                                 public CompletableSource apply(byte[] bytes) throws Exception {
-                                    String bodyString = new String(bytes, Charsets.UTF_8);
+                                    String bodyString = new String(bytes, StandardCharsets.UTF_8);
                                     log(logger, String.format("%s-byte body:\n%s", request.body().contentLength(), bodyString));
                                     log(logger, "--> END " + request.httpMethod());
                                     return Completable.complete();

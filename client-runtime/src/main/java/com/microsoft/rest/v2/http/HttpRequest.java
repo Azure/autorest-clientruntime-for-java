@@ -9,7 +9,6 @@ package com.microsoft.rest.v2.http;
 import com.google.common.base.Charsets;
 import io.reactivex.Flowable;
 
-import java.io.IOException;
 import java.net.URL;
 
 /**

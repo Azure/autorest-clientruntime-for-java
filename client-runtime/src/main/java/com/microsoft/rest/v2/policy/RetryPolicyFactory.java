@@ -11,7 +11,6 @@ import com.microsoft.rest.v2.http.HttpResponse;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
 
-import java.io.IOException;
 import java.net.HttpURLConnection;
 
 /**
@@ -53,14 +52,13 @@ public class RetryPolicyFactory implements RequestPolicyFactory {
         }
 
         private Single<HttpResponse> attemptAsync(final HttpRequest request, final int tryCount) {
-            final HttpRequest bufferedRequest = request.buffer();
-            Single<HttpResponse> result = next.sendAsync(request)
+            Single<HttpResponse> result = next.sendAsync(request.buffer())
                     .flatMap(new Function<HttpResponse, Single<? extends HttpResponse>>() {
                         @Override
                         public Single<HttpResponse> apply(HttpResponse httpResponse) throws Exception {
                             Single<HttpResponse> result;
                             if (shouldRetry(httpResponse, tryCount)) {
-                                result = attemptAsync(bufferedRequest.buffer(), tryCount + 1);
+                                result = attemptAsync(request, tryCount + 1);
                             } else {
                                 result = Single.just(httpResponse);
                             }

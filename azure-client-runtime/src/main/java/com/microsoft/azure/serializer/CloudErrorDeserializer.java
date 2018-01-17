@@ -60,7 +60,7 @@ final class CloudErrorDeserializer extends JsonDeserializer<CloudError> {
                 .replaceFirst("(?i)\"message\"", "\"message\"")
                 .replaceFirst("(?i)\"target\"", "\"target\"")
                 .replaceFirst("(?i)\"details\"", "\"details\"")
-                .replaceFirst("(?i)\"innererror\"", "\"innererror\"");
+                .replaceFirst("(?i)\"innererror\"", "\"innerError\"");
         JsonParser parser = new JsonFactory().createParser(nodeContent);
         parser.setCodec(mapper);
         return parser.readValueAs(CloudError.class);

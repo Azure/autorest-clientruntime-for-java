@@ -38,7 +38,7 @@ public final class CloudError {
     /**
      * The inner error.
      */
-    private ObjectNode innererror;
+    private ObjectNode innerError;
 
     /**
      * Initializes a new instance of CloudError.
@@ -111,7 +111,7 @@ public final class CloudError {
     /**
      * @return the inner error
      */
-    public ObjectNode innererror() {
-        return innererror;
+    public ObjectNode innerError() {
+        return innerError;
     }
 }

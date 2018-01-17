@@ -40,6 +40,6 @@ public class CloudErrorDeserializerTests {
         Assert.assertEquals("The provided database ‘foo’ has an invalid username.", cloudError.message());
         Assert.assertEquals("query", cloudError.target());
         Assert.assertEquals("301", cloudError.details().get(0).code());
-        Assert.assertEquals("customValue", cloudError.innererror().get("customKey").asText());
+        Assert.assertEquals("customValue", cloudError.innerError().get("customKey").asText());
     }
 }

@@ -134,7 +134,7 @@ public class LoggingInterceptor implements Interceptor {
         }
 
         // log body
-        if (logLevel == LogLevel.BODY || logLevel == LogLevel.BODY_AND_HEADERS) {
+        if ((logLevel == LogLevel.BODY || logLevel == LogLevel.BODY_AND_HEADERS) && contentLength > 0) {
             if (response.body() != null) {
                 BufferedSource source = responseBody.source();
                 source.request(Long.MAX_VALUE); // Buffer the entire body.
@@ -158,22 +158,20 @@ public class LoggingInterceptor implements Interceptor {
                     return response;
                 }
 
-                if (contentLength != 0) {
-                    String content;
-                    if (gzipped) {
-                        content = CharStreams.toString(new InputStreamReader(new GZIPInputStream(buffer.clone().inputStream())));
-                    } else {
-                        content = buffer.clone().readString(charset);
-                    }
-                    if (logLevel.isPrettyJson()) {
-                        try {
-                            content = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(MAPPER.readValue(content, JsonNode.class));
-                        } catch (Exception e) {
-                            // swallow, keep original content
-                        }
-                    }
-                    log(logger, String.format("%s-byte body:\n%s", buffer.size(), content));
+                String content;
+                if (gzipped) {
+                    content = CharStreams.toString(new InputStreamReader(new GZIPInputStream(buffer.clone().inputStream())));
+                } else {
+                    content = buffer.clone().readString(charset);
                 }
+                if (logLevel.isPrettyJson()) {
+                    try {
+                        content = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(MAPPER.readValue(content, JsonNode.class));
+                    } catch (Exception e) {
+                        // swallow, keep original content
+                    }
+                }
+                log(logger, String.format("%s-byte body:\n%s", buffer.size(), content));
                 log(logger, "<-- END HTTP");
             }
         }

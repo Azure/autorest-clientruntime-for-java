@@ -9,10 +9,7 @@ package com.microsoft.rest.v2;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.reflect.TypeToken;
 import com.microsoft.rest.v2.credentials.ServiceClientCredentials;
-import com.microsoft.rest.v2.http.AsyncInputStream;
 import com.microsoft.rest.v2.http.ContentType;
-import com.microsoft.rest.v2.http.FileRequestBody;
-import com.microsoft.rest.v2.http.FileSegment;
 import com.microsoft.rest.v2.http.FlowableHttpRequestBody;
 import com.microsoft.rest.v2.http.HttpHeader;
 import com.microsoft.rest.v2.http.HttpHeaders;
@@ -39,6 +36,7 @@ import io.reactivex.Single;
 import io.reactivex.exceptions.Exceptions;
 import io.reactivex.functions.Function;
 import org.joda.time.DateTime;
+import org.reactivestreams.Publisher;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -252,6 +250,7 @@ public class RestProxy implements InvocationHandler {
      * @return A HttpRequest.
      * @throws IOException Thrown if the body contents cannot be serialized.
      */
+    @SuppressWarnings("unchecked")
     private HttpRequest createHttpRequest(SwaggerMethodParser methodParser, Object[] args) throws IOException {
         UrlBuilder urlBuilder;
 
@@ -285,18 +284,11 @@ public class RestProxy implements InvocationHandler {
         final URL url = urlBuilder.toURL();
         final HttpRequest request = new HttpRequest(methodParser.fullyQualifiedMethodName(), methodParser.httpMethod(), url);
 
-        for (final HttpHeader header : methodParser.headers(args)) {
-            request.withHeader(header.name(), header.value());
-        }
-
         final Object bodyContentObject = methodParser.body(args);
         if (bodyContentObject == null) {
             request.headers().set("Content-Length", "0");
         } else {
             String contentType = methodParser.bodyContentType();
-            if (contentType == null || contentType.isEmpty()) {
-                contentType = request.headers().value("Content-Type");
-            }
             if (contentType == null || contentType.isEmpty()) {
                 if (bodyContentObject instanceof byte[] || bodyContentObject instanceof String) {
                     contentType = ContentType.APPLICATION_OCTET_STREAM;
@@ -321,12 +313,9 @@ public class RestProxy implements InvocationHandler {
                 final String bodyContentString = serializer.serialize(bodyContentObject, bodyEncoding(request.headers()));
                 request.withBody(bodyContentString, contentType);
             }
-            else if (bodyContentObject instanceof AsyncInputStream) {
-                AsyncInputStream stream = (AsyncInputStream) bodyContentObject;
-                request.withBody(new FlowableHttpRequestBody(stream.contentLength(), contentType, stream.content(), stream.isReplayable()));
-            }
-            else if (bodyContentObject instanceof FileSegment) {
-                request.withBody(new FileRequestBody((FileSegment) bodyContentObject));
+            else if (isFlowableByteArray(TypeToken.of(methodParser.bodyJavaType()))) {
+                //noinspection ConstantConditions
+                request.withBody(new FlowableHttpRequestBody(contentType, (Flowable<byte[]>) bodyContentObject));
             }
             else if (bodyContentObject instanceof byte[]) {
                 request.withBody((byte[]) bodyContentObject, contentType);
@@ -341,6 +330,11 @@ public class RestProxy implements InvocationHandler {
                 final String bodyContentString = serializer.serialize(bodyContentObject, bodyEncoding(request.headers()));
                 request.withBody(bodyContentString, contentType);
             }
+        }
+
+        // Headers from Swagger method arguments always take precedence over inferred headers from body types
+        for (final HttpHeader header : methodParser.headers(args)) {
+            request.withHeader(header.name(), header.value());
         }
 
         return request;
@@ -499,12 +493,6 @@ public class RestProxy implements InvocationHandler {
                 });
             }
             asyncResult = responseBodyBytesAsync;
-        } else if (entityTypeToken.isSubtypeOf(AsyncInputStream.class)) {
-            AsyncInputStream stream = new AsyncInputStream(
-                    response.streamBodyAsync(),
-                    Integer.parseInt(response.headerValue("Content-Length")),
-                    false);
-            asyncResult = Maybe.just(stream);
         } else if (isFlowableByteArray(entityTypeToken)) {
             asyncResult = Maybe.just(response.streamBodyAsync());
         } else {
@@ -576,6 +564,14 @@ public class RestProxy implements InvocationHandler {
         }
         else if (returnTypeToken.isSubtypeOf(Observable.class)) {
             throw new InvalidReturnTypeException("RestProxy does not support swagger interface methods (such as " + methodParser.fullyQualifiedMethodName() + "()) with a return type of " + returnType.toString());
+        }
+        else if (isFlowableByteArray(returnTypeToken)) {
+            result = asyncExpectedResponse.flatMapPublisher(new Function<HttpResponse, Publisher<?>>() {
+                @Override
+                public Publisher<?> apply(HttpResponse httpResponse) throws Exception {
+                    return httpResponse.streamBodyAsync();
+                }
+            });
         }
         else if (returnTypeToken.isSubtypeOf(void.class) || returnTypeToken.isSubtypeOf(Void.class)) {
             asyncExpectedResponse.blockingGet();

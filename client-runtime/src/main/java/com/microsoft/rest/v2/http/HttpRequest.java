@@ -161,7 +161,8 @@ public class HttpRequest {
      * @return This HttpRequest so that multiple operations can be chained together.
      */
     public HttpRequest withBody(byte[] body, String mimeContentType) {
-        return withBody(new FlowableHttpRequestBody(body.length, mimeContentType, Flowable.just(body), true));
+        headers.set("Content-Length", String.valueOf(body.length));
+        return withBody(new FlowableHttpRequestBody(mimeContentType, Flowable.just(body)));
     }
 
     /**
@@ -171,7 +172,6 @@ public class HttpRequest {
      */
     public HttpRequest withBody(HttpRequestBody body) {
         this.body = body;
-        headers.set("Content-Length", String.valueOf(body.contentLength()));
         return this;
     }
 
@@ -184,9 +184,6 @@ public class HttpRequest {
      */
     public HttpRequest buffer() {
         final HttpHeaders bufferedHeaders = new HttpHeaders(headers);
-        // If calling buffer() will consume the body, then we need to set this
-        // HttpRequest's body to be the buffered body too.
-        body = (body == null ? null : body.buffer());
         return new HttpRequest(callerMethod, httpMethod, url, bufferedHeaders, body);
     }
 }

@@ -10,31 +10,20 @@ import io.reactivex.Flowable;
 
 /**
  * An HTTP request body which is given by subscribing to a Flowable.
+ * The Flowable must support multiple subscription.
  */
 public final class FlowableHttpRequestBody implements HttpRequestBody {
-    private final long contentLength;
     private final String contentType;
-
-    private boolean isReplayable;
     private Flowable<byte[]> content;
 
     /**
      * Create a new FlowableHttpRequestBody.
-     * @param contentLength the number of bytes in the content emitted by the provided Flowable
      * @param contentType the MIME type of the content
-     * @param content the Flowable content
-     * @param isReplayable indicates whether the content Flowable allows multiple subscription
+     * @param content the flowable content. Must support multiple subscription.
      */
-    public FlowableHttpRequestBody(long contentLength, String contentType, Flowable<byte[]> content, boolean isReplayable) {
-        this.contentLength = contentLength;
+    public FlowableHttpRequestBody(String contentType, Flowable<byte[]> content) {
         this.contentType = contentType;
         this.content = content;
-        this.isReplayable = isReplayable;
-    }
-
-    @Override
-    public long contentLength() {
-        return contentLength;
     }
 
     @Override
@@ -45,14 +34,5 @@ public final class FlowableHttpRequestBody implements HttpRequestBody {
     @Override
     public Flowable<byte[]> content() {
         return content;
-    }
-
-    @Override
-    public HttpRequestBody buffer() {
-        if (!isReplayable) {
-            content = content.replay().autoConnect();
-            isReplayable = true;
-        }
-        return this;
     }
 }

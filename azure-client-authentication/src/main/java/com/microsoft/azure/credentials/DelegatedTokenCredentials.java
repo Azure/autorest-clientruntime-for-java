@@ -60,11 +60,8 @@ public class DelegatedTokenCredentials extends AzureTokenCredentials {
      * @param authorizationCode the oauth2 authorization code
      */
     public DelegatedTokenCredentials(ApplicationTokenCredentials applicationCredentials, String redirectUrl, String authorizationCode) {
-        super(applicationCredentials.environment(), applicationCredentials.domain()); // defer token acquisition
-        this.tokens = new ConcurrentHashMap<>();
-        this.redirectUrl = redirectUrl;
+        this(applicationCredentials, redirectUrl);
         this.authorizationCode = authorizationCode;
-        this.refreshTokenClient = new RefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(), proxy());
     }
 
     /**

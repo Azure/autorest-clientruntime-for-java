@@ -6,10 +6,10 @@
 
 package com.microsoft.rest.v2.http;
 
-import com.google.common.base.Charsets;
 import io.reactivex.Flowable;
 
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 /**
  * This class contains all of the details necessary for sending a HTTP request through a HttpClient.
@@ -19,7 +19,7 @@ public class HttpRequest {
     private HttpMethod httpMethod;
     private URL url;
     private HttpHeaders headers;
-    private HttpRequestBody body;
+    private Flowable<byte[]> body;
 
     /**
      * Create a new HttpRequest object with the provided HTTP method (GET, POST, PUT, etc.) and the
@@ -44,7 +44,7 @@ public class HttpRequest {
      * @param headers The HTTP headers to use with this request.
      * @param body The body of this HTTP request.
      */
-    public HttpRequest(String callerMethod, HttpMethod httpMethod, URL url, HttpHeaders headers, HttpRequestBody body) {
+    public HttpRequest(String callerMethod, HttpMethod httpMethod, URL url, HttpHeaders headers, Flowable<byte[]> body) {
         this.callerMethod = callerMethod;
         this.httpMethod = httpMethod;
         this.url = url;
@@ -139,38 +139,39 @@ public class HttpRequest {
      * Get the body for this HttpRequest.
      * @return The body for this HttpRequest.
      */
-    public HttpRequestBody body() {
+    public Flowable<byte[]> body() {
         return body;
     }
 
     /**
      * Set the body of this HTTP request.
      * @param body The body of this HTTP request.
-     * @param mimeContentType The MIME Content-Type of the body's contents.
      * @return This HttpRequest so that multiple operations can be chained together.
      */
-    public HttpRequest withBody(String body, String mimeContentType) {
-        final byte[] bodyBytes = body.getBytes(Charsets.UTF_8);
-        return withBody(bodyBytes, mimeContentType);
+    public HttpRequest withBody(String body) {
+        final byte[] bodyBytes = body.getBytes(StandardCharsets.UTF_8);
+        return withBody(bodyBytes);
     }
 
     /**
-     * Set the body of this HTTP request.
+     * Set the body of this HTTP request, automatically setting the Content-Length header based on the given body's length.
+     *
      * @param body The body of this HTTP request.
-     * @param mimeContentType The MIME Content-Type of the body's contents.
      * @return This HttpRequest so that multiple operations can be chained together.
      */
-    public HttpRequest withBody(byte[] body, String mimeContentType) {
+    public HttpRequest withBody(byte[] body) {
         headers.set("Content-Length", String.valueOf(body.length));
-        return withBody(new FlowableHttpRequestBody(mimeContentType, Flowable.just(body)));
+        return withBody(Flowable.just(body));
     }
 
     /**
-     * Set the body of this HTTP request.
+     * Set the body of this HTTP request, leaving request headers unmodified.
+     * Users must set the Content-Length header to indicate the length of the new body, or use Transfer-Encoding: chunked.
+     *
      * @param body The body of this HTTP request.
      * @return This HttpRequest so that multiple operations can be chained together.
      */
-    public HttpRequest withBody(HttpRequestBody body) {
+    public HttpRequest withBody(Flowable<byte[]> body) {
         this.body = body;
         return this;
     }

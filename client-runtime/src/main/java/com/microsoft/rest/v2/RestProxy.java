@@ -10,7 +10,6 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.reflect.TypeToken;
 import com.microsoft.rest.v2.credentials.ServiceClientCredentials;
 import com.microsoft.rest.v2.http.ContentType;
-import com.microsoft.rest.v2.http.FlowableHttpRequestBody;
 import com.microsoft.rest.v2.http.HttpHeader;
 import com.microsoft.rest.v2.http.HttpHeaders;
 import com.microsoft.rest.v2.http.HttpMethod;
@@ -310,25 +309,26 @@ public class RestProxy implements InvocationHandler {
             }
 
             if (isJson) {
-                final String bodyContentString = serializer.serialize(bodyContentObject, bodyEncoding(request.headers()));
-                request.withBody(bodyContentString, contentType);
+                final String bodyContentString = serializer.serialize(bodyContentObject, SerializerAdapter.Encoding.JSON);
+                request.withBody(bodyContentString);
             }
             else if (isFlowableByteArray(TypeToken.of(methodParser.bodyJavaType()))) {
+                // Content-Length or Transfer-Encoding: chunked must be provided by a user-specified header when a Flowable<byte[]> is given for the body.
                 //noinspection ConstantConditions
-                request.withBody(new FlowableHttpRequestBody(contentType, (Flowable<byte[]>) bodyContentObject));
+                request.withBody((Flowable<byte[]>) bodyContentObject);
             }
             else if (bodyContentObject instanceof byte[]) {
-                request.withBody((byte[]) bodyContentObject, contentType);
+                request.withBody((byte[]) bodyContentObject);
             }
             else if (bodyContentObject instanceof String) {
                 final String bodyContentString = (String) bodyContentObject;
                 if (!bodyContentString.isEmpty()) {
-                    request.withBody(bodyContentString, contentType);
+                    request.withBody(bodyContentString);
                 }
             }
             else {
                 final String bodyContentString = serializer.serialize(bodyContentObject, bodyEncoding(request.headers()));
-                request.withBody(bodyContentString, contentType);
+                request.withBody(bodyContentString);
             }
         }
 

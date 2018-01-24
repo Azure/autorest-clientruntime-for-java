@@ -282,7 +282,7 @@ public final class NettyClient extends HttpClient {
                                             }
                                         });
                             } else {
-                                Flowable<ByteBuf> byteBufContent = request.body().content().map(new Function<byte[], ByteBuf>() {
+                                Flowable<ByteBuf> byteBufContent = request.body().map(new Function<byte[], ByteBuf>() {
                                     @Override
                                     public ByteBuf apply(byte[] bytes) throws Exception {
                                         return Unpooled.wrappedBuffer(bytes);

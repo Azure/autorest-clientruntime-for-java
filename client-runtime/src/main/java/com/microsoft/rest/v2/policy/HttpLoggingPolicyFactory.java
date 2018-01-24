@@ -111,17 +111,17 @@ public class HttpLoggingPolicyFactory implements RequestPolicyFactory {
                     log(logger, "(empty body)");
                     log(logger, "--> END " + request.httpMethod());
                 } else {
-                    boolean isHumanReadableContentType = !"application/octet-stream".equalsIgnoreCase(request.body().contentType());
+                    boolean isHumanReadableContentType = !"application/octet-stream".equalsIgnoreCase(request.headers().value("Content-Type"));
                     final long contentLength = getContentLength(request.headers());
 
                     if (contentLength < MAX_BODY_LOG_SIZE && isHumanReadableContentType) {
                         try {
-                            Single<byte[]> collectedBytes = FlowableUtil.collectBytes(request.body().content());
+                            Single<byte[]> collectedBytes = FlowableUtil.collectBytes(request.body());
                             bodyLoggingTask = collectedBytes.flatMapCompletable(new Function<byte[], CompletableSource>() {
                                 @Override
                                 public CompletableSource apply(byte[] bytes) throws Exception {
                                     String bodyString = new String(bytes, StandardCharsets.UTF_8);
-                                    bodyString = prettyPrintIfNeeded(logger, request.body().contentType(), bodyString);
+                                    bodyString = prettyPrintIfNeeded(logger, request.headers().value("Content-Type"), bodyString);
                                     log(logger, String.format("%s-byte body:\n%s", contentLength, bodyString));
                                     log(logger, "--> END " + request.httpMethod());
                                     return Completable.complete();

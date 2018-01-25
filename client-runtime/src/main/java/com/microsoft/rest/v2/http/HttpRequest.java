@@ -6,6 +6,7 @@
 
 package com.microsoft.rest.v2.http;
 
+import com.microsoft.rest.v2.protocol.HttpResponseDecoder;
 import io.reactivex.Flowable;
 
 import java.net.URL;
@@ -18,6 +19,7 @@ public class HttpRequest {
     private String callerMethod;
     private HttpMethod httpMethod;
     private URL url;
+    private HttpResponseDecoder responseDecoder;
     private HttpHeaders headers;
     private Flowable<byte[]> body;
 
@@ -107,6 +109,24 @@ public class HttpRequest {
     }
 
     /**
+     * Get the {@link HttpResponseDecoder} which decodes messages sent in response to this HttpRequest
+     * @return the response decoder
+     */
+    public HttpResponseDecoder responseDecoder() {
+        return responseDecoder;
+    }
+
+    /**
+     * Set the {@link HttpResponseDecoder} which decodes messages sent in response to this HttpRequest.
+     * @param responseDecoder the response decoder
+     * @return this HttpRequest
+     */
+    public HttpRequest withResponseDecoder(HttpResponseDecoder responseDecoder) {
+        this.responseDecoder = responseDecoder;
+        return this;
+    }
+
+    /**
      * Get the headers for this request.
      * @return The headers for this request.
      */
@@ -185,6 +205,6 @@ public class HttpRequest {
      */
     public HttpRequest buffer() {
         final HttpHeaders bufferedHeaders = new HttpHeaders(headers);
-        return new HttpRequest(callerMethod, httpMethod, url, bufferedHeaders, body);
+        return new HttpRequest(callerMethod, httpMethod, url, bufferedHeaders, body).withResponseDecoder(responseDecoder);
     }
 }

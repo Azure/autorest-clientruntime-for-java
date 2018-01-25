@@ -44,7 +44,7 @@ public final class LocationPollStrategy extends PollStrategy {
 
     @Override
     public Single<HttpResponse> updateFromAsync(HttpResponse httpPollResponse) {
-        return ensureExpectedStatus(httpPollResponse, new int[] {202})
+        return Single.just(httpPollResponse) // FIXME ensureExpectedStatus(httpPollResponse, new int[] {202})
                 .map(new Function<HttpResponse, HttpResponse>() {
                     @Override
                     public HttpResponse apply(HttpResponse response) throws MalformedURLException {

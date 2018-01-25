@@ -72,11 +72,6 @@ public class MockAzureHttpResponse extends HttpResponse {
     }
 
     @Override
-    public Single<? extends InputStream> bodyAsInputStreamAsync() {
-        return Single.just(new ByteArrayInputStream(bodyBytes));
-    }
-
-    @Override
     public Single<byte[]> bodyAsByteArrayAsync() {
         return Single.just(bodyBytes);
     }

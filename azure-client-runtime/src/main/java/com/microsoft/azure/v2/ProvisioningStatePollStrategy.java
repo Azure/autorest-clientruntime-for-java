@@ -38,41 +38,28 @@ public class ProvisioningStatePollStrategy extends PollStrategy {
     }
 
     @Override
-    Single<HttpResponse> updateFromAsync(HttpResponse httpPollResponse) {
-        return ensureExpectedStatus(httpPollResponse)
-                .flatMap(new Function<HttpResponse, Single<HttpResponse>>() {
-                    @Override
-                    public Single<HttpResponse> apply(HttpResponse response) {
-                        final HttpResponse bufferedHttpPollResponse = response.buffer();
-                        return bufferedHttpPollResponse.bodyAsStringAsync()
-                                .map(new Function<String, HttpResponse>() {
-                                    @Override
-                                    public HttpResponse apply(String responseBody) {
-                                            ResourceWithProvisioningState resource = null;
-                                            try {
-                                                resource = deserialize(responseBody, ResourceWithProvisioningState.class);
-                                            } catch (IOException ignored) {
-                                            }
+    Single<HttpResponse> updateFromAsync(HttpResponse pollResponse) {
+        ResourceWithProvisioningState resource = null;
+        try {
+            resource = reserialize(pollResponse.deserializedBody(), ResourceWithProvisioningState.class);
+        } catch (IOException ignored) {
+        }
 
-                                            if (resource == null || resource.properties() == null || resource.properties().provisioningState() == null) {
-                                                if (methodParser.isExpectedResponseStatusCode(bufferedHttpPollResponse.statusCode())) {
-                                                   setStatus(OperationState.SUCCEEDED);
-                                                } else {
-                                                    setStatus(OperationState.FAILED);
-                                                }
-                                            }
-                                            else if (OperationState.isFailedOrCanceled(resource.properties().provisioningState())) {
-                                                throw new CloudException("Async operation failed with provisioning state: " + resource.properties().provisioningState(), bufferedHttpPollResponse);
-                                            }
-                                            else {
-                                                setStatus(resource.properties().provisioningState());
-                                            }
-                                        return bufferedHttpPollResponse;
-                                    }
-                                });
-                    }
-                });
+        if (resource == null || resource.properties() == null || resource.properties().provisioningState() == null) {
+            if (methodParser.isExpectedResponseStatusCode(pollResponse.statusCode())) {
+                setStatus(OperationState.SUCCEEDED);
+            } else {
+                setStatus(OperationState.FAILED);
+            }
+        }
+        else if (OperationState.isFailedOrCanceled(resource.properties().provisioningState())) {
+            throw new CloudException("Async operation failed with provisioning state: " + resource.properties().provisioningState(), pollResponse);
+        }
+        else {
+            setStatus(resource.properties().provisioningState());
+        }
 
+        return Single.just(pollResponse);
     }
 
     @Override

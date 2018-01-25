@@ -40,16 +40,6 @@ public class RequestIdPolicyTests {
         }
 
         @Override
-        public Single<? extends InputStream> bodyAsInputStreamAsync() {
-            return Single.just(new InputStream() {
-                @Override
-                public int read() throws IOException {
-                    return -1;
-                }
-            });
-        }
-
-        @Override
         public Single<byte[]> bodyAsByteArrayAsync() {
             return Single.just(new byte[0]);
         }

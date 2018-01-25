@@ -32,7 +32,6 @@ public final class AzureCliCredentials extends AzureTokenCredentials {
     private Map<String, AzureCliSubscription> subscriptions;
     private File azureProfile;
     private File accessTokens;
-    private Lock lock = new ReentrantLock();
 
     private AzureCliCredentials() {
         super(null, null);

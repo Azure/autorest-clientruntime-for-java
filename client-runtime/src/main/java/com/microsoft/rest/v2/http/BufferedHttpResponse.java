@@ -45,17 +45,6 @@ public final class BufferedHttpResponse extends HttpResponse {
     }
 
     @Override
-    public Single<? extends InputStream> bodyAsInputStreamAsync() {
-        return bodyAsByteArrayAsync()
-            .map(new Function<byte[], InputStream>() {
-                @Override
-                public InputStream apply(byte[] bytes) {
-                    return new ByteArrayInputStream(bytes);
-                }
-            });
-    }
-
-    @Override
     public Single<byte[]> bodyAsByteArrayAsync() {
         if (body == null) {
             body = innerHttpResponse.bodyAsByteArrayAsync()
@@ -91,4 +80,6 @@ public final class BufferedHttpResponse extends HttpResponse {
     public BufferedHttpResponse buffer() {
         return this;
     }
+
+
 }

@@ -11,10 +11,11 @@ import com.microsoft.rest.v2.RestProxy;
 import com.microsoft.rest.v2.SwaggerMethodParser;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
-import com.microsoft.rest.v2.protocol.SerializerAdapter.Encoding;
+import com.microsoft.rest.v2.protocol.SerializerEncoding;
 import io.reactivex.Completable;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.SingleSource;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 
@@ -42,15 +43,12 @@ abstract class PollStrategy {
 
     @SuppressWarnings("unchecked")
     protected <T> T deserialize(String value, Type returnType) throws IOException {
-        return (T) restProxy.deserialize(value, returnType, null, Encoding.JSON);
+        return (T) restProxy.serializer().deserialize(value, returnType, SerializerEncoding.JSON);
     }
 
-    protected Single<HttpResponse> ensureExpectedStatus(HttpResponse httpResponse) {
-        return ensureExpectedStatus(httpResponse, null);
-    }
-
-    protected Single<HttpResponse> ensureExpectedStatus(HttpResponse httpResponse, int[] additionalAllowedStatusCodes) {
-        return restProxy.ensureExpectedStatus(httpResponse, methodParser, additionalAllowedStatusCodes);
+    @SuppressWarnings("unchecked")
+    protected <T, U> U reserialize(T original, Type newType) throws IOException {
+        return (U) restProxy.serializer().deserialize(restProxy.serializer().serialize(original, SerializerEncoding.JSON), newType, SerializerEncoding.JSON);
     }
 
     protected String fullyQualifiedMethodName() {
@@ -152,6 +150,19 @@ abstract class PollStrategy {
                                 return restProxy.sendHttpRequestAsync(pollRequest);
                             }
                         }))
+                        .onErrorResumeNext(new Function<Throwable, SingleSource<? extends HttpResponse>>() {
+                            @Override
+                            public SingleSource<? extends HttpResponse> apply(Throwable throwable) throws Exception {
+                                if (throwable instanceof RestException) {
+                                    HttpResponse response = ((RestException) throwable).response();
+                                    if (response.statusCode() == 202) {
+                                        return Single.just(response);
+                                    }
+                                }
+
+                                return Single.error(throwable);
+                            }
+                        })
                         .flatMap(new Function<HttpResponse, Single<HttpResponse>>() {
                             @Override
                             public Single<HttpResponse> apply(HttpResponse response) {

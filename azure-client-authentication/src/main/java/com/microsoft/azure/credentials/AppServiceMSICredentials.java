@@ -45,15 +45,16 @@ public class AppServiceMSICredentials extends AzureTokenCredentials {
 
     @Override
     public String getToken(String resource) throws IOException {
-        URL url = new URL(String.format("%s?api-version=2017-09-01&resource=%s", this.endpoint, resource));
+        String urlString = String.format("%s?resource=%s&api-version=2017-09-01", this.endpoint, resource);
+        URL url = new URL(urlString);
         HttpURLConnection connection = null;
 
         try {
             connection = (HttpURLConnection) url.openConnection();
 
             connection.setRequestMethod("GET");
-            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-            connection.setRequestProperty("secret", this.secret);
+            connection.setRequestProperty("Secret", this.secret);
+            connection.setRequestProperty("Metadata", "true");
 
             connection.connect();
 

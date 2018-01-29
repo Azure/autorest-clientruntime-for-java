@@ -35,6 +35,7 @@ import java.util.zip.GZIPInputStream;
  */
 public class LoggingInterceptor implements Interceptor {
     private static final String LOGGING_HEADER = "x-ms-logging-context";
+    private static final String BODY_LOGGING = "x-ms-body-logging";
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private LogLevel logLevel;
 
@@ -60,6 +61,8 @@ public class LoggingInterceptor implements Interceptor {
         // get logger
         Request request = chain.request();
         String context = request.header(LOGGING_HEADER);
+        String bodyLoggingHeader = request.header(BODY_LOGGING);
+        boolean bodyLogging = bodyLoggingHeader == null || Boolean.parseBoolean(bodyLoggingHeader);
         if (context == null) {
             context = "";
         }
@@ -78,7 +81,7 @@ public class LoggingInterceptor implements Interceptor {
             }
         }
         // log body
-        if (logLevel == LogLevel.BODY || logLevel == LogLevel.BODY_AND_HEADERS) {
+        if (bodyLogging && (logLevel == LogLevel.BODY || logLevel == LogLevel.BODY_AND_HEADERS)) {
             if (request.body() != null) {
                 Buffer buffer = new Buffer();
                 request.body().writeTo(buffer);
@@ -134,7 +137,7 @@ public class LoggingInterceptor implements Interceptor {
         }
 
         // log body
-        if ((logLevel == LogLevel.BODY || logLevel == LogLevel.BODY_AND_HEADERS) && contentLength > 0) {
+        if (bodyLogging && (logLevel == LogLevel.BODY || logLevel == LogLevel.BODY_AND_HEADERS)) {
             if (response.body() != null) {
                 BufferedSource source = responseBody.source();
                 source.request(Long.MAX_VALUE); // Buffer the entire body.

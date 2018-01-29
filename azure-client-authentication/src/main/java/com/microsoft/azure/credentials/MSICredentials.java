@@ -6,7 +6,6 @@
 
 package com.microsoft.azure.credentials;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.management.apigeneration.Beta;
 import com.microsoft.azure.serializer.AzureJacksonAdapter;
@@ -140,7 +139,7 @@ public class MSICredentials extends AzureTokenCredentials {
             String result = reader.readLine();
 
             MSIToken msiToken = adapter.deserialize(result, MSIToken.class);
-            return msiToken.accessToken;
+            return msiToken.accessToken();
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
@@ -149,22 +148,5 @@ public class MSICredentials extends AzureTokenCredentials {
                 connection.disconnect();
             }
         }
-    }
-
-    /**
-     * Type representing response from the local MSI token provider.
-     */
-    private static class MSIToken {
-        /**
-         * Token type "Bearer".
-         */
-        @JsonProperty(value = "token_type")
-        private String tokenType;
-
-        /**
-         * Access token.
-         */
-        @JsonProperty(value = "access_token")
-        private String accessToken;
     }
 }

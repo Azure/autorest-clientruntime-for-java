@@ -26,10 +26,20 @@ public class AppServiceMSICredentials extends AzureTokenCredentials {
     private final String secret;
     private final AzureJacksonAdapter adapter;
 
+    /**
+     * Creates an MSI credential for app services.
+     * @param environment the environment this application is running in
+     */
     public AppServiceMSICredentials(AzureEnvironment environment) {
         this(environment, System.getenv("MSI_ENDPOINT"), System.getenv("MSI_SECRET"));
     }
 
+    /**
+     * Creates an MSI credential for app services.
+     * @param environment the environment this application is running in
+     * @param endpoint the MSI endpoint
+     * @param secret the MSI secret
+     */
     public AppServiceMSICredentials(AzureEnvironment environment, String endpoint, String secret) {
         super(environment, null);
         if (endpoint == null) {

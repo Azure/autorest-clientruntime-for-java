@@ -1,3 +1,6 @@
+1.2.1 (2017.12.14)
+  - Support for MSI login based on user assigned identity
+
 1.2.0 (2017.11.15)
   - Add delegated token credentials
   - Update OkHttp to 3.4 and Okio to 1.9

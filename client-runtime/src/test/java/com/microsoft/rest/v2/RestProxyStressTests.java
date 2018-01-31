@@ -53,6 +53,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.FileChannel;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -281,6 +282,52 @@ public class RestProxyStressTests {
         String timeTakenString = PeriodFormat.getDefault().print(new Duration(start, Instant.now()).toPeriod());
         LoggerFactory.getLogger(getClass()).info("Upload took " + timeTakenString);
     }
+
+    @Test
+    public void uploadMemoryMappedTest() throws Exception {
+        final String sas = System.getenv("JAVA_SDK_TEST_SAS");
+        HttpHeaders headers = new HttpHeaders()
+                .set("x-ms-version", "2017-04-17");
+
+        HttpPipeline pipeline = HttpPipeline.build(
+                new AddDatePolicyFactory(),
+                new AddHeadersPolicyFactory(headers),
+                new ThrottlingRetryPolicyFactory(),
+                new HttpLoggingPolicyFactory(HttpLogDetailLevel.BASIC));
+
+        final IOService service = RestProxy.create(IOService.class, pipeline);
+
+        List<byte[]> md5s = Flowable.range(0, NUM_FILES)
+                .map(new Function<Integer, byte[]>() {
+                    @Override
+                    public byte[] apply(Integer integer) throws Exception {
+                        final Path filePath = TEMP_FOLDER_PATH.resolve("100m-" + integer + "-md5.dat");
+                        return Files.readAllBytes(filePath);
+                    }
+                }).toList().blockingGet();
+
+        Instant start = Instant.now();
+        Flowable.range(0, NUM_FILES)
+                .zipWith(md5s, new BiFunction<Integer, byte[], Completable>() {
+                    @Override
+                    public Completable apply(Integer id, final byte[] md5) throws Exception {
+                        final FileChannel fileStream = FileChannel.open(TEMP_FOLDER_PATH.resolve("100m-" + id + ".dat"), StandardOpenOption.READ);
+                        Flowable<ByteBuffer> stream = Flowable.<ByteBuffer>just(fileStream.map(FileChannel.MapMode.READ_ONLY, 0, fileStream.size()));
+                        return service.upload100MB(String.valueOf(id), sas, "BlockBlob", stream, FILE_SIZE).flatMapCompletable(new Function<RestResponse<Void, Void>, CompletableSource>() {
+                            @Override
+                            public CompletableSource apply(RestResponse<Void, Void> response) throws Exception {
+                                String base64MD5 = response.rawHeaders().get("Content-MD5");
+                                byte[] receivedMD5 = BaseEncoding.base64().decode(base64MD5);
+                                assertArrayEquals(md5, receivedMD5);
+                                return Completable.complete();
+                            }
+                        });
+                    }
+                }).flatMapCompletable(Functions.<Completable>identity(), false, 30).blockingAwait();
+        String timeTakenString = PeriodFormat.getDefault().print(new Duration(start, Instant.now()).toPeriod());
+        LoggerFactory.getLogger(getClass()).info("Upload took " + timeTakenString);
+    }
+
 
     /**
      * Run after running one of the corresponding upload tests.

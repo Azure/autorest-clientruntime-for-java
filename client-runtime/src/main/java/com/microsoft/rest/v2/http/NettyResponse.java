@@ -82,7 +82,11 @@ class NettyResponse extends HttpResponse {
         return contentStream.map(new Function<ByteBuf, ByteBuffer>() {
             @Override
             public ByteBuffer apply(ByteBuf byteBuf) {
-                return byteBuf.nioBuffer();
+                ByteBuffer dst = ByteBuffer.allocate(byteBuf.readableBytes());
+                byteBuf.readBytes(dst);
+                byteBuf.release();
+                dst.flip();
+                return dst;
             }
         });
     }

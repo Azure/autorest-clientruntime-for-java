@@ -7,7 +7,6 @@
 package com.microsoft.rest.v2.http;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -138,33 +137,10 @@ public final class NettyClient extends HttpClient {
             return result;
         }
 
-        private static final class Allocator extends AbstractByteBufAllocator {
-            @Override
-            public ByteBuf ioBuffer(int initialCapacity, int maxCapacity) {
-                return Unpooled.buffer(initialCapacity, maxCapacity);
-            }
-
-            @Override
-            protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-                return Unpooled.buffer(initialCapacity, maxCapacity);
-            }
-
-            @Override
-            protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-                return Unpooled.directBuffer(initialCapacity, maxCapacity);
-            }
-
-            @Override
-            public boolean isDirectBufferPooled() {
-                return false;
-            }
-        }
-
         private static SharedChannelPool createChannelPool(final NettyAdapter adapter, TransportConfig config, int poolSize) {
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(config.eventLoopGroup);
             bootstrap.channel(config.channelClass);
-            bootstrap.option(ChannelOption.ALLOCATOR, new Allocator());
             bootstrap.option(ChannelOption.AUTO_READ, false);
             bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
             bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) TimeUnit.MINUTES.toMillis(3L));

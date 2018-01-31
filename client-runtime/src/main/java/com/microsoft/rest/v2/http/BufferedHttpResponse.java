@@ -11,6 +11,8 @@ import io.reactivex.Single;
 import io.reactivex.functions.Function;
 import org.reactivestreams.Publisher;
 
+import java.nio.ByteBuffer;
+
 /**
  * HTTP response which will buffer the response's body when/if it is read.
  */

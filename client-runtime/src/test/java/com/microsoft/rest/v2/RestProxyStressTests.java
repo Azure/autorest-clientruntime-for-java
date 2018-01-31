@@ -32,6 +32,7 @@ import io.reactivex.Emitter;
 import io.reactivex.Flowable;
 import io.reactivex.Single;
 import io.reactivex.SingleSource;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.BiFunction;
@@ -50,6 +51,7 @@ import org.reactivestreams.Publisher;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -147,10 +149,10 @@ public class RestProxyStressTests {
     interface IOService {
         @ExpectedResponses({ 201 })
         @PUT("/javasdktest/upload/100m-{id}.dat?{sas}")
-        Single<RestResponse<Void, Void>> upload100MB(@PathParam("id") String id, @PathParam(value = "sas", encoded = true) String sas, @HeaderParam("x-ms-blob-type") String blobType, @BodyParam(ContentType.APPLICATION_OCTET_STREAM) Flowable<byte[]> stream, @HeaderParam("content-length") long contentLength);
+        Single<RestResponse<Void, Void>> upload100MB(@PathParam("id") String id, @PathParam(value = "sas", encoded = true) String sas, @HeaderParam("x-ms-blob-type") String blobType, @BodyParam(ContentType.APPLICATION_OCTET_STREAM) Flowable<ByteBuffer> stream, @HeaderParam("content-length") long contentLength);
 
         @GET("/javasdktest/upload/100m-{id}.dat?{sas}")
-        Single<RestResponse<Void, Flowable<byte[]>>> download100M(@PathParam("id") String id, @PathParam(value = "sas", encoded = true) String sas);
+        Single<RestResponse<Void, Flowable<ByteBuffer>>> download100M(@PathParam("id") String id, @PathParam(value = "sas", encoded = true) String sas);
     }
 
     private static final Path TEMP_FOLDER_PATH = Paths.get("temp");
@@ -187,16 +189,16 @@ public class RestProxyStressTests {
      */
     @Test
     public void prepare100MFiles() throws Exception {
-        final Flowable<byte[]> contentGenerator = Flowable.generate(new Callable<Random>() {
+        final Flowable<ByteBuffer> contentGenerator = Flowable.generate(new Callable<Random>() {
             @Override
             public Random call() throws Exception {
                 return new Random();
             }
-        }, new BiConsumer<Random, Emitter<byte[]>>() {
+        }, new BiConsumer<Random, Emitter<ByteBuffer>>() {
             @Override
-            public void accept(Random random, Emitter<byte[]> emitter) throws Exception {
-                byte[] buf = new byte[CHUNK_SIZE];
-                random.nextBytes(buf);
+            public void accept(Random random, Emitter<ByteBuffer> emitter) throws Exception {
+                ByteBuffer buf = ByteBuffer.allocate(CHUNK_SIZE);
+                random.nextBytes(buf.array());
                 emitter.onNext(buf);
             }
         });
@@ -215,10 +217,10 @@ public class RestProxyStressTests {
                 final AsynchronousFileChannel file = AsynchronousFileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
                 final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
 
-                Flowable<byte[]> fileContent = contentGenerator.take(CHUNKS_PER_FILE).doOnNext(new Consumer<byte[]>() {
+                Flowable<ByteBuffer> fileContent = contentGenerator.take(CHUNKS_PER_FILE).doOnNext(new Consumer<ByteBuffer>() {
                     @Override
-                    public void accept(byte[] bytes) throws Exception {
-                        messageDigest.update(bytes);
+                    public void accept(ByteBuffer bytes) throws Exception {
+                        messageDigest.update(bytes.array());
                     }
                 });
 
@@ -264,7 +266,7 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(Integer id, final byte[] md5) throws Exception {
                         final AsynchronousFileChannel fileStream = AsynchronousFileChannel.open(TEMP_FOLDER_PATH.resolve("100m-" + id + ".dat"));
-                        Flowable<byte[]> stream = FlowableUtil.readFile(fileStream);
+                        Flowable<ByteBuffer> stream = FlowableUtil.readFile(fileStream);
                         return service.upload100MB(String.valueOf(id), sas, "BlockBlob", stream, FILE_SIZE).flatMapCompletable(new Function<RestResponse<Void, Void>, CompletableSource>() {
                             @Override
                             public CompletableSource apply(RestResponse<Void, Void> response) throws Exception {
@@ -312,13 +314,13 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(final Integer integer, final byte[] md5) throws Exception {
                         final int id = integer;
-                        return service.download100M(String.valueOf(id), sas).flatMapCompletable(new Function<RestResponse<Void, Flowable<byte[]>>, CompletableSource>() {
+                        return service.download100M(String.valueOf(id), sas).flatMapCompletable(new Function<RestResponse<Void, Flowable<ByteBuffer>>, CompletableSource>() {
                             @Override
-                            public CompletableSource apply(RestResponse<Void, Flowable<byte[]>> response) throws Exception {
+                            public CompletableSource apply(RestResponse<Void, Flowable<ByteBuffer>> response) throws Exception {
                                 final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-                                Flowable<byte[]> content = response.body().doOnNext(new Consumer<byte[]>() {
+                                Flowable<ByteBuffer> content = response.body().doOnNext(new Consumer<ByteBuffer>() {
                                     @Override
-                                    public void accept(byte[] bytes) throws Exception {
+                                    public void accept(ByteBuffer bytes) throws Exception {
                                         messageDigest.update(bytes);
                                     }
                                 });
@@ -368,9 +370,9 @@ public class RestProxyStressTests {
                     @Override
                     public Completable apply(final Integer integer, final byte[] diskMd5) throws Exception {
                         final int id = integer;
-                        Flowable<byte[]> downloadContent = service.download100M(String.valueOf(id), sas).flatMapPublisher(new Function<RestResponse<Void, Flowable<byte[]>>, Publisher<? extends byte[]>>() {
+                        Flowable<ByteBuffer> downloadContent = service.download100M(String.valueOf(id), sas).flatMapPublisher(new Function<RestResponse<Void, Flowable<ByteBuffer>>, Publisher<? extends ByteBuffer>>() {
                             @Override
-                            public Publisher<? extends byte[]> apply(RestResponse<Void, Flowable<byte[]>> response) throws Exception {
+                            public Publisher<? extends ByteBuffer> apply(RestResponse<Void, Flowable<ByteBuffer>> response) throws Exception {
                                 // Ideally we would intercept this content to load an MD5 to check consistency between download and upload directly,
                                 // but it's sufficient to demonstrate that no corruption occurred between preparation->upload->download->upload.
                                 return response.body();
@@ -394,7 +396,7 @@ public class RestProxyStressTests {
     }
 
     @Test
-    public void cancellationTest() {
+    public void cancellationTest() throws Exception {
         final String sas = System.getenv("JAVA_SDK_TEST_SAS");
         HttpHeaders headers = new HttpHeaders()
                 .set("x-ms-version", "2017-04-17");
@@ -407,17 +409,28 @@ public class RestProxyStressTests {
 
         final IOService service = RestProxy.create(IOService.class, pipeline);
 
-        Flowable.range(0, NUM_FILES)
-                .flatMap(new Function<Integer, Publisher<?>>() {
+        final Disposable d = Flowable.range(0, NUM_FILES)
+                .flatMap(new Function<Integer, Publisher<ByteBuffer>>() {
                     @Override
-                    public Publisher<?> apply(Integer integer) throws Exception {
-                        return service.download100M(String.valueOf(integer), sas).flatMapPublisher(new Function<RestResponse<Void, Flowable<byte[]>>, Publisher<?>>() {
+                    public Publisher<ByteBuffer> apply(Integer integer) throws Exception {
+                        return service.download100M(String.valueOf(integer), sas).flatMapPublisher(new Function<RestResponse<Void, Flowable<ByteBuffer>>, Publisher<ByteBuffer>>() {
                             @Override
-                            public Publisher<?> apply(RestResponse<Void, Flowable<byte[]>> response) throws Exception {
-                                return response.body().timeout(100, TimeUnit.MILLISECONDS);
+                            public Publisher<ByteBuffer> apply(RestResponse<Void, Flowable<ByteBuffer>> response) throws Exception {
+                                return response.body();
                             }
                         });
                     }
-                }).blockingLast();
+                }).subscribe();
+
+        Completable.complete().delay(10, TimeUnit.SECONDS)
+                .andThen(Completable.defer(new Callable<CompletableSource>() {
+                    @Override
+                    public CompletableSource call() throws Exception {
+                        d.dispose();
+                        return Completable.complete();
+                    }
+                })).blockingAwait();
+
+        System.in.read();
     }
 }

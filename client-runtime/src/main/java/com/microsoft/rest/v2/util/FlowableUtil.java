@@ -35,16 +35,16 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class FlowableUtil {
     /**
-     * Checks if a type is Flowable&lt;byte[]&gt;.
+     * Checks if a type is Flowable&lt;ByteBuffer&gt;.
      *
-     * @param entityTypeToken the entity to check
+     * @param entityTypeToken the type to check
      * @return whether the type represents a Flowable that emits byte arrays
      */
-    public static boolean isFlowableByteArray(TypeToken entityTypeToken) {
+    public static boolean isFlowableByteBuffer(TypeToken entityTypeToken) {
         if (entityTypeToken.isSubtypeOf(Flowable.class)) {
             final Type innerType = ((ParameterizedType) entityTypeToken.getType()).getActualTypeArguments()[0];
             final TypeToken innerTypeToken = TypeToken.of(innerType);
-            if (innerTypeToken.isSubtypeOf(byte[].class)) {
+            if (innerTypeToken.isSubtypeOf(ByteBuffer.class)) {
                 return true;
             }
         }
@@ -52,15 +52,18 @@ public class FlowableUtil {
     }
 
     /**
-     * Collects byte arrays emitted by a Flowable into a Single.
+     * Collects byte buffers emitted by a Flowable into a byte array.
      * @param content A stream which emits byte arrays.
-     * @return A Single which emits the concatenation of all the byte arrays given by the source Flowable.
+     * @return A Single which emits the concatenation of all the byte buffers given by the source Flowable.
      */
-    public static Single<byte[]> collectBytes(Flowable<byte[]> content) {
-        return content.collectInto(ByteStreams.newDataOutput(), new BiConsumer<ByteArrayDataOutput, byte[]>() {
+    public static Single<byte[]> collectBytes(Flowable<ByteBuffer> content) {
+        return content.collectInto(ByteStreams.newDataOutput(), new BiConsumer<ByteArrayDataOutput, ByteBuffer>() {
             @Override
-            public void accept(ByteArrayDataOutput out, byte[] chunk) throws Exception {
-                out.write(chunk);
+            public void accept(ByteArrayDataOutput out, ByteBuffer chunk) throws Exception {
+                // TODO: Would be nice to reduce copying here
+                byte[] arrayChunk = new byte[chunk.limit() - chunk.position()];
+                chunk.get(arrayChunk);
+                out.write(arrayChunk);
             }
         }).map(new Function<ByteArrayDataOutput, byte[]>() {
             @Override
@@ -76,11 +79,11 @@ public class FlowableUtil {
      * @param fileChannel the file channel
      * @return a Completable which performs the write operation when subscribed
      */
-    public static Completable writeFile(final Flowable<byte[]> content, final AsynchronousFileChannel fileChannel) {
+    public static Completable writeFile(final Flowable<ByteBuffer> content, final AsynchronousFileChannel fileChannel) {
         return Completable.create(new CompletableOnSubscribe() {
             @Override
             public void subscribe(final CompletableEmitter emitter) throws Exception {
-                content.subscribe(new FlowableSubscriber<byte[]>() {
+                content.subscribe(new FlowableSubscriber<ByteBuffer>() {
                     // volatile ensures that writes to these fields by one thread will be immediately visible to other threads.
                     // An I/O pool thread will write to isWriting and read isCompleted,
                     // while another thread may read isWriting and write to isCompleted.
@@ -96,9 +99,9 @@ public class FlowableUtil {
                     }
 
                     @Override
-                    public void onNext(byte[] bytes) {
+                    public void onNext(ByteBuffer bytes) {
                         isWriting = true;
-                        fileChannel.write(ByteBuffer.wrap(bytes), position, null, onWriteCompleted);
+                        fileChannel.write(bytes, position, null, onWriteCompleted);
                     }
 
 
@@ -109,6 +112,7 @@ public class FlowableUtil {
                             if (isCompleted) {
                                 emitter.onComplete();
                             }
+                            //noinspection NonAtomicOperationOnVolatileField
                             position += bytesRead;
                             subscription.request(1);
                         }
@@ -146,8 +150,8 @@ public class FlowableUtil {
      * @param length The number of bytes of data to read from the file.
      * @return The AsyncInputStream.
      */
-    public static Flowable<byte[]> readFile(final AsynchronousFileChannel fileChannel, final long offset, final long length) {
-        Flowable<byte[]> fileStream = new FileReadFlowable(fileChannel, offset, length);
+    public static Flowable<ByteBuffer> readFile(final AsynchronousFileChannel fileChannel, final long offset, final long length) {
+        Flowable<ByteBuffer> fileStream = new FileReadFlowable(fileChannel, offset, length);
         return fileStream;
     }
 
@@ -157,13 +161,13 @@ public class FlowableUtil {
      * @throws IOException if an error occurs when determining file size
      * @return The AsyncInputStream.
      */
-    public static Flowable<byte[]> readFile(AsynchronousFileChannel fileChannel) throws IOException {
+    public static Flowable<ByteBuffer> readFile(AsynchronousFileChannel fileChannel) throws IOException {
         long size = fileChannel.size();
         return readFile(fileChannel, 0, size);
     }
 
     private static final int CHUNK_SIZE = 8192;
-    private static class FileReadFlowable extends Flowable<byte[]> {
+    private static class FileReadFlowable extends Flowable<ByteBuffer> {
         private final AsynchronousFileChannel fileChannel;
         private final long offset;
         private final long length;
@@ -175,20 +179,19 @@ public class FlowableUtil {
         }
 
         @Override
-        protected void subscribeActual(Subscriber<? super byte[]> s) {
+        protected void subscribeActual(Subscriber<? super ByteBuffer> s) {
             s.onSubscribe(new FileReadSubscription(s));
         }
 
         private class FileReadSubscription implements Subscription {
-            final Subscriber<? super byte[]> subscriber;
-            final ByteBuffer innerBuf = ByteBuffer.wrap(new byte[CHUNK_SIZE]);
+            final Subscriber<? super ByteBuffer> subscriber;
             final AtomicLong requested = new AtomicLong();
             volatile boolean cancelled = false;
 
             // I/O callbacks are serialized, but not guaranteed to happen on the same thread, which makes volatile necessary.
             volatile long position = offset;
 
-            FileReadSubscription(Subscriber<? super byte[]> subscriber) {
+            FileReadSubscription(Subscriber<? super ByteBuffer> subscriber) {
                 this.subscriber = subscriber;
             }
 
@@ -200,13 +203,13 @@ public class FlowableUtil {
             }
 
             void doRead() {
-                innerBuf.clear();
-                fileChannel.read(innerBuf, position, null, onReadComplete);
+                ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, (int) (offset + length - position)));
+                fileChannel.read(innerBuf, position, innerBuf, onReadComplete);
             }
 
-            private final CompletionHandler<Integer, Object> onReadComplete = new CompletionHandler<Integer, Object>() {
+            private final CompletionHandler<Integer, ByteBuffer> onReadComplete = new CompletionHandler<Integer, ByteBuffer>() {
                 @Override
-                public void completed(Integer bytesRead, Object attachment) {
+                public void completed(Integer bytesRead, ByteBuffer buffer) {
                     if (!cancelled) {
                         if (bytesRead == -1) {
                             subscriber.onComplete();
@@ -214,7 +217,8 @@ public class FlowableUtil {
                             int bytesWanted = (int) Math.min(bytesRead, offset + length - position);
                             //noinspection NonAtomicOperationOnVolatileField
                             position += bytesWanted;
-                            subscriber.onNext(Arrays.copyOf(innerBuf.array(), bytesWanted));
+                            buffer.flip();
+                            subscriber.onNext(buffer);
                             if (position >= offset + length) {
                                 subscriber.onComplete();
                             } else if (requested.decrementAndGet() > 0) {
@@ -225,7 +229,7 @@ public class FlowableUtil {
                 }
 
                 @Override
-                public void failed(Throwable exc, Object attachment) {
+                public void failed(Throwable exc, ByteBuffer attachment) {
                     if (!cancelled) {
                         subscriber.onError(exc);
                     }

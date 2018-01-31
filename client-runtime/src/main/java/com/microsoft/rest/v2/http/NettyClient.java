@@ -7,8 +7,10 @@
 package com.microsoft.rest.v2.http;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -49,6 +51,7 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
@@ -137,10 +140,33 @@ public final class NettyClient extends HttpClient {
             return result;
         }
 
+        private static final class Allocator extends AbstractByteBufAllocator {
+            @Override
+            public ByteBuf ioBuffer(int initialCapacity, int maxCapacity) {
+                return Unpooled.buffer(initialCapacity, maxCapacity);
+            }
+
+            @Override
+            protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+                return Unpooled.buffer(initialCapacity, maxCapacity);
+            }
+
+            @Override
+            protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+                return Unpooled.directBuffer(initialCapacity, maxCapacity);
+            }
+
+            @Override
+            public boolean isDirectBufferPooled() {
+                return false;
+            }
+        }
+
         private static SharedChannelPool createChannelPool(final NettyAdapter adapter, TransportConfig config, int poolSize) {
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(config.eventLoopGroup);
             bootstrap.channel(config.channelClass);
+            bootstrap.option(ChannelOption.ALLOCATOR, new Allocator());
             bootstrap.option(ChannelOption.AUTO_READ, false);
             bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
             bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) TimeUnit.MINUTES.toMillis(3L));
@@ -282,14 +308,8 @@ public final class NettyClient extends HttpClient {
                                             }
                                         });
                             } else {
-                                Flowable<ByteBuf> byteBufContent = request.body().map(new Function<byte[], ByteBuf>() {
-                                    @Override
-                                    public ByteBuf apply(byte[] bytes) throws Exception {
-                                        return Unpooled.wrappedBuffer(bytes);
-                                    }
-                                });
 
-                                byteBufContent.observeOn(Schedulers.from(channel.eventLoop())).subscribe(new FlowableSubscriber<ByteBuf>() {
+                                request.body().observeOn(Schedulers.from(channel.eventLoop())).subscribe(new FlowableSubscriber<ByteBuffer>() {
                                     Subscription subscription;
                                     @Override
                                     public void onSubscribe(Subscription s) {
@@ -311,11 +331,11 @@ public final class NettyClient extends HttpClient {
                                             };
 
                                     @Override
-                                    public void onNext(ByteBuf buf) {
+                                    public void onNext(ByteBuffer buf) {
                                         if (!channel.eventLoop().inEventLoop()) {
                                             throw new IllegalStateException("onNext must be called from the event loop managing the channel.");
                                         }
-                                        channel.writeAndFlush(new DefaultHttpContent(buf))
+                                        channel.writeAndFlush(Unpooled.wrappedBuffer(buf))
                                                 .addListener(onChannelWriteComplete);
 
                                         if (channel.isWritable()) {

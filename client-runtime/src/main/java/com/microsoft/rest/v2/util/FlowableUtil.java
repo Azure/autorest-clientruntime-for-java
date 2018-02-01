@@ -12,10 +12,12 @@ import com.google.common.reflect.TypeToken;
 import io.reactivex.Completable;
 import io.reactivex.CompletableEmitter;
 import io.reactivex.CompletableOnSubscribe;
+import io.reactivex.Emitter;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Single;
 import io.reactivex.functions.BiConsumer;
+import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import io.reactivex.internal.util.BackpressureHelper;
 import org.reactivestreams.Subscriber;
@@ -27,12 +29,13 @@ import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Contains helper methods for dealing with Flowables.
  */
-public class FlowableUtil {
+public final class FlowableUtil {
     /**
      * Checks if a type is Flowable&lt;ByteBuffer&gt;.
      *
@@ -240,5 +243,37 @@ public class FlowableUtil {
                 cancelled = true;
             }
         }
+    }
+
+    /**
+     * Splits a large ByteBuffer into chunks.
+     *
+     * @param whole the ByteBuffer to split
+     * @param chunkSize the maximum size of each emitted ByteBuffer
+     * @return A stream that emits chunks of the original whole ByteBuffer
+     */
+    public static Flowable<ByteBuffer> split(final ByteBuffer whole, final int chunkSize) {
+        return Flowable.generate(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                return 0;
+            }
+        }, new BiFunction<Integer, Emitter<ByteBuffer>, Integer>() {
+            @Override
+            public Integer apply(Integer position, Emitter<ByteBuffer> emitter) throws Exception {
+                int newLimit = Math.min(whole.limit(), position + chunkSize);
+                if (position >= whole.limit()) {
+                    emitter.onComplete();
+                } else {
+                    ByteBuffer chunk = whole.duplicate();
+                    chunk.position(position).limit(newLimit);
+                    emitter.onNext(chunk);
+                }
+                return newLimit;
+            }
+        });
+    }
+
+    private FlowableUtil() {
     }
 }

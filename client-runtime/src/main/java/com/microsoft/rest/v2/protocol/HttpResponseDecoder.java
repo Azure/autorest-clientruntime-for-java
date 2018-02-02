@@ -13,6 +13,7 @@ import com.microsoft.rest.v2.http.HttpResponse;
 import com.microsoft.rest.v2.util.FlowableUtil;
 import io.reactivex.Completable;
 import io.reactivex.Maybe;
+import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
 import org.joda.time.DateTime;
@@ -63,29 +64,63 @@ public final class HttpResponseDecoder {
         boolean isSerializableBody = !FlowableUtil.isFlowableByteArray(entityTypeToken)
             && !entityTypeToken.isSubtypeOf(Completable.class)
             && !entityTypeToken.isSubtypeOf(byte[].class)
-            && !entityTypeToken.isSubtypeOf(boolean.class) && !entityTypeToken.isSubtypeOf(Boolean.class)
+            && !entityTypeToken.isSubtypeOf(Boolean.TYPE) && !entityTypeToken.isSubtypeOf(Boolean.class)
             && !entityTypeToken.isSubtypeOf(Void.TYPE) && !entityTypeToken.isSubtypeOf(Void.class);
 
-        Single<HttpResponse> result = ensureExpectedStatus(response, methodParser);
+        int[] expectedStatuses = methodParser.expectedStatusCodes();
+        boolean isErrorStatus = true;
+        if (expectedStatuses != null) {
+            for (int i = 0; i < expectedStatuses.length && isErrorStatus; i++) {
+                if (expectedStatuses[i] == response.statusCode()) {
+                    isErrorStatus = false;
+                }
+            }
+        } else {
+            isErrorStatus = response.statusCode() / 100 != 2;
+        }
 
-        if (isSerializableBody) {
-            result = result.toCompletable().andThen(response.bodyAsStringAsync().map(new Function<String, HttpResponse>() {
+        // FIXME: Somehow add these extra expected response statuses
+        if (response.statusCode() == 202) {
+            isErrorStatus = false;
+        }
+        if (response.statusCode() == 201) {
+            isErrorStatus = false;
+        }
+
+        Single<HttpResponse> result;
+        if (isErrorStatus) {
+            final HttpResponse bufferedResponse = response.buffer();
+            result = bufferedResponse.bodyAsStringAsync().map(new Function<String, HttpResponse>() {
                 @Override
                 public HttpResponse apply(String bodyString) throws Exception {
-                    Object body = deserialize(bodyString, getEntityType().getType(), returnValueWireType, SerializerEncoding.fromHeaders(response.headers()));
-                    return response
+                    bufferedResponse.withDeserializedHeaders(deserializedHeaders);
+                    if (!Object.class.equals(methodParser.exceptionBodyType())) {
+                        Object errorBody = deserializeBody(bodyString, methodParser.exceptionBodyType(), null, SerializerEncoding.fromHeaders(response.headers()));
+                        bufferedResponse.withDeserializedBody(errorBody);
+                    }
+
+                    return bufferedResponse;
+                }
+            });
+        } else if (isSerializableBody) {
+            final HttpResponse bufferedResponse = response.buffer();
+            result = bufferedResponse.bodyAsStringAsync().map(new Function<String, HttpResponse>() {
+                @Override
+                public HttpResponse apply(String bodyString) throws Exception {
+                    Object body = deserializeBody(bodyString, getEntityType().getType(), returnValueWireType, SerializerEncoding.fromHeaders(response.headers()));
+                    return bufferedResponse
                             .withDeserializedHeaders(deserializedHeaders)
                             .withDeserializedBody(body);
                 }
-            }));
+            });
         } else {
-            result = result.toCompletable().andThen(Single.just(response.withDeserializedHeaders(deserializedHeaders)));
+            result = Single.just(response.withDeserializedHeaders(deserializedHeaders));
         }
 
         return result;
     }
 
-    private Object deserialize(String value, Type resultType, Type wireType, SerializerEncoding encoding) throws IOException {
+    private Object deserializeBody(String value, Type resultType, Type wireType, SerializerEncoding encoding) throws IOException {
         Object result;
 
         if (wireType == null) {
@@ -210,12 +245,20 @@ public final class HttpResponseDecoder {
     private TypeToken getEntityType() {
         TypeToken token = TypeToken.of(methodParser.returnType());
 
-        if (token.isSubtypeOf(Single.class) || token.isSubtypeOf(Maybe.class)) {
+        if (token.isSubtypeOf(Single.class) || token.isSubtypeOf(Maybe.class) || token.isSubtypeOf(Observable.class)) {
             token = TypeToken.of(getTypeArgument(token.getType()));
         }
 
         if (token.isSubtypeOf(RestResponse.class)) {
             token = TypeToken.of(getTypeArguments(token.getType())[1]);
+        }
+
+        // TODO: unwrap OperationStatus a different way?
+        try {
+            if (token.isSubtypeOf(Class.forName("com.microsoft.azure.v2.OperationStatus"))) {
+                token = TypeToken.of(getTypeArgument(token.getType()));
+            }
+        } catch (Exception ignored) {
         }
 
         return token;
@@ -264,25 +307,13 @@ public final class HttpResponseDecoder {
         try {
             final Constructor<? extends RestException> exceptionConstructor = exceptionType.getConstructor(String.class, HttpResponse.class, exceptionBodyType);
 
-            boolean isSerializableContentType = contentType == null || contentType.isEmpty()
-                    || contentType.startsWith("application/json")
-                    || contentType.startsWith("text/json")
-                    || contentType.startsWith("application/xml")
-                    || contentType.startsWith("text/xml");
-
-            final Object exceptionBody = responseContent.isEmpty() || !isSerializableContentType
-                    ? null
-                    : serializer.deserialize(responseContent, exceptionBodyType, SerializerEncoding.fromHeaders(response.headers()));
-
-            result = exceptionConstructor.newInstance("Status code " + responseStatusCode + ", " + bodyRepresentation, response, exceptionBody);
-        } catch (IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchMethodException | JsonParseException e) {
+            result = exceptionConstructor.newInstance("Status code " + responseStatusCode + ", " + bodyRepresentation, response, response.deserializedBody());
+        } catch (IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchMethodException e) {
             String message = "Status code " + responseStatusCode + ", but an instance of "
                     + exceptionType.getCanonicalName() + " cannot be created."
                     + " Response body: " + bodyRepresentation;
 
             result = new IOException(message, e);
-        } catch (IOException e) {
-            result = e;
         }
 
         return result;

@@ -10,6 +10,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.reflect.TypeToken;
 import com.microsoft.azure.v2.annotations.AzureHost;
 import com.microsoft.azure.v2.serializer.AzureJacksonAdapter;
+import com.microsoft.rest.v2.RestException;
 import com.microsoft.rest.v2.credentials.ServiceClientCredentials;
 import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpMethod;
@@ -371,26 +372,31 @@ public final class AzureProxy extends RestProxy {
                 || !methodParser.expectsResponseBody()) {
             result = Single.<PollStrategy>just(new CompletedPollStrategy(AzureProxy.this, methodParser, httpResponse));
         } else {
-            if (httpResponse.deserializedBody() == null) {
-                throw new CloudException("The HTTP response does not contain a decoded body. DecodingPolicyFactory may be missing from the pipeline.", httpResponse);
-            }
+            final HttpResponse bufferedOriginalHttpResponse = httpResponse.buffer();
+            result = bufferedOriginalHttpResponse.bodyAsStringAsync()
+                    .map(new Function<String, PollStrategy>() {
+                        @Override
+                        public PollStrategy apply(String originalHttpResponseBody) {
+                            if (originalHttpResponseBody == null || originalHttpResponseBody.isEmpty()) {
+                                throw new CloudException("The HTTP response does not contain a body.", bufferedOriginalHttpResponse);
+                            }
 
-            PollStrategy strategy;
-            try {
-                final ResourceWithProvisioningState resource = serializer().deserialize(
-                        serializer().serialize(httpResponse.deserializedBody(), SerializerEncoding.JSON),
-                        ResourceWithProvisioningState.class, SerializerEncoding.JSON);
+                            PollStrategy result;
+                            try {
+                                final SerializerAdapter<?> serializer = serializer();
+                                final ResourceWithProvisioningState resource = serializer.deserialize(originalHttpResponseBody, ResourceWithProvisioningState.class, SerializerEncoding.JSON);
+                                if (resource != null && resource.properties() != null && !OperationState.isCompleted(resource.properties().provisioningState())) {
+                                    result = new ProvisioningStatePollStrategy(AzureProxy.this, methodParser, httpRequest, resource.properties().provisioningState(), delayInMilliseconds);
+                                } else {
+                                    result = new CompletedPollStrategy(AzureProxy.this, methodParser, bufferedOriginalHttpResponse);
+                                }
+                            } catch (IOException e) {
+                                throw Exceptions.propagate(e);
+                            }
 
-                if (resource != null && resource.properties() != null && !OperationState.isCompleted(resource.properties().provisioningState())) {
-                    strategy = new ProvisioningStatePollStrategy(AzureProxy.this, methodParser, httpRequest, resource.properties().provisioningState(), delayInMilliseconds);
-                } else {
-                    strategy = new CompletedPollStrategy(AzureProxy.this, methodParser, httpResponse);
-                }
-            } catch (IOException e) {
-                throw Exceptions.propagate(e);
-            }
-
-            result = Single.just(strategy);
+                            return result;
+                        }
+                    });
         }
 
         return result;

@@ -11,6 +11,7 @@ import com.microsoft.rest.v2.RestProxy;
 import com.microsoft.rest.v2.SwaggerMethodParser;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
+import com.microsoft.rest.v2.protocol.HttpResponseDecoder;
 import com.microsoft.rest.v2.protocol.SerializerEncoding;
 import io.reactivex.Completable;
 import io.reactivex.Observable;
@@ -46,9 +47,12 @@ abstract class PollStrategy {
         return (T) restProxy.serializer().deserialize(value, returnType, SerializerEncoding.JSON);
     }
 
-    @SuppressWarnings("unchecked")
-    protected <T, U> U reserialize(T original, Type newType) throws IOException {
-        return (U) restProxy.serializer().deserialize(restProxy.serializer().serialize(original, SerializerEncoding.JSON), newType, SerializerEncoding.JSON);
+    protected Single<HttpResponse> ensureExpectedStatus(HttpResponse httpResponse) {
+        return ensureExpectedStatus(httpResponse, null);
+    }
+
+    protected Single<HttpResponse> ensureExpectedStatus(HttpResponse httpResponse, int[] additionalAllowedStatusCodes) {
+        return restProxy.ensureExpectedStatus(httpResponse, methodParser, additionalAllowedStatusCodes);
     }
 
     protected String fullyQualifiedMethodName() {
@@ -146,7 +150,9 @@ abstract class PollStrategy {
                         .andThen(Single.defer(new Callable<Single<HttpResponse>>() {
                             @Override
                             public Single<HttpResponse> call() throws Exception {
-                                final HttpRequest pollRequest = createPollRequest();
+                                final HttpRequest pollRequest = createPollRequest()
+                                        .withResponseDecoder(new HttpResponseDecoder(methodParser, restProxy.serializer()));
+
                                 return restProxy.sendHttpRequestAsync(pollRequest);
                             }
                         }))

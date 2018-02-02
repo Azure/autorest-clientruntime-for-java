@@ -7,6 +7,7 @@
 package com.microsoft.rest.v2.http;
 
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
+import com.microsoft.rest.v2.protocol.SerializerEncoding;
 import com.microsoft.rest.v2.serializer.JacksonAdapter;
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
@@ -28,7 +29,7 @@ public class MockHttpResponse extends HttpResponse {
     public MockHttpResponse(int statusCode, HttpHeaders headers, byte[] bodyBytes) {
         this.statusCode = statusCode;
         this.headers = headers;
-        this.bodyBytes = bodyBytes;
+         this.bodyBytes = bodyBytes;
     }
 
     public MockHttpResponse(int statusCode, byte[] bodyBytes) {
@@ -36,11 +37,11 @@ public class MockHttpResponse extends HttpResponse {
     }
 
     public MockHttpResponse(int statusCode) {
-        this(statusCode, (byte[])null);
+        this(statusCode, new byte[0]);
     }
 
     public MockHttpResponse(int statusCode, String string) {
-        this(statusCode, new HttpHeaders(), string == null ? null : string.getBytes());
+        this(statusCode, new HttpHeaders(), string == null ? new byte[0] : string.getBytes());
     }
 
     public MockHttpResponse(int statusCode, HttpHeaders headers, Object serializable) {
@@ -54,7 +55,7 @@ public class MockHttpResponse extends HttpResponse {
     private static byte[] serialize(Object serializable) {
         byte[] result = null;
         try {
-            final String serializedString = serializer.serialize(serializable);
+            final String serializedString = serializer.serialize(serializable, SerializerEncoding.JSON);
             result = serializedString == null ? null : serializedString.getBytes();
         } catch (IOException e) {
             e.printStackTrace();

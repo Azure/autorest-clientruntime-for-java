@@ -9,6 +9,7 @@ package com.microsoft.azure.v2.credentials.http;
 import com.microsoft.rest.v2.http.HttpHeaders;
 import com.microsoft.rest.v2.http.HttpResponse;
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
+import com.microsoft.rest.v2.protocol.SerializerEncoding;
 import com.microsoft.rest.v2.serializer.JacksonAdapter;
 import io.reactivex.Flowable;
 import io.reactivex.Single;

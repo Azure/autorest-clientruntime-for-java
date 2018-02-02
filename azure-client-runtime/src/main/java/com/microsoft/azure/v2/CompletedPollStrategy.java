@@ -37,12 +37,12 @@ public class CompletedPollStrategy extends PollStrategy {
 
     @Override
     HttpRequest createPollRequest() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     Single<HttpResponse> updateFromAsync(HttpResponse httpPollResponse) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override

@@ -12,6 +12,7 @@ import com.microsoft.rest.v2.http.HttpMethod;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
 import io.reactivex.Single;
+import io.reactivex.functions.Function;
 
 import java.io.IOException;
 

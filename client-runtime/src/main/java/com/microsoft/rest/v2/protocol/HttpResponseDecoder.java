@@ -10,7 +10,6 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.reflect.TypeToken;
 import com.microsoft.rest.v2.Base64Url;
 import com.microsoft.rest.v2.DateTimeRfc1123;
-import com.microsoft.rest.v2.RestException;
 import com.microsoft.rest.v2.RestResponse;
 import com.microsoft.rest.v2.SwaggerMethodParser;
 import com.microsoft.rest.v2.UnixTime;
@@ -25,8 +24,6 @@ import io.reactivex.functions.Function;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
@@ -290,66 +287,5 @@ public final class HttpResponseDecoder {
                 Object deserializedHeaders = serializer.deserialize(headersJsonString, deserializedHeadersType, SerializerEncoding.JSON);
                 return deserializedHeaders;
             }
-    }
-
-    private Exception instantiateUnexpectedException(SwaggerMethodParser methodParser, HttpResponse response, String responseContent) {
-        final int responseStatusCode = response.statusCode();
-        final Class<? extends RestException> exceptionType = methodParser.exceptionType();
-        final Class<?> exceptionBodyType = methodParser.exceptionBodyType();
-
-        String contentType = response.headerValue("Content-Type");
-        String bodyRepresentation;
-        if ("application/octet-stream".equalsIgnoreCase(contentType)) {
-            bodyRepresentation = "(" + response.headerValue("Content-Length") + "-byte body)";
-        } else {
-            bodyRepresentation = responseContent.isEmpty() ? "(empty body)" : "\"" + responseContent + "\"";
-        }
-
-        Exception result;
-        try {
-            final Constructor<? extends RestException> exceptionConstructor = exceptionType.getConstructor(String.class, HttpResponse.class, exceptionBodyType);
-
-            result = exceptionConstructor.newInstance("Status code " + responseStatusCode + ", " + bodyRepresentation, response, response.deserializedBody());
-        } catch (IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchMethodException e) {
-            String message = "Status code " + responseStatusCode + ", but an instance of "
-                    + exceptionType.getCanonicalName() + " cannot be created."
-                    + " Response body: " + bodyRepresentation;
-
-            result = new IOException(message, e);
-        }
-
-        return result;
-    }
-
-    Single<HttpResponse> ensureExpectedStatus(final HttpResponse response, final SwaggerMethodParser methodParser) {
-        return ensureExpectedStatus(response, methodParser, null);
-    }
-
-    /**
-     * Ensure that the provided HttpResponse has a status code that is defined in the provided
-     * SwaggerMethodParser or is in the int[] of additional allowed status codes. If the
-     * HttpResponse's status code is not allowed, then an exception will be thrown.
-     * @param response The HttpResponse to check.
-     * @param methodParser The method parser that contains information about the service interface
-     *                     method that initiated the HTTP request.
-     * @param additionalAllowedStatusCodes Additional allowed status codes that are permitted based
-     *                                     on the context of the HTTP request.
-     * @return An async-version of the provided HttpResponse.
-     */
-    public Single<HttpResponse> ensureExpectedStatus(final HttpResponse response, final SwaggerMethodParser methodParser, int[] additionalAllowedStatusCodes) {
-        final int responseStatusCode = response.statusCode();
-        final Single<HttpResponse> asyncResult;
-        if (!methodParser.isExpectedResponseStatusCode(responseStatusCode, additionalAllowedStatusCodes)) {
-            asyncResult = response.bodyAsStringAsync().flatMap(new Function<String, Single<HttpResponse>>() {
-                @Override
-                public Single<HttpResponse> apply(String responseBody) throws Exception {
-                    return Single.error(instantiateUnexpectedException(methodParser, response, responseBody));
-                }
-            });
-        } else {
-            asyncResult = Single.just(response);
-        }
-
-        return asyncResult;
     }
 }

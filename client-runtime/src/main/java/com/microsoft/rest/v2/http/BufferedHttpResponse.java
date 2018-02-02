@@ -58,7 +58,6 @@ public final class BufferedHttpResponse extends HttpResponse {
 
     @Override
     public Flowable<byte[]> streamBodyAsync() {
-        // FIXME: maybe need to enable streaming/collecting in here
         return bodyAsByteArrayAsync().toFlowable();
     }
 

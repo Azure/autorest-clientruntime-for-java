@@ -6,7 +6,6 @@
 
 package com.microsoft.rest.v2;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.reflect.TypeToken;
 import com.microsoft.rest.v2.credentials.ServiceClientCredentials;
 import com.microsoft.rest.v2.http.ContentType;
@@ -39,7 +38,6 @@ import org.reactivestreams.Publisher;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
@@ -230,32 +228,19 @@ public class RestProxy implements InvocationHandler {
         Exception result;
         try {
             final Constructor<? extends RestException> exceptionConstructor = exceptionType.getConstructor(String.class, HttpResponse.class, exceptionBodyType);
-
-            boolean isSerializableContentType = contentType == null || contentType.isEmpty()
-                    || contentType.startsWith("application/json")
-                    || contentType.startsWith("text/json")
-                    || contentType.startsWith("application/xml")
-                    || contentType.startsWith("text/xml");
-
-            final Object exceptionBody = responseContent.isEmpty() || !isSerializableContentType
-                    ? null
-                    : serializer.deserialize(responseContent, exceptionBodyType, SerializerEncoding.fromHeaders(response.headers()));
-
-            result = exceptionConstructor.newInstance("Status code " + responseStatusCode + ", " + bodyRepresentation, response, exceptionBody);
-        } catch (IllegalAccessException | InstantiationException | InvocationTargetException | NoSuchMethodException | JsonParseException e) {
+            result = exceptionConstructor.newInstance("Status code " + responseStatusCode + ", " + bodyRepresentation, response, response.deserializedBody());
+        } catch (ReflectiveOperationException e) {
             String message = "Status code " + responseStatusCode + ", but an instance of "
                     + exceptionType.getCanonicalName() + " cannot be created."
                     + " Response body: " + bodyRepresentation;
 
             result = new IOException(message, e);
-        } catch (IOException e) {
-            result = e;
         }
 
         return result;
     }
 
-    Single<HttpResponse> ensureExpectedStatus(Single<HttpResponse> asyncResponse, final SwaggerMethodParser methodParser) {
+    private Single<HttpResponse> ensureExpectedStatus(Single<HttpResponse> asyncResponse, final SwaggerMethodParser methodParser) {
         return asyncResponse
                 .flatMap(new Function<HttpResponse, Single<? extends HttpResponse>>() {
                     @Override
@@ -265,7 +250,7 @@ public class RestProxy implements InvocationHandler {
                 });
     }
 
-    Single<HttpResponse> ensureExpectedStatus(final HttpResponse response, final SwaggerMethodParser methodParser) {
+    private Single<HttpResponse> ensureExpectedStatus(final HttpResponse response, final SwaggerMethodParser methodParser) {
         return ensureExpectedStatus(response, methodParser, null);
     }
 

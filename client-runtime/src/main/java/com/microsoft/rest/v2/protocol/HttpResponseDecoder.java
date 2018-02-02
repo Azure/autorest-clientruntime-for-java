@@ -6,6 +6,7 @@
 
 package com.microsoft.rest.v2.protocol;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.reflect.TypeToken;
 import com.microsoft.rest.v2.Base64Url;
 import com.microsoft.rest.v2.DateTimeRfc1123;
@@ -84,14 +85,6 @@ public final class HttpResponseDecoder {
             isErrorStatus = response.statusCode() / 100 != 2;
         }
 
-        // FIXME: Somehow add these extra expected response statuses
-        if (response.statusCode() == 202) {
-            isErrorStatus = false;
-        }
-        if (response.statusCode() == 201) {
-            isErrorStatus = false;
-        }
-
         Single<HttpResponse> result;
         if (isErrorStatus) {
             final HttpResponse bufferedResponse = response.buffer();
@@ -99,12 +92,16 @@ public final class HttpResponseDecoder {
                 @Override
                 public HttpResponse apply(String bodyString) throws Exception {
                     bufferedResponse.withDeserializedHeaders(deserializedHeaders);
-                    if (!Object.class.equals(methodParser.exceptionBodyType())) {
-                        Object errorBody = deserializeBody(bodyString, methodParser.exceptionBodyType(), null, SerializerEncoding.fromHeaders(response.headers()));
-                        bufferedResponse.withDeserializedBody(errorBody);
+
+                    Object body = null;
+                    try {
+                        body = deserializeBody(bodyString, methodParser.exceptionBodyType(), null, SerializerEncoding.fromHeaders(response.headers()));
+                    } catch (JsonParseException ignored) {
+                        // This translates in RestProxy as a RestException with no deserialized body.
+                        // The response content will still be accessible via the .response() member.
                     }
 
-                    return bufferedResponse;
+                    return bufferedResponse.withDeserializedBody(body);
                 }
             });
         } else if (isSerializableBody) {

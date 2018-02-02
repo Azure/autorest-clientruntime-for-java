@@ -14,12 +14,10 @@ import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
 import com.microsoft.rest.v2.http.MockHttpClient;
 import io.reactivex.Flowable;
+import io.reactivex.Single;
 import org.junit.Assert;
 import org.junit.Test;
-import io.reactivex.Single;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 
 public class RequestIdPolicyTests {
@@ -81,8 +79,8 @@ public class RequestIdPolicyTests {
             })
             .build();
 
-        pipeline.sendRequestAsync(new HttpRequest("newRequestIdForEachCall", HttpMethod.GET, new URL("http://localhost/"))).blockingGet();
-        pipeline.sendRequestAsync(new HttpRequest("newRequestIdForEachCall", HttpMethod.GET, new URL("http://localhost/"))).blockingGet();
+        pipeline.sendRequestAsync(new HttpRequest("newRequestIdForEachCall", HttpMethod.GET, new URL("http://localhost/"), null)).blockingGet();
+        pipeline.sendRequestAsync(new HttpRequest("newRequestIdForEachCall", HttpMethod.GET, new URL("http://localhost/"), null)).blockingGet();
     }
 
     @Test
@@ -108,6 +106,6 @@ public class RequestIdPolicyTests {
             new RequestIdPolicyFactory(),
             new RetryPolicyFactory(1));
 
-        pipeline.sendRequestAsync(new HttpRequest("sameRequestIdForRetry", HttpMethod.GET, new URL("http://localhost/"))).blockingGet();
+        pipeline.sendRequestAsync(new HttpRequest("sameRequestIdForRetry", HttpMethod.GET, new URL("http://localhost/"), null)).blockingGet();
     }
 }

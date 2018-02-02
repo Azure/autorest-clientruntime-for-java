@@ -122,6 +122,10 @@ abstract class PollStrategy {
         this.status = status;
     }
 
+    protected final HttpResponseDecoder createResponseDecoder() {
+        return new HttpResponseDecoder(methodParser, restProxy.serializer());
+    }
+
     /**
      * Create a new HTTP poll request.
      * @return A new HTTP poll request.
@@ -149,8 +153,7 @@ abstract class PollStrategy {
                         .andThen(Single.defer(new Callable<Single<HttpResponse>>() {
                             @Override
                             public Single<HttpResponse> call() throws Exception {
-                                final HttpRequest pollRequest = createPollRequest()
-                                        .withResponseDecoder(new HttpResponseDecoder(methodParser, restProxy.serializer()));
+                                final HttpRequest pollRequest = createPollRequest();
 
                                 return restProxy.sendHttpRequestAsync(pollRequest);
                             }

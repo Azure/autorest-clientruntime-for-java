@@ -73,9 +73,10 @@ public final class HttpResponseDecoder {
         int[] expectedStatuses = methodParser.expectedStatusCodes();
         boolean isErrorStatus = true;
         if (expectedStatuses != null) {
-            for (int i = 0; i < expectedStatuses.length && isErrorStatus; i++) {
-                if (expectedStatuses[i] == response.statusCode()) {
+            for (int expectedStatus : expectedStatuses) {
+                if (expectedStatus == response.statusCode()) {
                     isErrorStatus = false;
+                    break;
                 }
             }
         } else {

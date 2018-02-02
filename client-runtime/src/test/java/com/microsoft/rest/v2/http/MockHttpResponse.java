@@ -10,12 +10,9 @@ import com.microsoft.rest.v2.protocol.SerializerAdapter;
 import com.microsoft.rest.v2.protocol.SerializerEncoding;
 import com.microsoft.rest.v2.serializer.JacksonAdapter;
 import io.reactivex.Flowable;
-import io.reactivex.Observable;
 import io.reactivex.Single;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 public class MockHttpResponse extends HttpResponse {
     private final static SerializerAdapter<?> serializer = new JacksonAdapter();
@@ -29,7 +26,7 @@ public class MockHttpResponse extends HttpResponse {
     public MockHttpResponse(int statusCode, HttpHeaders headers, byte[] bodyBytes) {
         this.statusCode = statusCode;
         this.headers = headers;
-         this.bodyBytes = bodyBytes;
+        this.bodyBytes = bodyBytes;
     }
 
     public MockHttpResponse(int statusCode, byte[] bodyBytes) {

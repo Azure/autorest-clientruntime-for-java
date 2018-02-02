@@ -65,10 +65,8 @@ public abstract class HttpResponse implements Closeable {
      * Buffers the HTTP response body into memory, allowing the content to be inspected and replayed.
      * @return This HTTP response, with body content buffered into memory.
      */
-    public HttpResponse buffer() {
-        return new BufferedHttpResponse(this)
-                .withDeserializedBody(deserializedBody)
-                .withDeserializedHeaders(deserializedHeaders);
+    public BufferedHttpResponse buffer() {
+        return new BufferedHttpResponse(this);
     }
 
     /**

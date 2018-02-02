@@ -8,6 +8,7 @@ package com.microsoft.azure.v2;
 
 import com.microsoft.rest.v2.RestProxy;
 import com.microsoft.rest.v2.SwaggerMethodParser;
+import com.microsoft.rest.v2.http.BufferedHttpResponse;
 import com.microsoft.rest.v2.http.HttpRequest;
 import com.microsoft.rest.v2.http.HttpResponse;
 import io.reactivex.Observable;
@@ -20,7 +21,7 @@ import java.lang.reflect.Type;
  * further polling.
  */
 public class CompletedPollStrategy extends PollStrategy {
-    private final HttpResponse firstHttpResponse;
+    private final BufferedHttpResponse firstHttpResponse;
 
     /**
      * Create a new CompletedPollStrategy.
@@ -31,7 +32,7 @@ public class CompletedPollStrategy extends PollStrategy {
      */
     public CompletedPollStrategy(RestProxy restProxy, SwaggerMethodParser methodParser, HttpResponse firstHttpResponse) {
         super(restProxy, methodParser, 0);
-        this.firstHttpResponse = firstHttpResponse;
+        this.firstHttpResponse = firstHttpResponse.buffer();
         setStatus(OperationState.SUCCEEDED);
     }
 
@@ -55,6 +56,6 @@ public class CompletedPollStrategy extends PollStrategy {
     }
 
     Single<HttpResponse> pollUntilDone() {
-        return Single.just(firstHttpResponse);
+        return Single.<HttpResponse>just(firstHttpResponse);
     }
 }

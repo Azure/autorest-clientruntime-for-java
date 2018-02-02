@@ -16,7 +16,6 @@ import com.microsoft.rest.v2.protocol.SerializerEncoding;
 import io.reactivex.Completable;
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.SingleSource;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 
@@ -156,19 +155,6 @@ abstract class PollStrategy {
                                 return restProxy.sendHttpRequestAsync(pollRequest);
                             }
                         }))
-                        .onErrorResumeNext(new Function<Throwable, SingleSource<? extends HttpResponse>>() {
-                            @Override
-                            public SingleSource<? extends HttpResponse> apply(Throwable throwable) throws Exception {
-                                if (throwable instanceof RestException) {
-                                    HttpResponse response = ((RestException) throwable).response();
-                                    if (response.statusCode() == 202) {
-                                        return Single.just(response);
-                                    }
-                                }
-
-                                return Single.error(throwable);
-                            }
-                        })
                         .flatMap(new Function<HttpResponse, Single<HttpResponse>>() {
                             @Override
                             public Single<HttpResponse> apply(HttpResponse response) {

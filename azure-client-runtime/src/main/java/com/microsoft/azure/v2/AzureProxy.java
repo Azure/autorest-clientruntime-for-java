@@ -300,7 +300,7 @@ public final class AzureProxy extends RestProxy {
                     public Single<PollStrategy> apply(final HttpResponse originalHttpResponse) {
                         final int httpStatusCode = originalHttpResponse.statusCode();
                         final int[] longRunningOperationStatusCodes = new int[] {200, 201, 202};
-                        return Single.just(originalHttpResponse)
+                        return ensureExpectedStatus(originalHttpResponse, methodParser, longRunningOperationStatusCodes)
                                 .flatMap(new Function<HttpResponse, Single<? extends PollStrategy>>() {
                                     @Override
                                     public Single<? extends PollStrategy> apply(HttpResponse response) {

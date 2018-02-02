@@ -77,5 +77,25 @@ public final class BufferedHttpResponse extends HttpResponse {
         return this;
     }
 
+    @Override
+    public Object deserializedHeaders() {
+        return innerHttpResponse.deserializedHeaders();
+    }
 
+    @Override
+    public HttpResponse withDeserializedHeaders(Object deserializedHeaders) {
+        innerHttpResponse.withDeserializedHeaders(deserializedHeaders);
+        return this;
+    }
+
+    @Override
+    public Object deserializedBody() {
+        return innerHttpResponse.deserializedBody();
+    }
+
+    @Override
+    public HttpResponse withDeserializedBody(Object deserializedBody) {
+        innerHttpResponse.withDeserializedBody(deserializedBody);
+        return this;
+    }
 }

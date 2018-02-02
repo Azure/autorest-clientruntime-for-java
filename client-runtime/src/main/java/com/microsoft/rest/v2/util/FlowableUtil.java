@@ -63,7 +63,7 @@ public final class FlowableUtil {
             @Override
             public void accept(ByteArrayDataOutput out, ByteBuffer chunk) throws Exception {
                 // TODO: Would be nice to reduce copying here
-                byte[] arrayChunk = new byte[chunk.limit() - chunk.position()];
+                byte[] arrayChunk = new byte[chunk.remaining()];
                 chunk.get(arrayChunk);
                 out.write(arrayChunk);
             }

@@ -1309,7 +1309,7 @@ public abstract class RestProxyTests {
         RestResponse<Void, Flowable<ByteBuffer>> response = createService(DownloadService.class).getBytes();
         int count = 0;
         for (ByteBuffer bytes : response.body().blockingIterable()) {
-            count += bytes.limit() - bytes.position();
+            count += bytes.remaining();
         }
         assertEquals(30720, count);
     }
@@ -1319,7 +1319,7 @@ public abstract class RestProxyTests {
         Flowable<ByteBuffer> response = createService(DownloadService.class).getBytesFlowable();
         int count = 0;
         for (ByteBuffer bytes : response.blockingIterable()) {
-            count += bytes.limit() - bytes.position();
+            count += bytes.remaining();
         }
         assertEquals(30720, count);
     }

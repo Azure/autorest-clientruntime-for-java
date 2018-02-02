@@ -12,12 +12,12 @@ import io.reactivex.functions.Function;
 public class DecodingPolicyFactory implements RequestPolicyFactory {
     @Override
     public RequestPolicy create(RequestPolicy next, RequestPolicyOptions options) {
-        return new SerializationPolicy(next);
+        return new DecodingPolicy(next);
     }
 
-    private class SerializationPolicy implements RequestPolicy {
+    private class DecodingPolicy implements RequestPolicy {
         private final RequestPolicy next;
-        private SerializationPolicy(RequestPolicy next) {
+        private DecodingPolicy(RequestPolicy next) {
             this.next = next;
         }
 

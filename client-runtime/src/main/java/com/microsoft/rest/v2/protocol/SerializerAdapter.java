@@ -7,7 +7,6 @@
 package com.microsoft.rest.v2.protocol;
 
 import com.microsoft.rest.v2.CollectionFormat;
-import com.microsoft.rest.v2.http.HttpHeaders;
 
 import java.io.IOException;
 import java.lang.reflect.Type;

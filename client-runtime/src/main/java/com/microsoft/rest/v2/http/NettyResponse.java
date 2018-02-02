@@ -13,7 +13,6 @@ import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
-import io.reactivex.internal.functions.Functions;
 import org.reactivestreams.Subscription;
 
 import java.util.List;

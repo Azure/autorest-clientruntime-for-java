@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
+
 package com.microsoft.rest.v2.protocol;
 
 
@@ -17,6 +23,11 @@ public enum SerializerEncoding {
      */
     XML;
 
+    /**
+     * Determines the serializer encoding to use based on the Content-Type header.
+     * @param headers the headers to check the encoding for
+     * @return the serializer encoding to use for the body
+     */
     public static SerializerEncoding fromHeaders(HttpHeaders headers) {
         String mimeContentType = headers.value("Content-Type");
         if (mimeContentType != null) {

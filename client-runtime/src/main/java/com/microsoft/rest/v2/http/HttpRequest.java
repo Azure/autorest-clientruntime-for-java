@@ -109,7 +109,7 @@ public class HttpRequest {
     }
 
     /**
-     * Get the {@link HttpResponseDecoder} which decodes messages sent in response to this HttpRequest
+     * Get the {@link HttpResponseDecoder} which decodes messages sent in response to this HttpRequest.
      * @return the response decoder
      */
     public HttpResponseDecoder responseDecoder() {

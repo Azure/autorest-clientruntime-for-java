@@ -10,9 +10,6 @@ import io.reactivex.Flowable;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-
 /**
  * HTTP response which will buffer the response's body when/if it is read.
  */

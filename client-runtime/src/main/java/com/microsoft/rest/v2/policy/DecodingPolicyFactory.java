@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
+
 package com.microsoft.rest.v2.policy;
 
 import com.microsoft.rest.v2.http.HttpRequest;
@@ -9,13 +15,13 @@ import io.reactivex.functions.Function;
 /**
  * Creates a RequestPolicy which decodes the response body and headers.
  */
-public class DecodingPolicyFactory implements RequestPolicyFactory {
+public final class DecodingPolicyFactory implements RequestPolicyFactory {
     @Override
     public RequestPolicy create(RequestPolicy next, RequestPolicyOptions options) {
         return new DecodingPolicy(next);
     }
 
-    private class DecodingPolicy implements RequestPolicy {
+    private final class DecodingPolicy implements RequestPolicy {
         private final RequestPolicy next;
         private DecodingPolicy(RequestPolicy next) {
             this.next = next;

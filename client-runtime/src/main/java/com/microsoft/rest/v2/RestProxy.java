@@ -380,7 +380,7 @@ public class RestProxy implements InvocationHandler {
         return handleRestReturnType(httpRequest, asyncHttpResponse, methodParser, returnType);
     }
 
-    private static final Function<Throwable, Single<?>> warnMissingDecoding = new Function<Throwable, Single<?>>() {
+    private static final Function<Throwable, Single<?>> WARN_MISSING_DECODING = new Function<Throwable, Single<?>>() {
         @Override
         public Single<?> apply(Throwable throwable) throws Exception {
             if (throwable instanceof NoSuchElementException) {
@@ -416,7 +416,7 @@ public class RestProxy implements InvocationHandler {
                 public Single<?> apply(HttpResponse response) throws Exception {
                     return handleRestResponseReturnTypeAsync(response, methodParser, singleTypeParam);
                 }
-            }).onErrorResumeNext(warnMissingDecoding);
+            }).onErrorResumeNext(WARN_MISSING_DECODING);
         }
         else if (returnTypeToken.isSubtypeOf(Observable.class)) {
             throw new InvalidReturnTypeException("RestProxy does not support swagger interface methods (such as " + methodParser.fullyQualifiedMethodName() + "()) with a return type of " + returnType.toString());
@@ -441,7 +441,7 @@ public class RestProxy implements InvocationHandler {
                         public Single<?> apply(HttpResponse httpResponse) throws Exception {
                             return handleRestResponseReturnTypeAsync(httpResponse, methodParser, returnType);
                         }
-                    }).onErrorResumeNext(warnMissingDecoding).blockingGet();
+                    }).onErrorResumeNext(WARN_MISSING_DECODING).blockingGet();
         }
 
         return result;

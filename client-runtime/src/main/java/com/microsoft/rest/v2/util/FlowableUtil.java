@@ -37,7 +37,7 @@ public class FlowableUtil {
     /**
      * Checks if a type is Flowable&lt;byte[]&gt;.
      *
-     * @param entityTypeToken
+     * @param entityTypeToken the entity to check
      * @return whether the type represents a Flowable that emits byte arrays
      */
     public static boolean isFlowableByteArray(TypeToken entityTypeToken) {

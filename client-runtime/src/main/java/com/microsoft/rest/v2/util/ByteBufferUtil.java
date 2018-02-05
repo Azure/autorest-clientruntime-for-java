@@ -13,9 +13,9 @@ import java.nio.ByteBuffer;
  */
 public class ByteBufferUtil {
     /**
-     * Convert the provided ByteBuffer to a byte[].
-     * @param byteBuffer The ByteBuffer to convert.
-     * @return The converted byte[].
+     * Read the contents of the ByteBuffer into a byte[].
+     * @param byteBuffer The ByteBuffer to read from.
+     * @return The created byte[].
      */
     public static byte[] toByteArray(ByteBuffer byteBuffer) {
         byte[] byteArray = null;

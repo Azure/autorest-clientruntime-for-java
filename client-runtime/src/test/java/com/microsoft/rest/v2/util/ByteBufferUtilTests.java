@@ -24,7 +24,9 @@ public class ByteBufferUtilTests {
     {
         final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[] { 0, 1, 2, 3, 4 });
         assertEquals(5, byteBuffer.remaining());
-        assertArrayEquals(new byte[] { 0, 1, 2, 3, 4 }, ByteBufferUtil.toByteArray(byteBuffer));
+        final byte[] byteArray = ByteBufferUtil.toByteArray(byteBuffer);
+        assertArrayEquals(new byte[] { 0, 1, 2, 3, 4 }, byteArray);
         assertEquals(0, byteBuffer.remaining());
+        assertNotSame(byteBuffer.array(), byteArray);
     }
 }

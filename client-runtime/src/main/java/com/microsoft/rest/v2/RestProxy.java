@@ -460,9 +460,9 @@ public class RestProxy implements InvocationHandler {
      */
     public static HttpPipeline createDefaultPipeline(RequestPolicyFactory credentialsPolicy) {
         final HttpPipelineBuilder builder = new HttpPipelineBuilder();
-        builder.withRequestPolicy(new DecodingPolicyFactory());
         builder.withRequestPolicy(new UserAgentPolicyFactory());
         builder.withRequestPolicy(new RetryPolicyFactory());
+        builder.withRequestPolicy(new DecodingPolicyFactory());
         builder.withRequestPolicy(new CookiePolicyFactory());
         if (credentialsPolicy != null) {
             builder.withRequestPolicy(credentialsPolicy);

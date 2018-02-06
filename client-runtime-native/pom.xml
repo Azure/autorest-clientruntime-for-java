@@ -20,16 +20,6 @@
     </description>
     <url>https://github.com/Azure/autorest-clientruntime-for-java</url>
 
-    <build>
-        <extensions>
-            <extension>
-                <groupId>kr.motd.maven</groupId>
-                <artifactId>os-maven-plugin</artifactId>
-                <version>1.5.0.Final</version>
-            </extension>
-        </extensions>
-    </build>
-
     <profiles>
         <profile>
             <id>osx</id>
@@ -37,6 +27,10 @@
                 <os>
                     <name>Mac OS X</name>
                 </os>
+                <property>
+                    <name>os.detected.arch</name>
+                    <value>x86_64</value>
+                </property>
             </activation>
             <dependencies>
                 <dependency>
@@ -60,6 +54,10 @@
                 <os>
                     <name>Linux</name>
                 </os>
+                <property>
+                    <name>os.detected.arch</name>
+                    <value>x86_64</value>
+                </property>
             </activation>
             <dependencies>
                 <dependency>
@@ -83,6 +81,10 @@
                 <os>
                     <name>Windows</name>
                 </os>
+                <property>
+                    <name>os.detected.arch</name>
+                    <value>x86_64</value>
+                </property>
             </activation>
             <dependencies>
                 <dependency>

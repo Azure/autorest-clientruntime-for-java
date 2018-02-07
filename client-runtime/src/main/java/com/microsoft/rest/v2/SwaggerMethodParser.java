@@ -291,9 +291,9 @@ public class SwaggerMethodParser {
                 if (0 <= parameterIndex && parameterIndex < swaggerMethodArguments.length) {
                     final Object methodArgument = swaggerMethodArguments[headerSubstitution.methodParameterIndex()];
                     if (methodArgument instanceof Map) {
-                        final Map<String,?> headerCollection = (Map<String,?>)methodArgument;
+                        final Map<String, ?> headerCollection = (Map<String, ?>) methodArgument;
                         final String headerCollectionPrefix = headerSubstitution.urlParameterName();
-                        for (final Map.Entry<String,?> headerCollectionEntry : headerCollection.entrySet()) {
+                        for (final Map.Entry<String, ?> headerCollectionEntry : headerCollection.entrySet()) {
                             final String headerName = headerCollectionPrefix + headerCollectionEntry.getKey();
                             final String headerValue = headerCollectionEntry.getValue() == null ? null : headerCollectionEntry.getValue().toString();
                             result.set(headerName, headerValue);

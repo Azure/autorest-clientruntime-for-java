@@ -16,33 +16,42 @@
     <name>Native Modules for AutoRest Client Runtime for Java</name>
     <description>
         This package contains native dependencies for the AutoRest Client Runtime for Java which can improve performance.
-        Simply including this package in your dependencies is sufficient to cause all native modules available on your OS and architecture to be used.
+        Including this package in your dependencies will cause all native modules available on your OS to be used.
+        Currently, only x86_64 architectures are supported.
     </description>
     <url>https://github.com/Azure/autorest-clientruntime-for-java</url>
 
     <profiles>
         <profile>
+            <id>boringssl</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+
+            <dependencies>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-tcnative-boringssl-static</artifactId>
+                    <version>2.0.7.Final</version>
+                    <classifier>${os.detected.name}-${os.detected.arch}</classifier>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
             <id>osx</id>
             <activation>
-                <os>
-                    <name>Mac OS X</name>
-                </os>
                 <property>
-                    <name>os.detected.arch</name>
-                    <value>x86_64</value>
+                    <name>os.detected.name</name>
+                    <value>osx</value>
                 </property>
             </activation>
+
             <dependencies>
                 <dependency>
                     <groupId>io.netty</groupId>
                     <artifactId>netty-transport-native-kqueue</artifactId>
                     <version>${netty.version}</version>
-                    <classifier>${os.detected.name}-${os.detected.arch}</classifier>
-                </dependency>
-                <dependency>
-                    <groupId>io.netty</groupId>
-                    <artifactId>netty-tcnative-boringssl-static</artifactId>
-                    <version>2.0.7.Final</version>
                     <classifier>${os.detected.name}-${os.detected.arch}</classifier>
                 </dependency>
             </dependencies>
@@ -51,12 +60,9 @@
         <profile>
             <id>linux</id>
             <activation>
-                <os>
-                    <name>Linux</name>
-                </os>
                 <property>
-                    <name>os.detected.arch</name>
-                    <value>x86_64</value>
+                    <name>os.detected.name</name>
+                    <value>linux</value>
                 </property>
             </activation>
             <dependencies>
@@ -64,33 +70,6 @@
                     <groupId>io.netty</groupId>
                     <artifactId>netty-transport-native-epoll</artifactId>
                     <version>${netty.version}</version>
-                    <classifier>${os.detected.name}-${os.detected.arch}</classifier>
-                </dependency>
-                <dependency>
-                    <groupId>io.netty</groupId>
-                    <artifactId>netty-tcnative-boringssl-static</artifactId>
-                    <version>2.0.7.Final</version>
-                    <classifier>${os.detected.name}-${os.detected.arch}</classifier>
-                </dependency>
-            </dependencies>
-        </profile>
-
-        <profile>
-            <id>windows</id>
-            <activation>
-                <os>
-                    <name>Windows</name>
-                </os>
-                <property>
-                    <name>os.detected.arch</name>
-                    <value>x86_64</value>
-                </property>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>io.netty</groupId>
-                    <artifactId>netty-tcnative-boringssl-static</artifactId>
-                    <version>2.0.7.Final</version>
                     <classifier>${os.detected.name}-${os.detected.arch}</classifier>
                 </dependency>
             </dependencies>

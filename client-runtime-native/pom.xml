@@ -21,6 +21,9 @@
     </description>
     <url>https://github.com/Azure/autorest-clientruntime-for-java</url>
 
+    <properties>
+        <netty-boringssl.version>2.0.7.Final</netty-boringssl.version>
+    </properties>
     <profiles>
         <profile>
             <id>boringssl</id>
@@ -32,7 +35,7 @@
                 <dependency>
                     <groupId>io.netty</groupId>
                     <artifactId>netty-tcnative-boringssl-static</artifactId>
-                    <version>2.0.7.Final</version>
+                    <version>${netty-boringssl.version}</version>
                     <classifier>${os.detected.name}-${os.detected.arch}</classifier>
                 </dependency>
             </dependencies>
@@ -54,6 +57,13 @@
                     <version>${netty.version}</version>
                     <classifier>${os.detected.name}-${os.detected.arch}</classifier>
                 </dependency>
+
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-tcnative-boringssl-static</artifactId>
+                    <version>${netty-boringssl.version}</version>
+                    <classifier>${os.detected.name}-${os.detected.arch}</classifier>
+                </dependency>
             </dependencies>
         </profile>
 
@@ -70,6 +80,13 @@
                     <groupId>io.netty</groupId>
                     <artifactId>netty-transport-native-epoll</artifactId>
                     <version>${netty.version}</version>
+                    <classifier>${os.detected.name}-${os.detected.arch}</classifier>
+                </dependency>
+
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-tcnative-boringssl-static</artifactId>
+                    <version>${netty-boringssl.version}</version>
                     <classifier>${os.detected.name}-${os.detected.arch}</classifier>
                 </dependency>
             </dependencies>

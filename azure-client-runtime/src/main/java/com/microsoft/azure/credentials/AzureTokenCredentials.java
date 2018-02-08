@@ -119,7 +119,7 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
     /**
      * @return the ssl socket factory.
      */
-    public SSLSocketFactory sslSocketFactory(){
+    public SSLSocketFactory sslSocketFactory() {
         return sslSocketFactory;
     }
 

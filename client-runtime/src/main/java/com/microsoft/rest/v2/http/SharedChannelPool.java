@@ -10,7 +10,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.handler.ssl.SslContext;
@@ -27,6 +26,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * A Netty channel pool implementation shared between multiple requests.
@@ -39,7 +39,6 @@ public class SharedChannelPool implements ChannelPool {
     private static final AttributeKey<URI> CHANNEL_URI = AttributeKey.newInstance("channel-uri");
     private final Bootstrap bootstrap;
     private final ChannelPoolHandler handler;
-    private boolean closed = false;
     private final int poolSize;
     private final Queue<ChannelRequest> requests;
     private final ConcurrentMultiHashMap<URI, Channel> available;
@@ -47,10 +46,7 @@ public class SharedChannelPool implements ChannelPool {
     private final Object sync = -1;
     private final SslContext sslContext;
     private final ExecutorService executor;
-
-    EventLoopGroup eventLoopGroup() {
-        return bootstrap.config().group();
-    }
+    private volatile boolean closed = false;
 
     private static boolean isChannelHealthy(Channel channel) {
         if (!channel.isActive()) {
@@ -172,6 +168,10 @@ public class SharedChannelPool implements ChannelPool {
      * @return the future to a connected channel
      */
     public Future<Channel> acquire(URI uri, final Promise<Channel> promise) {
+        if (closed) {
+            throw new RejectedExecutionException("SharedChannelPool is closed");
+        }
+
         ChannelRequest channelRequest = new ChannelRequest();
         channelRequest.promise = promise;
         int port;
@@ -242,14 +242,6 @@ public class SharedChannelPool implements ChannelPool {
     public void close() {
         closed = true;
         executor.shutdown();
-        synchronized (sync) {
-            for (Channel channel : leased.values()) {
-                channel.close();
-            }
-            for (Channel channel : available.values()) {
-                channel.close();
-            }
-        }
     }
 
     private static class ChannelRequest {

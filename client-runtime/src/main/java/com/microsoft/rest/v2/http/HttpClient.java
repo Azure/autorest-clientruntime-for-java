@@ -8,6 +8,7 @@ package com.microsoft.rest.v2.http;
 
 import io.reactivex.Single;
 
+import java.io.Closeable;
 import java.net.Proxy;
 
 /**
@@ -21,9 +22,7 @@ public abstract class HttpClient {
      */
     public abstract Single<HttpResponse> sendRequestAsync(HttpRequest request);
 
-    private static HttpClient.Factory defaultHttpClientFactory() {
-        return new NettyClient.Factory();
-    }
+    private static HttpClient.Factory defaultHttpClientFactory = new NettyClient.Factory();
 
     /**
      * Create an instance of the default HttpClient type.
@@ -39,7 +38,7 @@ public abstract class HttpClient {
      * @return an instance of the default HttpClient type.
      */
     public static HttpClient createDefault(HttpClient.Configuration configuration) {
-        return defaultHttpClientFactory().create(configuration);
+        return defaultHttpClientFactory.create(configuration);
     }
 
     /**
@@ -67,12 +66,19 @@ public abstract class HttpClient {
     /**
      * Creates an HttpClient from a Configuration.
      */
-    public interface Factory {
+    public interface Factory extends Closeable {
         /**
          * Creates an HttpClient with the given Configuration.
          * @param configuration the configuration.
          * @return the HttpClient.
          */
         HttpClient create(Configuration configuration);
+
+        /**
+         * Synchronously awaits completion of in-flight tasks,
+         * then closes shared resources associated with this HttpClient.Factory.
+         */
+        @Override
+        void close();
     }
 }

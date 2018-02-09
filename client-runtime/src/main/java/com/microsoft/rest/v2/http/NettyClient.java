@@ -38,6 +38,7 @@ import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
 import io.reactivex.SingleOnSubscribe;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.exceptions.Exceptions;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import org.reactivestreams.Subscriber;
@@ -84,6 +85,15 @@ public final class NettyClient extends HttpClient {
 
         private final MultithreadEventLoopGroup eventLoopGroup;
         private final SharedChannelPool channelPool;
+
+        public Future<?> shutdownGracefully() {
+            return eventLoopGroup.shutdownGracefully().addListener(new GenericFutureListener<Future<Object>>() {
+                @Override
+                public void operationComplete(Future<Object> objectFuture) throws Exception {
+                    channelPool.close();
+                }
+            });
+        }
 
         private static final class TransportConfig {
             final MultithreadEventLoopGroup eventLoopGroup;
@@ -258,31 +268,38 @@ public final class NettyClient extends HttpClient {
                                 raw.headers().add(header.name(), header.value());
                             }
 
-                            channel.write(raw).addListener(new GenericFutureListener<Future<? super Void>>() {
-                                @Override
-                                public void operationComplete(Future<? super Void> future) throws Exception {
-                                    if (!future.isSuccess()) {
-                                        channelPool.closeAndRelease(channel);
-                                        emitErrorIfSubscribed(future.cause());
+                            try {
+                                channel.write(raw).addListener(new GenericFutureListener<Future<? super Void>>() {
+                                    @Override
+                                    public void operationComplete(Future<? super Void> future) throws Exception {
+                                        if (!future.isSuccess()) {
+                                            channelPool.closeAndRelease(channel);
+                                            emitErrorIfSubscribed(future.cause());
+                                        }
                                     }
-                                }
-                            });
+                                });
+                            } catch (Exception e) {
+                                emitErrorIfSubscribed(e);
+                            }
 
                             if (request.body() == null) {
-                                channel.writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT)
-                                        .addListener(new GenericFutureListener<Future<? super Void>>() {
-                                            @Override
-                                            public void operationComplete(Future<? super Void> future) throws Exception {
-                                                if (future.isSuccess()) {
-                                                    channel.read();
-                                                } else {
-                                                    channelPool.closeAndRelease(channel);
-                                                    emitErrorIfSubscribed(future.cause());
+                                try {
+                                    channel.writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT)
+                                            .addListener(new GenericFutureListener<Future<? super Void>>() {
+                                                @Override
+                                                public void operationComplete(Future<? super Void> future) throws Exception {
+                                                    if (future.isSuccess()) {
+                                                        channel.read();
+                                                    } else {
+                                                        channelPool.closeAndRelease(channel);
+                                                        emitErrorIfSubscribed(future.cause());
+                                                    }
                                                 }
-                                            }
-                                        });
+                                            });
+                                } catch (Exception e) {
+                                    emitErrorIfSubscribed(e);
+                                }
                             } else {
-
                                 request.body().observeOn(Schedulers.from(channel.eventLoop())).subscribe(new FlowableSubscriber<ByteBuffer>() {
                                     Subscription subscription;
                                     @Override
@@ -309,8 +326,12 @@ public final class NettyClient extends HttpClient {
                                         if (!channel.eventLoop().inEventLoop()) {
                                             throw new IllegalStateException("onNext must be called from the event loop managing the channel.");
                                         }
-                                        channel.writeAndFlush(Unpooled.wrappedBuffer(buf))
-                                                .addListener(onChannelWriteComplete);
+                                        try {
+                                            channel.writeAndFlush(Unpooled.wrappedBuffer(buf))
+                                                    .addListener(onChannelWriteComplete);
+                                        } catch (Exception e) {
+                                            emitErrorIfSubscribed(e);
+                                        }
 
                                         if (channel.isWritable()) {
                                             subscription.request(1);
@@ -325,19 +346,23 @@ public final class NettyClient extends HttpClient {
 
                                     @Override
                                     public void onComplete() {
-                                        channel.writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT)
-                                                .addListener(new GenericFutureListener<Future<? super Void>>() {
-                                                    @Override
-                                                    public void operationComplete(Future<? super Void> future) throws Exception {
-                                                        if (!future.isSuccess()) {
-                                                            subscription.cancel();
-                                                            channelPool.closeAndRelease(channel);
-                                                            emitErrorIfSubscribed(future.cause());
-                                                        } else {
-                                                            channel.read();
+                                        try {
+                                            channel.writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT)
+                                                    .addListener(new GenericFutureListener<Future<? super Void>>() {
+                                                        @Override
+                                                        public void operationComplete(Future<? super Void> future) throws Exception {
+                                                            if (!future.isSuccess()) {
+                                                                subscription.cancel();
+                                                                channelPool.closeAndRelease(channel);
+                                                                emitErrorIfSubscribed(future.cause());
+                                                            } else {
+                                                                channel.read();
+                                                            }
                                                         }
-                                                    }
-                                                });
+                                                    });
+                                        } catch (Exception e) {
+                                            emitErrorIfSubscribed(e);
+                                        }
                                     }
                                 });
                             }
@@ -404,7 +429,7 @@ public final class NettyClient extends HttpClient {
             }
 
             if (chunksRequested > 0 && !isCanceled) {
-                handlerSubscription.request(l);
+                handlerSubscription.request(chunksRequested);
             }
         }
 
@@ -569,6 +594,14 @@ public final class NettyClient extends HttpClient {
         @Override
         public HttpClient create(final Configuration configuration) {
             return new NettyClient(configuration, adapter);
+        }
+
+        @Override
+        public void close() {
+            Future<?> result = this.adapter.shutdownGracefully().awaitUninterruptibly();
+            if (!result.isSuccess()) {
+                throw Exceptions.propagate(result.cause());
+            }
         }
     }
 }

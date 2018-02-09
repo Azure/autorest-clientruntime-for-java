@@ -299,23 +299,18 @@ public final class HttpResponseDecoder {
 
                 final Class<?> deserializedHeadersClass = TypeToken.of(deserializedHeadersType).getRawType();
                 final Field[] declaredFields = deserializedHeadersClass.getDeclaredFields();
-                for (final Field declaredField : declaredFields)
-                {
-                    if (declaredField.isAnnotationPresent(HeaderCollection.class))
-                    {
+                for (final Field declaredField : declaredFields) {
+                    if (declaredField.isAnnotationPresent(HeaderCollection.class)) {
                         final Type declaredFieldType = declaredField.getGenericType();
-                        if (TypeToken.of(declaredField.getType()).isSubtypeOf(Map.class))
-                        {
+                        if (TypeToken.of(declaredField.getType()).isSubtypeOf(Map.class)) {
                             final Type[] mapTypeArguments = getTypeArguments(declaredFieldType);
-                            if (mapTypeArguments.length == 2 && mapTypeArguments[0] == String.class && mapTypeArguments[1] == String.class)
-                            {
+                            if (mapTypeArguments.length == 2 && mapTypeArguments[0] == String.class && mapTypeArguments[1] == String.class) {
                                 final HeaderCollection headerCollectionAnnotation = declaredField.getAnnotation(HeaderCollection.class);
                                 final String headerCollectionPrefix = headerCollectionAnnotation.value().toLowerCase();
                                 final int headerCollectionPrefixLength = headerCollectionPrefix.length();
                                 if (headerCollectionPrefixLength > 0) {
-                                    final Map<String,String> headerCollection = new HashMap<>();
-                                    for (final HttpHeader header : headers)
-                                    {
+                                    final Map<String, String> headerCollection = new HashMap<>();
+                                    for (final HttpHeader header : headers) {
                                         final String headerName = header.name();
                                         if (headerName.toLowerCase().startsWith(headerCollectionPrefix)) {
                                             headerCollection.put(headerName.substring(headerCollectionPrefixLength), header.value());

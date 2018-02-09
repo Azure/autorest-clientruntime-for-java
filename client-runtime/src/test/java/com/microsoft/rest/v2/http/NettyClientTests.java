@@ -28,8 +28,10 @@ public class NettyClientTests {
         HttpClient client = factory.create(null);
         HttpRequest request = new HttpRequest("", HttpMethod.GET, new URL("https://httpbin.org/get"), null);
 
+        LoggerFactory.getLogger(getClass()).info("Closing factory");
         factory.close();
         try {
+            LoggerFactory.getLogger(getClass()).info("Sending request");
             client.sendRequestAsync(request).blockingGet();
             fail();
         } catch (RejectedExecutionException ignored) {

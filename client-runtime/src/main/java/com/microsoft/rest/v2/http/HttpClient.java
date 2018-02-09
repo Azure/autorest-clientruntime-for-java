@@ -8,8 +8,8 @@ package com.microsoft.rest.v2.http;
 
 import io.reactivex.Single;
 
-import java.io.Closeable;
 import java.net.Proxy;
+import java.util.concurrent.Future;
 
 /**
  * A generic interface for sending HTTP requests and getting responses.
@@ -22,7 +22,11 @@ public abstract class HttpClient {
      */
     public abstract Single<HttpResponse> sendRequestAsync(HttpRequest request);
 
-    private static HttpClient.Factory defaultHttpClientFactory = new NettyClient.Factory();
+    private static final class DefaultHttpClientHolder {
+        // Putting this field in an inner class makes it so it is only instantiated when
+        // one of the createDefault() methods instead of instantiating when any members are accessed.
+        private static HttpClient.Factory defaultHttpClientFactory = new NettyClient.Factory();
+    }
 
     /**
      * Create an instance of the default HttpClient type.
@@ -38,7 +42,7 @@ public abstract class HttpClient {
      * @return an instance of the default HttpClient type.
      */
     public static HttpClient createDefault(HttpClient.Configuration configuration) {
-        return defaultHttpClientFactory.create(configuration);
+        return DefaultHttpClientHolder.defaultHttpClientFactory.create(configuration);
     }
 
     /**
@@ -66,7 +70,7 @@ public abstract class HttpClient {
     /**
      * Creates an HttpClient from a Configuration.
      */
-    public interface Factory extends Closeable {
+    public interface Factory {
         /**
          * Creates an HttpClient with the given Configuration.
          * @param configuration the configuration.
@@ -77,8 +81,9 @@ public abstract class HttpClient {
         /**
          * Synchronously awaits completion of in-flight tasks,
          * then closes shared resources associated with this HttpClient.Factory.
+         *
+         * @return a Future which completes when shutdown finishes.
          */
-        @Override
-        void close();
+        Future<?> shutdown();
     }
 }

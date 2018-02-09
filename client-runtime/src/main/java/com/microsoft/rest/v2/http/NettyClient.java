@@ -598,6 +598,7 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void close() {
+            LoggerFactory.getLogger(getClass()).info("Shutting down NettyAdapter");
             Future<?> result = this.adapter.shutdownGracefully().awaitUninterruptibly();
             if (!result.isSuccess()) {
                 throw Exceptions.propagate(result.cause());

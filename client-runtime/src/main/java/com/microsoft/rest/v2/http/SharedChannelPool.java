@@ -18,8 +18,6 @@ import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
-import io.reactivex.exceptions.Exceptions;
-import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
 import java.net.URI;
@@ -29,7 +27,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * A Netty channel pool implementation shared between multiple requests.
@@ -65,8 +62,6 @@ public class SharedChannelPool implements ChannelPool {
      * @param size the upper limit of total number of channels
      */
     public SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size) {
-        LoggerFactory.getLogger(getClass()).info("Creating channel pool.");
-
         this.bootstrap = bootstrap.clone().handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -94,8 +89,7 @@ public class SharedChannelPool implements ChannelPool {
                         final ChannelFuture channelFuture;
                         synchronized (requests) {
                             while (requests.isEmpty() && !closed) {
-                                LoggerFactory.getLogger(getClass()).info("Waiting for request. Closed: " + closed);
-                                requests.wait(1000);
+                                requests.wait();
                             }
                         }
                         request = requests.poll();
@@ -247,11 +241,7 @@ public class SharedChannelPool implements ChannelPool {
     @Override
     public void close() {
         closed = true;
-        try {
-            executor.awaitTermination(24, TimeUnit.HOURS);
-        } catch (InterruptedException e) {
-            throw Exceptions.propagate(e);
-        }
+        executor.shutdownNow();
     }
 
     private static class ChannelRequest {

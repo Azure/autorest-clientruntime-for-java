@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.reactivex.Completable;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Scheduler;
@@ -38,7 +39,6 @@ import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
 import io.reactivex.SingleOnSubscribe;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.exceptions.Exceptions;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import org.reactivestreams.Subscriber;
@@ -87,12 +87,8 @@ public final class NettyClient extends HttpClient {
         private final SharedChannelPool channelPool;
 
         public Future<?> shutdownGracefully() {
-            return eventLoopGroup.shutdownGracefully().addListener(new GenericFutureListener<Future<Object>>() {
-                @Override
-                public void operationComplete(Future<Object> objectFuture) throws Exception {
-                    channelPool.close();
-                }
-            });
+            channelPool.close();
+            return eventLoopGroup.shutdownGracefully();
         }
 
         private static final class TransportConfig {
@@ -597,12 +593,8 @@ public final class NettyClient extends HttpClient {
         }
 
         @Override
-        public void close() {
-            LoggerFactory.getLogger(getClass()).info("Shutting down NettyAdapter");
-            Future<?> result = this.adapter.shutdownGracefully().awaitUninterruptibly();
-            if (!result.isSuccess()) {
-                throw Exceptions.propagate(result.cause());
-            }
+        public Completable shutdown() {
+            return Completable.fromFuture(this.adapter.shutdownGracefully());
         }
     }
 }

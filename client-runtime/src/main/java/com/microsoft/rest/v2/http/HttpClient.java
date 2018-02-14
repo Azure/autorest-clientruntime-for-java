@@ -6,10 +6,10 @@
 
 package com.microsoft.rest.v2.http;
 
+import io.reactivex.Completable;
 import io.reactivex.Single;
 
 import java.net.Proxy;
-import java.util.concurrent.Future;
 
 /**
  * A generic interface for sending HTTP requests and getting responses.
@@ -79,11 +79,12 @@ public abstract class HttpClient {
         HttpClient create(Configuration configuration);
 
         /**
-         * Synchronously awaits completion of in-flight tasks,
+         * Asynchronously awaits completion of in-flight tasks,
          * then closes shared resources associated with this HttpClient.Factory.
+         * After this Completable completes, HttpClients created from this Factory can no longer be used.
          *
-         * @return a Future which completes when shutdown finishes.
+         * @return a Completable which shuts down the factory when subscribed to.
          */
-        Future<?> shutdown();
+        Completable shutdown();
     }
 }

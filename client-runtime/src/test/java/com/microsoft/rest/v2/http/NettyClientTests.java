@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import java.net.URL;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +20,7 @@ public class NettyClientTests {
         HttpRequest request = new HttpRequest("", HttpMethod.GET, new URL("https://httpbin.org/get"), null);
 
         client.sendRequestAsync(request).blockingGet();
-        factory.close();
+        factory.shutdown().blockingAwait();
     }
 
     @Test
@@ -29,7 +30,8 @@ public class NettyClientTests {
         HttpRequest request = new HttpRequest("", HttpMethod.GET, new URL("https://httpbin.org/get"), null);
 
         LoggerFactory.getLogger(getClass()).info("Closing factory");
-        factory.close();
+        factory.shutdown().blockingAwait();
+
         try {
             LoggerFactory.getLogger(getClass()).info("Sending request");
             client.sendRequestAsync(request).blockingGet();
@@ -50,12 +52,12 @@ public class NettyClientTests {
 
             Future<HttpResponse> asyncResponse = client.sendRequestAsync(request).toFuture();
             Thread.sleep(100);
-            factory.close();
+            factory.shutdown().blockingAwait();
 
             boolean shouldRetry = false;
             try {
                 asyncResponse.get(5, TimeUnit.SECONDS);
-            } catch (IllegalStateException e) {
+            } catch (ExecutionException e) {
                 shouldRetry = true;
             }
 

@@ -6,17 +6,18 @@
 
 package com.microsoft.rest.v2.http;
 
+import com.microsoft.rest.v2.RestException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Single;
+import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.Function;
 import org.reactivestreams.Subscription;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map.Entry;
 
 /**
@@ -51,11 +52,20 @@ class NettyResponse extends HttpResponse {
     }
 
     private Single<ByteBuf> collectContent() {
-        return contentStream.toList().map(new Function<List<ByteBuf>, ByteBuf>() {
+        String contentLengthString = headerValue("Content-Length");
+        final ByteBuf allContent;
+        try {
+            int contentLength = Integer.parseInt(contentLengthString);
+            allContent = Unpooled.buffer(contentLength);
+        } catch (NumberFormatException e) {
+            return Single.error(new RestException("Unexpected format for Content-Length header: " + contentLengthString, this, e));
+        }
+
+        return contentStream.collectInto(allContent, new BiConsumer<ByteBuf, ByteBuf>() {
             @Override
-            public ByteBuf apply(List<ByteBuf> l) {
-                ByteBuf[] bufs = new ByteBuf[l.size()];
-                return Unpooled.wrappedBuffer(l.toArray(bufs));
+            public void accept(ByteBuf allContent, ByteBuf chunk) throws Exception {
+                allContent.writeBytes(chunk);
+                chunk.release();
             }
         });
     }
@@ -64,17 +74,10 @@ class NettyResponse extends HttpResponse {
     public Single<byte[]> bodyAsByteArrayAsync() {
         return collectContent().map(new Function<ByteBuf, byte[]>() {
             @Override
-            public byte[] apply(ByteBuf byteBuf) {
-                return toByteArray(byteBuf);
+            public byte[] apply(ByteBuf byteBuf) throws Exception {
+                return byteBuf.array();
             }
         });
-    }
-
-    static byte[] toByteArray(ByteBuf byteBuf) {
-        byte[] res = new byte[byteBuf.readableBytes()];
-        byteBuf.readBytes(res);
-        byteBuf.release();
-        return res;
     }
 
     @Override
@@ -95,7 +98,7 @@ class NettyResponse extends HttpResponse {
     public Single<String> bodyAsStringAsync() {
         return collectContent().map(new Function<ByteBuf, String>() {
             @Override
-            public String apply(ByteBuf byteBuf) {
+            public String apply(ByteBuf byteBuf) throws Exception {
                 return byteBuf.toString(StandardCharsets.UTF_8);
             }
         });

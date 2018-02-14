@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.reactivex.Completable;
+import io.reactivex.CompletableSource;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Scheduler;
@@ -52,6 +53,7 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -590,7 +592,12 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public Completable shutdown() {
-            return Completable.fromFuture(this.adapter.shutdownGracefully());
+            return Completable.defer(new Callable<CompletableSource>() {
+                @Override
+                public CompletableSource call() throws Exception {
+                    return Completable.fromFuture(adapter.shutdownGracefully());
+                }
+            });
         }
     }
 }

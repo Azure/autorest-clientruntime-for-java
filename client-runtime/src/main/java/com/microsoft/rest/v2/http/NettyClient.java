@@ -66,7 +66,7 @@ public final class NettyClient extends HttpClient {
      * @param configuration the HTTP client configuration.
      * @param adapter the adapter to Netty
      */
-    private NettyClient(HttpClient.Configuration configuration, NettyAdapter adapter) {
+    private NettyClient(HttpClientConfiguration configuration, NettyAdapter adapter) {
         this.adapter = adapter;
         this.proxy = configuration == null ? null : configuration.proxy();
     }
@@ -567,7 +567,7 @@ public final class NettyClient extends HttpClient {
     /**
      * The factory for creating a NettyClient.
      */
-    public static class Factory implements HttpClient.Factory {
+    public static class Factory implements HttpClientFactory {
         private final NettyAdapter adapter;
 
         /**
@@ -588,7 +588,7 @@ public final class NettyClient extends HttpClient {
         }
 
         @Override
-        public HttpClient create(final Configuration configuration) {
+        public HttpClient create(final HttpClientConfiguration configuration) {
             return new NettyClient(configuration, adapter);
         }
 

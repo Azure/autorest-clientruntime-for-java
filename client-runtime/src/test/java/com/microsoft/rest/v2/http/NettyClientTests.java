@@ -15,7 +15,7 @@ import static org.junit.Assert.fail;
 public class NettyClientTests {
     @Test
     public void testRequestBeforeShutdownSucceeds() throws Exception {
-        final HttpClient.Factory factory = new NettyClient.Factory();
+        final HttpClientFactory factory = new NettyClient.Factory();
         HttpClient client = factory.create(null);
         HttpRequest request = new HttpRequest("", HttpMethod.GET, new URL("https://httpbin.org/get"), null);
 
@@ -25,7 +25,7 @@ public class NettyClientTests {
 
     @Test
     public void testRequestAfterShutdownIsRejected() throws Exception {
-        final HttpClient.Factory factory = new NettyClient.Factory();
+        final HttpClientFactory factory = new NettyClient.Factory();
         HttpClient client = factory.create(null);
         HttpRequest request = new HttpRequest("", HttpMethod.GET, new URL("https://httpbin.org/get"), null);
 
@@ -46,7 +46,7 @@ public class NettyClientTests {
     public void testInFlightRequestSucceedsAfterCancellation() throws Exception {
         // Retry a few times in case shutdown begins before the request is submitted to Netty
         for (int i = 0; i < 3; i++) {
-            final HttpClient.Factory factory = new NettyClient.Factory();
+            final HttpClientFactory factory = new NettyClient.Factory();
             HttpClient client = factory.create(null);
             HttpRequest request = new HttpRequest("", HttpMethod.GET, new URL("https://httpbin.org/get"), null);
 

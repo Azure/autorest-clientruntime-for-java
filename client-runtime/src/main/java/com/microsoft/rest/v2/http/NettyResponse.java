@@ -79,7 +79,18 @@ class NettyResponse extends HttpResponse {
         return collectContent().map(new Function<ByteBuf, byte[]>() {
             @Override
             public byte[] apply(ByteBuf byteBuf) throws Exception {
-                return byteBuf.array();
+                byte[] result;
+                if (byteBuf.readableBytes() == byteBuf.array().length) {
+                    result = byteBuf.array();
+                } else {
+                    byte[] dst = new byte[byteBuf.readableBytes()];
+                    byteBuf.readBytes(dst);
+                    result = dst;
+                }
+
+                // This byteBuf is not pooled but Netty uses ref counting to track allocation metrics
+                byteBuf.release();
+                return result;
             }
         });
     }
@@ -103,7 +114,9 @@ class NettyResponse extends HttpResponse {
         return collectContent().map(new Function<ByteBuf, String>() {
             @Override
             public String apply(ByteBuf byteBuf) throws Exception {
-                return byteBuf.toString(StandardCharsets.UTF_8);
+                String result = byteBuf.toString(StandardCharsets.UTF_8);
+                byteBuf.release();
+                return result;
             }
         });
     }

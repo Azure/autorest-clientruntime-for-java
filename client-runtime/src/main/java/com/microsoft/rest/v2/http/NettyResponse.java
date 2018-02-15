@@ -6,7 +6,6 @@
 
 package com.microsoft.rest.v2.http;
 
-import com.microsoft.rest.v2.RestException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.reactivex.Flowable;
@@ -52,13 +51,18 @@ class NettyResponse extends HttpResponse {
     }
 
     private Single<ByteBuf> collectContent() {
+        ByteBuf allContent = null;
         String contentLengthString = headerValue("Content-Length");
-        final ByteBuf allContent;
-        try {
-            int contentLength = Integer.parseInt(contentLengthString);
-            allContent = Unpooled.buffer(contentLength);
-        } catch (NumberFormatException e) {
-            return Single.error(new RestException("Unexpected format for Content-Length header: " + contentLengthString, this, e));
+        if (contentLengthString != null) {
+            try {
+                int contentLength = Integer.parseInt(contentLengthString);
+                allContent = Unpooled.buffer(contentLength);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        if (allContent == null) {
+            allContent = Unpooled.buffer();
         }
 
         return contentStream.collectInto(allContent, new BiConsumer<ByteBuf, ByteBuf>() {

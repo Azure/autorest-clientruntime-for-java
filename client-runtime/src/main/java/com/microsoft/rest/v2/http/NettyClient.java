@@ -192,7 +192,7 @@ public final class NettyClient extends HttpClient {
                             "SocketAddress on java.net.Proxy must be an InetSocketAddress. Found proxy: " + proxy);
                 }
 
-                request.withHeader(io.netty.handler.codec.http.HttpHeaders.Names.HOST, channelAddress.getHost());
+                request.withHeader(io.netty.handler.codec.http.HttpHeaders.Names.HOST, request.url().getHost());
                 request.withHeader(io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION, io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE);
             } catch (URISyntaxException e) {
                 return Single.error(e);

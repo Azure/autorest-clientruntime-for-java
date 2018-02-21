@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.reactivex.Completable;
@@ -54,6 +55,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -103,28 +105,25 @@ public final class NettyClient extends HttpClient {
             }
         }
 
-        private static MultithreadEventLoopGroup loadEventLoopGroup(String className, Integer optionalSize) throws ReflectiveOperationException {
-            MultithreadEventLoopGroup result;
-            if (optionalSize == null) {
-                result = (MultithreadEventLoopGroup) Class.forName(className).getConstructor().newInstance();
-            } else {
-                result = (MultithreadEventLoopGroup) Class.forName(className).getConstructor(Integer.TYPE).newInstance(optionalSize);
-            }
+        private static MultithreadEventLoopGroup loadEventLoopGroup(String className, int size) throws ReflectiveOperationException {
+            Class<?> cls = Class.forName(className);
+            ThreadFactory factory = new DefaultThreadFactory(cls, true);
+            MultithreadEventLoopGroup result = (MultithreadEventLoopGroup) cls.getConstructor(Integer.TYPE, ThreadFactory.class).newInstance(size, factory);
             return result;
         }
 
         @SuppressWarnings("unchecked")
-        private static TransportConfig loadTransport(Integer optionalGroupSize) {
+        private static TransportConfig loadTransport(int groupSize) {
             TransportConfig result = null;
             try {
                 final String osName = System.getProperty("os.name");
                 if (osName.contains("Linux")) {
                     result = new TransportConfig(
-                            loadEventLoopGroup(EPOLL_GROUP_CLASS_NAME, optionalGroupSize),
+                            loadEventLoopGroup(EPOLL_GROUP_CLASS_NAME, groupSize),
                             (Class<? extends SocketChannel>) Class.forName(EPOLL_SOCKET_CLASS_NAME));
                 } else if (osName.contains("Mac")) {
                     result = new TransportConfig(
-                            loadEventLoopGroup(KQUEUE_GROUP_CLASS_NAME, optionalGroupSize),
+                            loadEventLoopGroup(KQUEUE_GROUP_CLASS_NAME, groupSize),
                             (Class<? extends SocketChannel>) Class.forName(KQUEUE_SOCKET_CLASS_NAME));
                 }
             } catch (Exception e) {
@@ -139,7 +138,7 @@ public final class NettyClient extends HttpClient {
             }
 
             if (result == null) {
-                result = new TransportConfig(new NioEventLoopGroup(), NioSocketChannel.class);
+                result = new TransportConfig(new NioEventLoopGroup(groupSize, new DefaultThreadFactory(NioEventLoopGroup.class, true)), NioSocketChannel.class);
             }
 
             return result;
@@ -163,9 +162,9 @@ public final class NettyClient extends HttpClient {
         }
 
         private NettyAdapter() {
-            TransportConfig config = loadTransport(null);
+            TransportConfig config = loadTransport(0);
             this.eventLoopGroup = config.eventLoopGroup;
-            this.channelPool = createChannelPool(this, config, eventLoopGroup.executorCount() * 2);
+            this.channelPool = createChannelPool(this, config, eventLoopGroup.executorCount() * 16);
         }
 
         private NettyAdapter(int eventLoopGroupSize, int channelPoolSize) {

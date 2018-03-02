@@ -44,7 +44,7 @@ public class SharedChannelPool implements ChannelPool {
     private final Queue<ChannelRequest> requests;
     private final ConcurrentMultiHashMap<URI, Channel> available;
     private final ConcurrentMultiHashMap<URI, Channel> leased;
-    private final Object sync = -1;
+    private final Object sync = new Object();
     private final SslContext sslContext;
     private final ExecutorService executor;
     private volatile boolean closed = false;

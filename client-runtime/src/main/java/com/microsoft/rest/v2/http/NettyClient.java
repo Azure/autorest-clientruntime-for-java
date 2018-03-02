@@ -590,13 +590,8 @@ public final class NettyClient extends HttpClient {
         }
 
         @Override
-        public Completable shutdown() {
-            return Completable.defer(new Callable<CompletableSource>() {
-                @Override
-                public CompletableSource call() throws Exception {
-                    return Completable.fromFuture(adapter.shutdownGracefully());
-                }
-            });
+        public void close() {
+            adapter.shutdownGracefully().awaitUninterruptibly();
         }
     }
 }

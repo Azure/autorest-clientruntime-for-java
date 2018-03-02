@@ -13,10 +13,10 @@ import java.util.Map;
  */
 public final class VoidResponse extends RestResponse<Void, Void> {
     /**
-     * Create a StreamResponse.
+     * Creates a StreamResponse.
      *
-     * @param statusCode The status code of the HTTP response.
-     * @param rawHeaders The raw headers of the HTTP response.
+     * @param statusCode the status code of the HTTP response
+     * @param rawHeaders the raw headers of the HTTP response
      */
     public VoidResponse(int statusCode, Map<String, String> rawHeaders) {
         super(statusCode, null, rawHeaders, null);
@@ -29,7 +29,9 @@ public final class VoidResponse extends RestResponse<Void, Void> {
     }
 
     /**
-     * Always returns null due to no headers type being defined in the service specification. Consider using {@link #rawHeaders()}.
+     * Always returns null due to no headers type being defined in the service specification.
+     * Consider using {@link #rawHeaders()}.
+     *
      * @return null
      */
     @Override

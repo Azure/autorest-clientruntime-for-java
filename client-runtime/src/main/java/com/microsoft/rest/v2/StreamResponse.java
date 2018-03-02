@@ -18,11 +18,11 @@ import java.util.Map;
  */
 public final class StreamResponse extends RestResponse<Void, Flowable<ByteBuffer>> implements Closeable {
     /**
-     * Create a StreamResponse.
+     * Creates a StreamResponse.
      *
-     * @param statusCode The status code of the HTTP response.
-     * @param rawHeaders The raw headers of the HTTP response.
-     * @param body      The streaming body.
+     * @param statusCode the status code of the HTTP response
+     * @param rawHeaders the raw headers of the HTTP response
+     * @param body the streaming body
      */
     public StreamResponse(int statusCode, Map<String, String> rawHeaders, Flowable<ByteBuffer> body) {
         super(statusCode, null, rawHeaders, body);

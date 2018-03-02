@@ -15,14 +15,14 @@ import java.util.Map;
  */
 public final class BodyResponse<TBody> extends RestResponse<Void, TBody> {
     /**
-     * Create a new RestResponse object.
+     * Creates a new BodyResponse object.
      *
-     * @param statusCode The status code of the HTTP response.
-     * @param rawHeaders The raw headers of the HTTP response.
-     * @param tBody      The deserialized body.
+     * @param statusCode the status code of the HTTP response
+     * @param rawHeaders the raw headers of the HTTP response
+     * @param body the deserialized body
      */
-    public BodyResponse(int statusCode, Map<String, String> rawHeaders, TBody tBody) {
-        super(statusCode, null, rawHeaders, tBody);
+    public BodyResponse(int statusCode, Map<String, String> rawHeaders, TBody body) {
+        super(statusCode, null, rawHeaders, body);
     }
 
     // Used for uniform reflective creation in RestProxy.
@@ -32,8 +32,7 @@ public final class BodyResponse<TBody> extends RestResponse<Void, TBody> {
     }
 
     /**
-     * The deserialized body of the HTTP response.
-     * @return The deserialized body of the HTTP response.
+     * @return the deserialized body of the HTTP response
      */
     public TBody body() {
         return super.body();

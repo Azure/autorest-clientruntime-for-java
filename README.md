@@ -22,13 +22,13 @@ The runtime libraries for [AutoRest](https://github.com/azure/autorest) generate
     
     <!-- For Azure Resource Management users -->
     <dependency>
-      <groupId>com.microsoft.azure</groupId>
+      <groupId>com.microsoft.azure.v2</groupId>
       <artifactId>azure-client-runtime</artifactId>
       <version>2.0.0-beta1</version>
     </dependency>
     
     <dependency>
-      <groupId>com.microsoft.azure</groupId>
+      <groupId>com.microsoft.azure.v2</groupId>
       <artifactId>azure-client-authentication</artifactId>
       <version>2.0.0-beta1</version>
     </dependency>

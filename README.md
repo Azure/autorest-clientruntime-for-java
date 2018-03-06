@@ -47,9 +47,9 @@ The runtime libraries for [AutoRest](https://github.com/azure/autorest) generate
 
 Non-Azure generated clients will have a constructor that takes no arguments for simple scenarios, while Azure generated clients will require a `ServiceClientCredentials` argument at a minimum.
 
-If you wish you have more control over configuration, you may wish to use HttpPipeline. HttpPipeline contains a sequence of RequestPolicyFactories, which are similar to interceptors or filters in other HTTP client libraries.
+If you want to have more control over configuration, consider using HttpPipeline. This enables performing transformations on all HTTP messages sent by a client, similar to interceptors or filters in other HTTP clients.
 
-You can build a sequence of these RequestPolicyFactories which will get applied in-order to outgoing requests, and then in reverse order for incoming responses. 
+You can build an HttpPipeline out of a sequence of RequestPolicyFactories. These policies will get applied in-order to outgoing requests, and then in reverse order for incoming responses. HttpPipelineBuilder includes convenience methods for adding several built-in RequestPolicyFactories, including policies for credentials, logging, response decoding (deserialization), cookies support, and several others.
 
 ```java
 // For Java generator
@@ -64,7 +64,7 @@ HttpPipeline azurePipeline = new HttpPipelineBuilder()
     .withCredentialsPolicy(AzureCliCredentials.create())
     .withHttpLoggingPolicy(HttpLogDetailLevel.HEADERS)
     .withDecodingPolicy()
-  	.build();
+    .build();
 FooServiceClient azureClient = new FooServiceClientImpl(azurePipeline);
 ```
 

@@ -38,6 +38,7 @@ import io.reactivex.Scheduler;
 import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.internal.util.BackpressureHelper;
 import io.reactivex.schedulers.Schedulers;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -394,10 +395,7 @@ public final class NettyClient extends HttpClient {
             if (l <= 0) {
                 subscriber.onError(new IllegalArgumentException("Request amount must be positive. Received amount: " + l));
             } else {
-                chunksRequested += l;
-                if (chunksRequested < 0) {
-                    chunksRequested = Long.MAX_VALUE;
-                }
+                chunksRequested = BackpressureHelper.addCap(chunksRequested, l);
 
                 if (!draining) {
                     try {

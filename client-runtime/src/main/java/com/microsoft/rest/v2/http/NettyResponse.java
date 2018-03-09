@@ -68,8 +68,13 @@ class NettyResponse extends HttpResponse {
         return contentStream.collectInto(allContent, new BiConsumer<ByteBuf, ByteBuf>() {
             @Override
             public void accept(ByteBuf allContent, ByteBuf chunk) throws Exception {
-                allContent.writeBytes(chunk);
-                chunk.release();
+                //use try-finally to ensure chunk gets released
+                try {
+                    allContent.writeBytes(chunk);
+                }
+                finally {
+                    chunk.release();
+                }
             }
         });
     }

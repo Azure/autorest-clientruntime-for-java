@@ -27,6 +27,7 @@ public class SwaggerInterfaceParser {
      * Create a new SwaggerInterfaceParser object with the provided fully qualified interface
      * name.
      * @param swaggerInterface The interface that will be parsed.
+     * @param serializer The serializer that will be used to serialize non-String header values and query values.
      */
     public SwaggerInterfaceParser(Class<?> swaggerInterface, SerializerAdapter<?> serializer) {
         this(swaggerInterface, serializer, null);
@@ -36,6 +37,7 @@ public class SwaggerInterfaceParser {
      * Create a new SwaggerInterfaceParser object with the provided fully qualified interface
      * name.
      * @param swaggerInterface The interface that will be parsed.
+     * @param serializer The serializer that will be used to serialize non-String header values and query values.
      * @param host The host of URLs that this Swagger interface targets.
      */
     public SwaggerInterfaceParser(Class<?> swaggerInterface, SerializerAdapter<?> serializer, String host) {

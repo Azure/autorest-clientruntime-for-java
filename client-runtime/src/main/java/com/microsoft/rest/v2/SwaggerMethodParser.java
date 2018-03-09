@@ -28,11 +28,9 @@ import com.microsoft.rest.v2.http.HttpHeader;
 import com.microsoft.rest.v2.http.HttpHeaders;
 import com.microsoft.rest.v2.http.HttpMethod;
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
-import com.microsoft.rest.v2.protocol.SerializerEncoding;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -491,7 +489,7 @@ public class SwaggerMethodParser {
         String result = null;
         if (value != null) {
             if (value instanceof String) {
-                result = (String)value;
+                result = (String) value;
             }
             else {
                 result = serializer.serializeRaw(value);

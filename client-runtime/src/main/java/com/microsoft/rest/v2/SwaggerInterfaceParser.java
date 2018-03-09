@@ -7,6 +7,7 @@
 package com.microsoft.rest.v2;
 
 import com.microsoft.rest.v2.annotations.Host;
+import com.microsoft.rest.v2.protocol.SerializerAdapter;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -18,6 +19,7 @@ import java.util.Map;
  */
 public class SwaggerInterfaceParser {
     private final Class<?> swaggerInterface;
+    private final SerializerAdapter<?> serializer;
     private final String host;
     private final Map<Method, SwaggerMethodParser> methodParsers = new HashMap<>();
 
@@ -26,8 +28,8 @@ public class SwaggerInterfaceParser {
      * name.
      * @param swaggerInterface The interface that will be parsed.
      */
-    public SwaggerInterfaceParser(Class<?> swaggerInterface) {
-        this(swaggerInterface, null);
+    public SwaggerInterfaceParser(Class<?> swaggerInterface, SerializerAdapter<?> serializer) {
+        this(swaggerInterface, serializer, null);
     }
 
     /**
@@ -36,8 +38,9 @@ public class SwaggerInterfaceParser {
      * @param swaggerInterface The interface that will be parsed.
      * @param host The host of URLs that this Swagger interface targets.
      */
-    public SwaggerInterfaceParser(Class<?> swaggerInterface, String host) {
+    public SwaggerInterfaceParser(Class<?> swaggerInterface, SerializerAdapter<?> serializer, String host) {
         this.swaggerInterface = swaggerInterface;
+        this.serializer = serializer;
 
         if (host != null && !host.isEmpty()) {
             this.host = host;
@@ -62,7 +65,7 @@ public class SwaggerInterfaceParser {
     public SwaggerMethodParser methodParser(Method swaggerMethod) {
         SwaggerMethodParser result = methodParsers.get(swaggerMethod);
         if (result == null) {
-            result = new SwaggerMethodParser(swaggerMethod, host());
+            result = new SwaggerMethodParser(swaggerMethod, serializer, host());
             methodParsers.put(swaggerMethod, result);
         }
         return result;

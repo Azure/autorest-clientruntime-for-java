@@ -38,8 +38,24 @@ public final class DateTimeSerializer extends JsonSerializer<OffsetDateTime> {
         if (provider.isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)) {
             jgen.writeNumber(value.toInstant().toEpochMilli());
         } else {
-            value = value.withOffsetSameLocal(ZoneOffset.UTC);
-            jgen.writeString(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(value));
+            jgen.writeString(toString(value));
         }
+    }
+
+    /**
+     * Convert the provided OffsetDateTime to its String representation.
+     * @param offsetDateTime The OffsetDateTime to convert.
+     * @return The String representation of the provided offsetDateTime.
+     */
+    public static String toString(OffsetDateTime offsetDateTime) {
+        String result = null;
+        if (offsetDateTime != null) {
+            offsetDateTime = offsetDateTime.withOffsetSameInstant(ZoneOffset.UTC);
+            result = DateTimeFormatter.ISO_INSTANT.format(offsetDateTime);
+            if (result.startsWith("+")) {
+                result = result.substring(1);
+            }
+        }
+        return result;
     }
 }

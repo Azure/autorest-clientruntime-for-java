@@ -7,12 +7,19 @@
 package com.microsoft.rest.v2;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 /**
  * Simple wrapper over java.time.OffsetDateTime used for specifying RFC1123 format during serialization/deserialization.
  */
 public final class DateTimeRfc1123 {
+    /**
+     * The pattern of the datetime used for RFC1123 datetime format.
+     */
+    private static final DateTimeFormatter RFC1123_DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'").withZone(ZoneId.of("UTC")).withLocale(Locale.US);
     /**
      * The actual datetime object.
      */
@@ -47,7 +54,7 @@ public final class DateTimeRfc1123 {
 
     @Override
     public String toString() {
-        return DateTimeFormatter.RFC_1123_DATE_TIME.format(this.dateTime);
+        return RFC1123_DATE_TIME_FORMATTER.format(this.dateTime);
     }
 
     @Override

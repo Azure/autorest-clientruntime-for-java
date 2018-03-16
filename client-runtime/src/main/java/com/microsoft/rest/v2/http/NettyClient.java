@@ -482,6 +482,7 @@ public final class NettyClient extends HttpClient {
         
         private void drain() {
             // Below is a non-blocking technique to ensure serialization (in-order processing) of the block inside the if statement
+            // and also to ensure no race conditions exist where items on the queue would be missed.
             //
             // wip = `work in progress` and follows a naming convention in RxJava
             // We want to ensure that if items are added to the queue and `drain` is called while it is running that there is no race

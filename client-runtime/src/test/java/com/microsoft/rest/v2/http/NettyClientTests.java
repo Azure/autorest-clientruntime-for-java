@@ -42,11 +42,13 @@ public class NettyClientTests {
     @BeforeClass
     public static void beforeClass() {
         server = new WireMockServer(WireMockConfiguration.options().dynamicPort());
-        server.stubFor(WireMock.get("/short").willReturn(WireMock.aResponse().withBody(SHORT_BODY)));
+        server.stubFor(
+                WireMock.get("/short").willReturn(WireMock.aResponse().withBody(SHORT_BODY)));
         server.stubFor(WireMock.get("/long").willReturn(WireMock.aResponse().withBody(LONG_BODY)));
-        server.stubFor(WireMock.get("/error").willReturn(WireMock.aResponse().withBody("error").withStatus(500)));
+        server.stubFor(WireMock.get("/error")
+                .willReturn(WireMock.aResponse().withBody("error").withStatus(500)));
         server.start();
-//        ResourceLeakDetector.setLevel(Level.PARANOID);
+        // ResourceLeakDetector.setLevel(Level.PARANOID);
     }
 
     @AfterClass
@@ -67,12 +69,11 @@ public class NettyClientTests {
     }
 
     private void checkBodyReceived(String expectedBody, String path) {
-        try (HttpClientFactory factory = new NettyClient.Factory()) {
-            HttpClient client = factory.create(null);
-            HttpResponse response = doRequest(client, path);
-            String s = new String(response.bodyAsByteArrayAsync().blockingGet(), StandardCharsets.UTF_8);
-            assertEquals(expectedBody, s);
-        }
+        HttpClient client = HttpClient.createDefault();
+        HttpResponse response = doRequest(client, path);
+        String s = new String(response.bodyAsByteArrayAsync().blockingGet(),
+                StandardCharsets.UTF_8);
+        assertEquals(expectedBody, s);
     }
 
     private HttpResponse doRequest(HttpClient client, String path) {
@@ -83,86 +84,64 @@ public class NettyClientTests {
 
     @Test
     public void testMultipleSubscriptionsEmitsError() {
-        final HttpClientFactory factory = new NettyClient.Factory();
-        try {
-            HttpResponse response = makeRequest(factory, "/short");
-            response.bodyAsByteArrayAsync().blockingGet();
-            // subscribe again
-            response.bodyAsByteArrayAsync() //
-                    .test() //
-                    .awaitDone(20, TimeUnit.SECONDS) //
-                    .assertNoValues() //
-                    .assertError(IllegalStateException.class);
-        } finally {
-            factory.close();
-        }
+        HttpResponse response = makeRequest("/short");
+        response.bodyAsByteArrayAsync().blockingGet();
+        // subscribe again
+        response.bodyAsByteArrayAsync() //
+                .test() //
+                .awaitDone(20, TimeUnit.SECONDS) //
+                .assertNoValues() //
+                .assertError(IllegalStateException.class);
     }
 
     @Test
     public void testCancel() throws InterruptedException {
-        final HttpClientFactory factory = new NettyClient.Factory();
-        try {
-            HttpResponse response = makeRequest(factory, "/long");
-            TestSubscriber<ByteBuffer> ts = response.streamBodyAsync() //
-                    .test(0) //
-                    .requestMore(1) //
-                    .awaitCount(1) //
-                    .assertNotComplete() //
-                    .assertValueCount(1);
-            ts.cancel();
-            Thread.sleep(100);
-            ts.requestMore(100);
-            Thread.sleep(100);
-            ts.assertNotComplete() //
-                    .assertValueCount(1);
-
-        } finally {
-            factory.close();
-        }
+        HttpResponse response = makeRequest("/long");
+        TestSubscriber<ByteBuffer> ts = response.streamBodyAsync() //
+                .test(0) //
+                .requestMore(1) //
+                .awaitCount(1) //
+                .assertNotComplete() //
+                .assertValueCount(1);
+        ts.cancel();
+        Thread.sleep(100);
+        ts.requestMore(100);
+        Thread.sleep(100);
+        ts.assertNotComplete() //
+                .assertValueCount(1);
     }
 
     @Test
     public void testFlowableWhenServerReturnsBodyAndNoErrorsWhenHttp500Returned() {
-        final HttpClientFactory factory = new NettyClient.Factory();
-        try {
-            HttpResponse response = makeRequest(factory, "/error");
-            response //
-                    .bodyAsStringAsync() //
-                    .test() //
-                    .awaitDone(20,  TimeUnit.SECONDS) //
-                    .assertValues("error") //
-                    .assertNoErrors();
-            assertEquals(500, response.statusCode());
-        } finally {
-            factory.close();
-        }
-    }
-    
-    @Test
-    public void testFlowableBackpressure() {
-        final HttpClientFactory factory = new NettyClient.Factory();
-        try {
-            HttpResponse response = makeRequest(factory, "/long");
-            response //
-                    .streamBodyAsync() //
-                    .test(0) //
-                    .assertValueCount(0) //
-                    .assertNoErrors() //
-                    .requestMore(1) //
-                    .awaitCount(1) //
-                    .assertValueCount(1) ///
-                    .requestMore(3) //
-                    .awaitCount(4) //
-                    .requestMore(Long.MAX_VALUE) //
-                    .awaitDone(20, TimeUnit.SECONDS)
-                    .assertComplete();
-        } finally {
-            factory.close();
-        }
+        HttpResponse response = makeRequest("/error");
+        response //
+                .bodyAsStringAsync() //
+                .test() //
+                .awaitDone(20, TimeUnit.SECONDS) //
+                .assertValues("error") //
+                .assertNoErrors();
+        assertEquals(500, response.statusCode());
     }
 
-    private HttpResponse makeRequest(final HttpClientFactory factory, String path) {
-        HttpClient client = factory.create(null);
+    @Test
+    public void testFlowableBackpressure() {
+        HttpResponse response = makeRequest("/long");
+        response //
+                .streamBodyAsync() //
+                .test(0) //
+                .assertValueCount(0) //
+                .assertNoErrors() //
+                .requestMore(1) //
+                .awaitCount(1) //
+                .assertValueCount(1) ///
+                .requestMore(3) //
+                .awaitCount(4) //
+                .requestMore(Long.MAX_VALUE) //
+                .awaitDone(20, TimeUnit.SECONDS).assertComplete();
+    }
+
+    private HttpResponse makeRequest(String path) {
+        HttpClient client = HttpClient.createDefault();
         HttpRequest request = new HttpRequest("", HttpMethod.GET, url(server, path), null);
         return client.sendRequestAsync(request).blockingGet();
     }
@@ -195,7 +174,8 @@ public class NettyClientTests {
     }
 
     @Test(timeout = 5000)
-    public void testServerShutsDownSocketShouldPushErrorToContentFlowable() throws IOException, InterruptedException {
+    public void testServerShutsDownSocketShouldPushErrorToContentFlowable()
+            throws IOException, InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicReference<Socket> sock = new AtomicReference<>();
         ServerSocket ss = new ServerSocket(0);
@@ -225,19 +205,17 @@ public class NettyClientTests {
                     .subscribeOn(Schedulers.io()) //
                     .subscribe();
             latch.await();
-            try (HttpClientFactory factory = new NettyClient.Factory()) {
-                HttpClient client = factory.create(null);
-                HttpRequest request = new HttpRequest("", HttpMethod.GET,
-                        new URL("http://localhost:" + ss.getLocalPort() + "/get"), null);
-                HttpResponse response = client.sendRequestAsync(request).blockingGet();
-                assertEquals(200, response.statusCode());
-                System.out.println("reading body");
-                response.bodyAsByteArrayAsync() //
-                        .test() //
-                        .awaitDone(1, TimeUnit.SECONDS) //
-                        .assertError(IOException.class) //
-                        .assertErrorMessage("channel inactive");
-            }
+            HttpClient client = HttpClient.createDefault();
+            HttpRequest request = new HttpRequest("", HttpMethod.GET,
+                    new URL("http://localhost:" + ss.getLocalPort() + "/get"), null);
+            HttpResponse response = client.sendRequestAsync(request).blockingGet();
+            assertEquals(200, response.statusCode());
+            System.out.println("reading body");
+            response.bodyAsByteArrayAsync() //
+                    .test() //
+                    .awaitDone(1, TimeUnit.SECONDS) //
+                    .assertError(IOException.class) //
+                    .assertErrorMessage("channel inactive");
         } finally {
             ss.close();
         }

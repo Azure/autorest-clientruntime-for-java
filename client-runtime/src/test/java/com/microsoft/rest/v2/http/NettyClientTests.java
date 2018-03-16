@@ -90,6 +90,7 @@ public class NettyClientTests {
             // subscribe again
             response.bodyAsByteArrayAsync() //
                     .test() //
+                    .awaitDone(20, TimeUnit.SECONDS) //
                     .assertNoValues() //
                     .assertError(IllegalStateException.class);
         } finally {
@@ -128,6 +129,7 @@ public class NettyClientTests {
             response //
                     .bodyAsStringAsync() //
                     .test() //
+                    .awaitDone(20,  TimeUnit.SECONDS) //
                     .assertValues("error") //
                     .assertNoErrors();
             assertEquals(500, response.statusCode());

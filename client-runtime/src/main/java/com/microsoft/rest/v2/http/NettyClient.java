@@ -516,6 +516,7 @@ public final class NettyClient extends HttpClient {
                             if (chunkRequested.compareAndSet(false, true)) {
                                 requestChunkOfByteBufsFromUpstream();
                             }
+                            break;
                         }
                         if (cancelled) {
                             releaseQueue();

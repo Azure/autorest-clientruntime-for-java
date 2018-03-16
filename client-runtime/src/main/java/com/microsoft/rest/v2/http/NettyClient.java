@@ -495,7 +495,6 @@ public final class NettyClient extends HttpClient {
                         // Note that an error can shortcut the emission of content that is currently on the queue.
                         // This is probably desirable generally because it prevents work that being done downstream 
                         // that might be thrown away anyway due to the error. 
-                        // TODO discuss with project members
                         Throwable error = err;
                         if (error != null) {
                             releaseQueue();

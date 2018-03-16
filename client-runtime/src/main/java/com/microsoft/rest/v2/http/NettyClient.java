@@ -485,8 +485,6 @@ public final class NettyClient extends HttpClient {
             // and also to ensure no race conditions exist where items on the queue would be missed.
             //
             // wip = `work in progress` and follows a naming convention in RxJava
-            // We want to ensure that if items are added to the queue and `drain` is called while it is running that there is no race
-            // condition where the items are not picked up.
             //
             // `missed` is a clever little trick to ensure that we only do as many loops as actually required. If `drain` is called 
             // say 10 times while the `drain` loop is active then we notice that there are possibly extra items on the queue that arrived

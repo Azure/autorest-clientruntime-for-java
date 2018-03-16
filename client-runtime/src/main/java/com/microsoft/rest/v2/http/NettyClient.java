@@ -481,6 +481,16 @@ public final class NettyClient extends HttpClient {
         }
         
         private void drain() {
+            // Below is a non-blocking technique to ensure serialization (in-order processing) of the block inside the if statement
+            //
+            // wip = `work in progress` and follows a naming convention in RxJava
+            // We want to ensure that if items are added to the queue and `drain` is called while it is running that there is no race
+            // condition where the items are not picked up.
+            //
+            // `missed` is a clever little trick to ensure that we only do as many loops as actually required. If `drain` is called 
+            // say 10 times while the `drain` loop is active then we notice that there are possibly extra items on the queue that arrived
+            // just after we found none left (and before the method exits). We don't need to loop around ten times but only once because
+            // all items will be picked up from the queue in one additional polling loop. 
             if (wip.getAndIncrement() == 0) {
                 // need to check cancelled even if there are no requests
                 if (cancelled) {

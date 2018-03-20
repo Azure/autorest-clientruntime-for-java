@@ -333,10 +333,9 @@ public class RestProxyStressTests {
                 .zipWith(md5s, (id, md5) ->
                         service.download100M(String.valueOf(id), sas).flatMapCompletable(response -> {
                             final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-                            Flowable<ByteBuffer> content = response.body().doOnNext(messageDigest::update);
+                            Flowable<ByteBuffer> content = response.body().doOnNext(buf -> messageDigest.update(buf.slice()));
 
-                            AsynchronousFileChannel file = AsynchronousFileChannel.open(TEMP_FOLDER_PATH.resolve("100m-" + id + "-dl.dat"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-                            return FlowableUtil.writeFile(content, file).doOnComplete(() -> {
+                            return content.lastOrError().toCompletable().doOnComplete(() -> {
                                 assertArrayEquals(md5, messageDigest.digest());
                                 LoggerFactory.getLogger(getClass()).info("Finished downloading and MD5 validated for " + id);
                             });

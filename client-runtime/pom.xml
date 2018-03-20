@@ -137,6 +137,21 @@
 <br />*/</code>]]></bottom>
         </configuration>
       </plugin>
+
+      <plugin>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-maven-plugin</artifactId>
+        <version>9.3.22.v20171030</version>
+        <configuration>
+          <httpConnector>
+            <port>11081</port>
+          </httpConnector>
+          <webApp>
+            <contextPath>/javasdktest/upload</contextPath>
+          </webApp>
+          <webAppSourceDirectory>temp/</webAppSourceDirectory>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>

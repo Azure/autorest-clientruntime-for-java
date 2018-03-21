@@ -1,3 +1,7 @@
+1.3.0 (2018.1.29)
+  - Support for MSI login in both Virtual Machines and App Service
+  - Support authentication to Key Vault
+
 1.2.1 (2017.12.14)
   - Support for MSI login based on user assigned identity
 

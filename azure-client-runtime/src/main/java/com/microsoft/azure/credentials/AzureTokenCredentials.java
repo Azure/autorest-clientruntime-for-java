@@ -20,6 +20,7 @@ import java.net.Proxy;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * AzureTokenCredentials represents a credentials object with access to Azure
@@ -31,6 +32,7 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
     private String defaultSubscription;
 
     private Proxy proxy;
+    private SSLSocketFactory sslSocketFactory;
 
     /**
      * Initializes a new instance of the AzureTokenCredentials.
@@ -115,15 +117,26 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
     }
 
     /**
-     * Set the proxy used for accessing Active Directory.
-     * @param proxy the proxy to use
-     * @return the credential itself
+     * @return the ssl socket factory.
      */
-    public AzureTokenCredentials withProxy(Proxy proxy) {
-        this.proxy = proxy;
-        return this;
+    public SSLSocketFactory sslSocketFactory() {
+        return sslSocketFactory;
     }
 
+    /**
+     * @param proxy the proxy being used for accessing Active Directory.
+     */
+    public void setProxy(Proxy proxy) {
+        this.proxy = proxy;
+    }
+
+    /**
+     * @param sslSocketFactory the ssl socket factory.
+     */
+    public void setSslSocketFactory(SSLSocketFactory sslSocketFactory) {
+        this.sslSocketFactory = sslSocketFactory;
+    }
+    
     @Override
     public void applyCredentialsFilter(OkHttpClient.Builder clientBuilder) {
         clientBuilder.interceptors().add(new AzureTokenCredentialsInterceptor(this));

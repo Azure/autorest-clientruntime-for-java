@@ -213,7 +213,7 @@ public class NettyClientTests {
             System.out.println("reading body");
             response.bodyAsByteArrayAsync() //
                     .test() //
-                    .awaitDone(1, TimeUnit.SECONDS) //
+                    .awaitDone(20, TimeUnit.SECONDS) //
                     .assertError(IOException.class) //
                     .assertErrorMessage("channel inactive");
         } finally {

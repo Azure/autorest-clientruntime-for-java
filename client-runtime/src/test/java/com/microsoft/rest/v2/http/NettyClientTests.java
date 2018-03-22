@@ -264,7 +264,7 @@ public class NettyClientTests {
                 .get(0);
         t = System.currentTimeMillis() - t;
         System.out.println("totalBytesRead=" + numBytes / 1024 / 1024 + "MB in " + t / 1000.0 + "s");
-        assertTrue(numBytes > 0);
+        assertEquals(numRequests * LONG_BODY.getBytes(StandardCharsets.UTF_8).length, numBytes);
     }
 
     private static final class NumberedByteBuffer {

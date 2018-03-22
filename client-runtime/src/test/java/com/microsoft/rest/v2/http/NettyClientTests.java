@@ -223,6 +223,7 @@ public class NettyClientTests {
         long t = System.currentTimeMillis();
         int numRequests = 100; // 100 = 1GB of data read
         long timeoutSeconds = 60;
+        HttpClient client = HttpClient.createDefault();
         long numBytes = Flowable.range(1, numRequests) //
                 // Note that WireMock default threads for accepting connections is 10
                 // we start 10 different threads each of which will deal with the range
@@ -230,7 +231,7 @@ public class NettyClientTests {
                 .parallel(10) //
                 .runOn(Schedulers.io()) //
                 .flatMap(n -> Single //
-                        .fromCallable(() -> getResponse("/long")) //
+                        .fromCallable(() -> getResponse(client, "/long")) //
                         .flatMapPublisher(response -> response //
                                 .streamBodyAsync() //
                                 .map(bb -> new NumberedByteBuffer(n, bb))

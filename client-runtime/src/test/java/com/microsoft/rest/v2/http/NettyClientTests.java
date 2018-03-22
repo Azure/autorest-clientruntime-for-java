@@ -44,7 +44,7 @@ public class NettyClientTests {
 
     @BeforeClass
     public static void beforeClass() {
-        server = new WireMockServer(WireMockConfiguration.options().dynamicPort());
+        server = new WireMockServer(WireMockConfiguration.options().dynamicPort().disableRequestJournal());
         server.stubFor(
                 WireMock.get("/short").willReturn(WireMock.aResponse().withBody(SHORT_BODY)));
         server.stubFor(WireMock.get("/long").willReturn(WireMock.aResponse().withBody(LONG_BODY)));

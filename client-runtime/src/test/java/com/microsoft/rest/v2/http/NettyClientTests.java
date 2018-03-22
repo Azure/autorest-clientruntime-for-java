@@ -12,6 +12,8 @@ import java.net.Socket;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -20,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -219,11 +222,14 @@ public class NettyClientTests {
     }
     
     @Test
-    public void testConcurrentRequests() {
+    public void testConcurrentRequests() throws NoSuchAlgorithmException {
         long t = System.currentTimeMillis();
         int numRequests = 100; // 100 = 1GB of data read
         long timeoutSeconds = 60;
         HttpClient client = HttpClient.createDefault();
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        md.update(LONG_BODY.getBytes(StandardCharsets.UTF_8));
+        byte[] expectedDigest = md.digest();
         long numBytes = Flowable.range(1, numRequests) //
                 // Note that WireMock default threads for accepting connections is 10
                 // we start 10 different threads each of which will deal with the range
@@ -232,13 +238,20 @@ public class NettyClientTests {
                 .runOn(Schedulers.io()) //
                 .flatMap(n -> Single //
                         .fromCallable(() -> getResponse(client, "/long")) //
-                        .flatMapPublisher(response -> response //
-                                .streamBodyAsync() //
-                                .map(bb -> new NumberedByteBuffer(n, bb))
-                                .doOnComplete(() -> System.out.println("completed " + n))))
+                        .flatMapPublisher(response -> {
+                            MessageDigest md2 = MessageDigest.getInstance("MD5");
+                            return response //
+                                    .streamBodyAsync() //
+                                    .doOnNext(bb -> md2.update(bb)) //
+                                    .map(bb -> new NumberedByteBuffer(n, bb))
+                                    .doOnComplete(() -> System.out.println("completed " + n)) //
+                                    .doOnComplete(() -> Assert.assertArrayEquals("wrong digest!", expectedDigest,
+                                            md2.digest()));
+                        }))
                 .sequential() //
                 // enable the doOnNext call to see request numbers and thread names
-                // .doOnNext(g -> System.out.println(g.n + " " + Thread.currentThread().getName())) //
+                // .doOnNext(g -> System.out.println(g.n + " " +
+                // Thread.currentThread().getName())) //
                 .map(nbb -> (long) nbb.bb.limit()) //
                 .reduce((x, y) -> x + y) //
                 .subscribeOn(Schedulers.io()) //

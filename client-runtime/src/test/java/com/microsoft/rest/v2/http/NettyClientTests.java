@@ -227,9 +227,7 @@ public class NettyClientTests {
         int numRequests = 100; // 100 = 1GB of data read
         long timeoutSeconds = 60;
         HttpClient client = HttpClient.createDefault();
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        md.update(LONG_BODY.getBytes(StandardCharsets.UTF_8));
-        byte[] expectedDigest = md.digest();
+        byte[] expectedDigest = digest(LONG_BODY);
         long numBytes = Flowable.range(1, numRequests) //
                 // Note that WireMock default threads for accepting connections is 10
                 // we start 10 different threads each of which will deal with the range
@@ -239,14 +237,14 @@ public class NettyClientTests {
                 .flatMap(n -> Single //
                         .fromCallable(() -> getResponse(client, "/long")) //
                         .flatMapPublisher(response -> {
-                            MessageDigest md2 = MessageDigest.getInstance("MD5");
+                            MessageDigest md = MessageDigest.getInstance("MD5");
                             return response //
                                     .streamBodyAsync() //
-                                    .doOnNext(bb -> md2.update(bb)) //
+                                    .doOnNext(bb -> md.update(bb)) //
                                     .map(bb -> new NumberedByteBuffer(n, bb))
                                     .doOnComplete(() -> System.out.println("completed " + n)) //
                                     .doOnComplete(() -> Assert.assertArrayEquals("wrong digest!", expectedDigest,
-                                            md2.digest()));
+                                            md.digest()));
                         }))
                 .sequential() //
                 // enable the doOnNext call to see request numbers and thread names
@@ -265,6 +263,13 @@ public class NettyClientTests {
         t = System.currentTimeMillis() - t;
         System.out.println("totalBytesRead=" + numBytes / 1024 / 1024 + "MB in " + t / 1000.0 + "s");
         assertEquals(numRequests * LONG_BODY.getBytes(StandardCharsets.UTF_8).length, numBytes);
+    }
+
+    private static byte[] digest(String s) throws NoSuchAlgorithmException {
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        md.update(s.getBytes(StandardCharsets.UTF_8));
+        byte[] expectedDigest = md.digest();
+        return expectedDigest;
     }
 
     private static final class NumberedByteBuffer {

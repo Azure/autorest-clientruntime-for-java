@@ -1,6 +1,7 @@
 package com.microsoft.rest.v2.http;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -29,6 +30,8 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 
 import io.reactivex.Completable;
+import io.reactivex.Flowable;
+import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subscribers.TestSubscriber;
 
@@ -84,7 +87,7 @@ public class NettyClientTests {
 
     @Test
     public void testMultipleSubscriptionsEmitsError() {
-        HttpResponse response = makeRequest("/short");
+        HttpResponse response = getResponse("/short");
         response.bodyAsByteArrayAsync().blockingGet();
         // subscribe again
         response.bodyAsByteArrayAsync() //
@@ -96,7 +99,7 @@ public class NettyClientTests {
 
     @Test
     public void testCancel() throws InterruptedException {
-        HttpResponse response = makeRequest("/long");
+        HttpResponse response = getResponse("/long");
         TestSubscriber<ByteBuffer> ts = response.streamBodyAsync() //
                 .test(0) //
                 .requestMore(1) //
@@ -113,7 +116,7 @@ public class NettyClientTests {
 
     @Test
     public void testFlowableWhenServerReturnsBodyAndNoErrorsWhenHttp500Returned() {
-        HttpResponse response = makeRequest("/error");
+        HttpResponse response = getResponse("/error");
         response //
                 .bodyAsStringAsync() //
                 .test() //
@@ -125,7 +128,7 @@ public class NettyClientTests {
 
     @Test
     public void testFlowableBackpressure() {
-        HttpResponse response = makeRequest("/long");
+        HttpResponse response = getResponse("/long");
         response //
                 .streamBodyAsync() //
                 .test(0) //
@@ -138,12 +141,6 @@ public class NettyClientTests {
                 .awaitCount(4) //
                 .requestMore(Long.MAX_VALUE) //
                 .awaitDone(20, TimeUnit.SECONDS).assertComplete();
-    }
-
-    private HttpResponse makeRequest(String path) {
-        HttpClient client = HttpClient.createDefault();
-        HttpRequest request = new HttpRequest("", HttpMethod.GET, url(server, path), null);
-        return client.sendRequestAsync(request).blockingGet();
     }
 
     @Test
@@ -219,6 +216,60 @@ public class NettyClientTests {
         } finally {
             ss.close();
         }
+    }
+    
+    @Test
+    public void testConcurrentRequests() {
+        long t = System.currentTimeMillis();
+        int numRequests = 100; // 100 = 1GB of data read
+        long timeoutSeconds = 60;
+        long numBytes = Flowable.range(1, numRequests) //
+                // Note that WireMock default threads for accepting connections is 10
+                // we start 10 different threads each of which will deal with the range
+                // in round-robin fashion
+                .parallel(10) //
+                .runOn(Schedulers.io()) //
+                .flatMap(n -> Single //
+                        .fromCallable(() -> getResponse("/long")) //
+                        .flatMapPublisher(response -> response //
+                                .streamBodyAsync() //
+                                .map(bb -> new NumberedByteBuffer(n, bb))))
+                .sequential() //
+                // enable the doOnNext call to see request numbers and thread names
+                // .doOnNext(g -> System.out.println(g.n + " " + Thread.currentThread().getName())) //
+                .map(nbb -> (long) nbb.bb.limit()) //
+                .reduce((x, y) -> x + y) //
+                .subscribeOn(Schedulers.io()) //
+                .observeOn(Schedulers.io()) //
+                .test() //
+                .awaitDone(timeoutSeconds, TimeUnit.SECONDS) //
+                .assertComplete() //
+                .assertValueCount(1) //
+                .values() //
+                .get(0);
+        t = System.currentTimeMillis() - t;
+        System.out.println("totalBytesRead=" + numBytes / 1024 / 1024 + "MB in " + t / 1000.0 + "s");
+        assertTrue(numBytes > 0);
+    }
+
+    private static final class NumberedByteBuffer {
+        final long n;
+        final ByteBuffer bb;
+
+        NumberedByteBuffer(long n, ByteBuffer bb) {
+            this.n = n;
+            this.bb = bb;
+        }
+    }
+
+    private static HttpResponse getResponse(String path) {
+        HttpClient client = HttpClient.createDefault();
+        return getResponse(client, path);
+    }
+
+    private static HttpResponse getResponse(HttpClient client, String path) {
+        HttpRequest request = new HttpRequest("", HttpMethod.GET, url(server, path), null);
+        return client.sendRequestAsync(request).blockingGet();
     }
 
     @Test

@@ -77,7 +77,7 @@ public class NettyClientTests {
     private void checkBodyReceived(String expectedBody, String path) {
         HttpClient client = HttpClient.createDefault();
         HttpResponse response = doRequest(client, path);
-        String s = new String(response.bodyAsByteArrayAsync().blockingGet(),
+        String s = new String(response.bodyAsByteArray().blockingGet(),
                 StandardCharsets.UTF_8);
         assertEquals(expectedBody, s);
     }
@@ -91,9 +91,9 @@ public class NettyClientTests {
     @Test
     public void testMultipleSubscriptionsEmitsError() {
         HttpResponse response = getResponse("/short");
-        response.bodyAsByteArrayAsync().blockingGet();
+        response.bodyAsByteArray().blockingGet();
         // subscribe again
-        response.bodyAsByteArrayAsync() //
+        response.bodyAsByteArray() //
                 .test() //
                 .awaitDone(20, TimeUnit.SECONDS) //
                 .assertNoValues() //
@@ -103,7 +103,7 @@ public class NettyClientTests {
     @Test
     public void testCancel() throws InterruptedException {
         HttpResponse response = getResponse("/long");
-        TestSubscriber<ByteBuffer> ts = response.streamBodyAsync() //
+        TestSubscriber<ByteBuffer> ts = response.body() //
                 .test(0) //
                 .requestMore(1) //
                 .awaitCount(1) //
@@ -121,7 +121,7 @@ public class NettyClientTests {
     public void testFlowableWhenServerReturnsBodyAndNoErrorsWhenHttp500Returned() {
         HttpResponse response = getResponse("/error");
         response //
-                .bodyAsStringAsync() //
+                .bodyAsString() //
                 .test() //
                 .awaitDone(20, TimeUnit.SECONDS) //
                 .assertValues("error") //
@@ -133,7 +133,7 @@ public class NettyClientTests {
     public void testFlowableBackpressure() {
         HttpResponse response = getResponse("/long");
         response //
-                .streamBodyAsync() //
+                .body() //
                 .test(0) //
                 .assertValueCount(0) //
                 .assertNoErrors() //
@@ -211,7 +211,7 @@ public class NettyClientTests {
             HttpResponse response = client.sendRequestAsync(request).blockingGet();
             assertEquals(200, response.statusCode());
             System.out.println("reading body");
-            response.bodyAsByteArrayAsync() //
+            response.bodyAsByteArray() //
                     .test() //
                     .awaitDone(20, TimeUnit.SECONDS) //
                     .assertError(IOException.class) //
@@ -239,7 +239,7 @@ public class NettyClientTests {
                         .flatMapPublisher(response -> {
                             MessageDigest md = MessageDigest.getInstance("MD5");
                             return response //
-                                    .streamBodyAsync() //
+                                    .body() //
                                     .doOnNext(bb -> md.update(bb)) //
                                     .map(bb -> new NumberedByteBuffer(n, bb))
                                     .doOnComplete(() -> System.out.println("completed " + n)) //

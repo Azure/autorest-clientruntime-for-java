@@ -80,7 +80,7 @@ class NettyResponse extends HttpResponse {
     }
 
     @Override
-    public Single<byte[]> bodyAsByteArrayAsync() {
+    public Single<byte[]> bodyAsByteArray() {
         return collectContent().map(new Function<ByteBuf, byte[]>() {
             @Override
             public byte[] apply(ByteBuf byteBuf) throws Exception {
@@ -101,7 +101,7 @@ class NettyResponse extends HttpResponse {
     }
 
     @Override
-    public Flowable<ByteBuffer> streamBodyAsync() {
+    public Flowable<ByteBuffer> body() {
         return contentStream.map(new Function<ByteBuf, ByteBuffer>() {
             @Override
             public ByteBuffer apply(ByteBuf byteBuf) {
@@ -115,7 +115,7 @@ class NettyResponse extends HttpResponse {
     }
 
     @Override
-    public Single<String> bodyAsStringAsync() {
+    public Single<String> bodyAsString() {
         return collectContent().map(new Function<ByteBuf, String>() {
             @Override
             public String apply(ByteBuf byteBuf) throws Exception {

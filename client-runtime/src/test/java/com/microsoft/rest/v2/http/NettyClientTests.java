@@ -233,7 +233,8 @@ public class NettyClientTests {
                         .fromCallable(() -> getResponse("/long")) //
                         .flatMapPublisher(response -> response //
                                 .streamBodyAsync() //
-                                .map(bb -> new NumberedByteBuffer(n, bb))))
+                                .map(bb -> new NumberedByteBuffer(n, bb))
+                                .doOnComplete(() -> System.out.println("completed " + n))))
                 .sequential() //
                 // enable the doOnNext call to see request numbers and thread names
                 // .doOnNext(g -> System.out.println(g.n + " " + Thread.currentThread().getName())) //

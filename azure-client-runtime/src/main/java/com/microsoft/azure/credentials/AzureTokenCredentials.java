@@ -124,17 +124,21 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
     }
 
     /**
-     * @param proxy the proxy being used for accessing Active Directory.
+     * @param proxy the proxy being used for accessing Active Directory
+     * @return the credential itself
      */
-    public void setProxy(Proxy proxy) {
+    public AzureTokenCredentials withProxy(Proxy proxy) {
         this.proxy = proxy;
+        return this;
     }
 
     /**
-     * @param sslSocketFactory the ssl socket factory.
+     * @param sslSocketFactory the ssl socket factory
+     * @return the credential itself
      */
-    public void setSslSocketFactory(SSLSocketFactory sslSocketFactory) {
+    public AzureTokenCredentials withSslSocketFactory(SSLSocketFactory sslSocketFactory) {
         this.sslSocketFactory = sslSocketFactory;
+        return this;
     }
     
     @Override

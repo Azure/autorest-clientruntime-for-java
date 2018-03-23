@@ -210,24 +210,4 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
             throw new RuntimeException(e);
         }
     }
-
-     /**
-     * Set the proxy used for accessing Active Directory.
-     * @param proxy the proxy to use
-     * @return the credential itself
-     */
-    public ApplicationTokenCredentials withProxy(Proxy proxy) {
-        this.setProxy(proxy);
-        return this;
-    }
-        
-    /**
-     * Set the ssl socket factory used for accessing Active Directory.
-     * @param sslSocketFactory the SSLSocketFactory to use
-     * @return the credential itself
-     */
-    public ApplicationTokenCredentials withSSLSocketFactory(SSLSocketFactory sslSocketFactory) {
-        this.setSslSocketFactory(sslSocketFactory);
-        return this;
-    }
 }

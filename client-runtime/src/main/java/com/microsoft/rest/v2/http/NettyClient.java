@@ -229,18 +229,19 @@ public final class NettyClient extends HttpClient {
                         inboundHandler.httpResponseEmitted = false;
                         inboundHandler.responseEmitter = responseEmitter;
                         responseEmitter.setDisposable(new Disposable() {
-                            volatile boolean isDisposed = false;
+                            final AtomicBoolean disposed = new AtomicBoolean(false);
                             @Override
                             public void dispose() {
-                                isDisposed = true;
-                                if (!inboundHandler.httpResponseEmitted) {
-                                    channelPool.closeAndRelease(channel);
+                                if (disposed.compareAndSet(false, true)) {
+                                    if (!inboundHandler.httpResponseEmitted) {
+                                        channelPool.closeAndRelease(channel);
+                                    }
                                 }
                             }
 
                             @Override
                             public boolean isDisposed() {
-                                return isDisposed;
+                                return disposed.get();
                             }
                         });
 
@@ -370,7 +371,7 @@ public final class NettyClient extends HttpClient {
         // single producer, single consumer queue
         private final SimplePlainQueue<HttpContent> queue = new SpscLinkedArrayQueue<>(16);
         private final Subscription channelSubscription;
-        private final AtomicBoolean chunkRequested = new AtomicBoolean();
+        private final AtomicBoolean chunkRequested = new AtomicBoolean(true);
         private final AtomicLong requested = new AtomicLong();
         
         // work-in-progress counter
@@ -400,10 +401,14 @@ public final class NettyClient extends HttpClient {
         protected void subscribeActual(Subscriber<? super ByteBuf> s) {
             if (once.compareAndSet(false, true)) {
                 subscriber = s;
+                s.onSubscribe(this);
+
                 // now that subscriber has been set enable the drain loop
                 wip.lazySet(0);
-                
-                s.onSubscribe(this);
+
+                // we call drain because requests could have happened asynchronously before 
+                // wip was set to 0 (which enables the drain loop)
+                drain();
             } else {
                 s.onSubscribe(SubscriptionHelper.CANCELLED);
                 s.onError(new IllegalStateException(
@@ -454,6 +459,7 @@ public final class NettyClient extends HttpClient {
             chunkRequested.set(false);
             drain();
         }
+
 
         void onError(Throwable cause) {
             if (done) {

@@ -286,7 +286,7 @@ public final class NettyClient extends HttpClient {
                                             }
                                         });
                             } else {
-                                request.body().observeOn(Schedulers.from(channel.eventLoop())).subscribe(new FlowableSubscriber<ByteBuffer>() {
+                                request.body().subscribe(new FlowableSubscriber<ByteBuffer>() {
                                     Subscription subscription;
                                     @Override
                                     public void onSubscribe(Subscription s) {
@@ -305,9 +305,6 @@ public final class NettyClient extends HttpClient {
 
                                     @Override
                                     public void onNext(ByteBuffer buf) {
-                                        if (!channel.eventLoop().inEventLoop()) {
-                                            throw new IllegalStateException("onNext must be called from the event loop managing the channel.");
-                                        }
                                         try {
                                             channel.writeAndFlush(Unpooled.wrappedBuffer(buf))
                                                     .addListener(onChannelWriteComplete);

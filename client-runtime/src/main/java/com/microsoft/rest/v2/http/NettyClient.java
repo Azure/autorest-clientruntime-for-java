@@ -226,14 +226,14 @@ public final class NettyClient extends HttpClient {
                         }
 
                         // After this point, we're starting to send data, so if the Single<HttpResponse> gets canceled we need to close the channel.
-                        inboundHandler.didEmitHttpResponse = false;
+                        inboundHandler.httpResponseEmitted = false;
                         inboundHandler.responseEmitter = responseEmitter;
                         responseEmitter.setDisposable(new Disposable() {
-                            boolean isDisposed = false;
+                            volatile boolean isDisposed = false;
                             @Override
                             public void dispose() {
                                 isDisposed = true;
-                                if (!inboundHandler.didEmitHttpResponse) {
+                                if (!inboundHandler.httpResponseEmitted) {
                                     channelPool.closeAndRelease(channel);
                                 }
                             }
@@ -576,7 +576,7 @@ public final class NettyClient extends HttpClient {
         private ResponseContentFlowable contentEmitter;
         private Subscription requestContentSubscription;
         private final NettyAdapter adapter;
-        private boolean didEmitHttpResponse;
+        private volatile boolean httpResponseEmitted;
 
         private HttpClientInboundHandler(NettyAdapter adapter) {
             this.adapter = adapter;
@@ -637,7 +637,7 @@ public final class NettyClient extends HttpClient {
                 });
 
                 // Prevents channel from being closed when the Single<HttpResponse> is disposed
-                didEmitHttpResponse = true;
+                httpResponseEmitted = true;
 
                 //Scheduler scheduler = Schedulers.from(ctx.channel().eventLoop());
                 responseEmitter.onSuccess(

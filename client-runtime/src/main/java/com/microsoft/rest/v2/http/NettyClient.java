@@ -179,26 +179,12 @@ public final class NettyClient extends HttpClient {
         private Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request, final Proxy proxy) {
             final URI channelAddress;
             try {
-                if (proxy == null) {
-                    channelAddress = request.url().toURI();
-                } else if (proxy.address() instanceof InetSocketAddress) {
-                    InetSocketAddress address = (InetSocketAddress) proxy.address();
-                    String scheme = address.getPort() == 443
-                            ? "https"
-                            : "http";
-
-                    String channelAddressString = scheme + "://" + address.getHostString() + ":" + address.getPort();
-                    channelAddress = new URI(channelAddressString);
-                } else {
-                    throw new IllegalArgumentException(
-                            "SocketAddress on java.net.Proxy must be an InetSocketAddress. Found proxy: " + proxy);
-                }
-
-                request.withHeader(io.netty.handler.codec.http.HttpHeaderNames.HOST.toString(), request.url().getHost());
-                request.withHeader(io.netty.handler.codec.http.HttpHeaderNames.CONNECTION.toString(), io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE.toString());
+                channelAddress = getChannelAddress(request, proxy);
             } catch (URISyntaxException e) {
                 return Single.error(e);
             }
+            request.withHeader(io.netty.handler.codec.http.HttpHeaderNames.HOST.toString(), request.url().getHost());
+            request.withHeader(io.netty.handler.codec.http.HttpHeaderNames.CONNECTION.toString(), io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE.toString());
 
             // Creates cold observable from an emitter
             return Single.create((SingleEmitter<HttpResponse> responseEmitter) -> {
@@ -355,6 +341,23 @@ public final class NettyClient extends HttpClient {
                     return Single.error(throwable);
                 }
             });
+        }
+    }
+    
+    private static URI getChannelAddress(final HttpRequest request, final Proxy proxy) throws URISyntaxException {
+        if (proxy == null) {
+            return request.url().toURI();
+        } else if (proxy.address() instanceof InetSocketAddress) {
+            InetSocketAddress address = (InetSocketAddress) proxy.address();
+            String scheme = address.getPort() == 443
+                    ? "https"
+                    : "http";
+
+            String channelAddressString = scheme + "://" + address.getHostString() + ":" + address.getPort();
+            return new URI(channelAddressString);
+        } else {
+            throw new IllegalArgumentException(
+                    "SocketAddress on java.net.Proxy must be an InetSocketAddress. Found proxy: " + proxy);
         }
     }
 

@@ -579,6 +579,8 @@ public final class NettyClient extends HttpClient {
 
     private static final class HttpClientInboundHandler extends ChannelInboundHandlerAdapter {
         private SingleEmitter<HttpResponse> responseEmitter;
+        
+        //TODO does this need to be volatile
         private ResponseContentFlowable contentEmitter;
         private Subscription requestContentSubscription;
         private final NettyAdapter adapter;

@@ -192,9 +192,7 @@ public final class NettyClient extends HttpClient {
             } catch (URISyntaxException e) {
                 return Single.error(e);
             }
-            request.withHeader(io.netty.handler.codec.http.HttpHeaderNames.HOST.toString(), request.url().getHost())
-                    .withHeader(io.netty.handler.codec.http.HttpHeaderNames.CONNECTION.toString(),
-                            io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE.toString());
+            addHeaders(request);
 
             // Creates cold observable from an emitter
             return Single.create((SingleEmitter<HttpResponse> responseEmitter) -> {
@@ -204,13 +202,19 @@ public final class NettyClient extends HttpClient {
             }).onErrorResumeNext((Throwable throwable) -> {
                 if (throwable instanceof EncoderException) {
                     LoggerFactory.getLogger(getClass()).warn("Got EncoderException: " + throwable.getMessage());
+                    //TODO what is this, a retry? Should have a time delay? Max number of retries?
                     return sendRequestInternalAsync(request, proxy);
                 } else {
                     return Single.error(throwable);
                 }
             });
         }
-
+    }
+    
+    private static  void addHeaders(final HttpRequest request) {
+        request.withHeader(io.netty.handler.codec.http.HttpHeaderNames.HOST.toString(), request.url().getHost())
+                .withHeader(io.netty.handler.codec.http.HttpHeaderNames.CONNECTION.toString(),
+                        io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE.toString());
     }
 
     private static URI getChannelAddress(final HttpRequest request, final Proxy proxy) throws URISyntaxException {

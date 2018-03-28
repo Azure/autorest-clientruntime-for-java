@@ -786,7 +786,8 @@ public final class NettyClient extends HttpClient {
         // TODO does this need to be volatile
         private ResponseContentFlowable contentEmitter;
         private AcquisitionListener acquisitionListener;
-        private Subscription requestContentSubscription;
+        //TODO may not need to be volatile, depends on eventLoop involvement
+        private volatile Subscription requestContentSubscription;
         private final NettyAdapter adapter;
 
         private HttpClientInboundHandler(NettyAdapter adapter) {

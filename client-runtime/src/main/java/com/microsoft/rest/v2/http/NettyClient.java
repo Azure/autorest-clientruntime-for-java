@@ -275,8 +275,6 @@ public final class NettyClient extends HttpClient {
                 if (transition(s, ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
                     channelPool.closeAndRelease(channel);
                     return;
-                } else if (transition(s, CHANNEL_RELEASED, CHANNEL_RELEASED)) {
-                    return;
                 } else if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRED_CONTENT_NOT_SUBSCRIBED)) {
                     break;
                 } else if (state.compareAndSet(s,  s)) {

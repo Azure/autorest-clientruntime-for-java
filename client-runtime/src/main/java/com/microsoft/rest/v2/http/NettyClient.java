@@ -299,77 +299,81 @@ public final class NettyClient extends HttpClient {
                 if (request.body() == null) {
                     writeBodyEnd();
                 } else {
-                    request.body().subscribe(createSubscriber(inboundHandler));
+                    request.body().subscribe(new RequestSubscriber(inboundHandler));
                 }
             } catch (Exception e) {
                 emitError(e);
             }
         }
+        
+        private final class RequestSubscriber implements FlowableSubscriber<ByteBuffer> {
+            Subscription subscription;
+            
+            // we need a done flag because an onNext emission can throw and emit an Error 
+            // event though the onNext cancels the subscription that is best endeavours for the 
+            // upstream so we need to be defensive about terminal events that follow
+            private boolean done;
 
-        private FlowableSubscriber<ByteBuffer> createSubscriber(final HttpClientInboundHandler inboundHandler) {
-            return new FlowableSubscriber<ByteBuffer>() {
-                Subscription subscription;
-                
-                // we need a done flag because an onNext emission can throw and emit an Error 
-                // event though the onNext cancels the subscription that is best endeavours for the 
-                // upstream so we need to be defensive about terminal events that follow
-                private boolean done;
-                
-                @Override
-                public void onSubscribe(Subscription s) {
-                    subscription = s;
-                    inboundHandler.requestContentSubscription = subscription;
-                    subscription.request(1);
-                }
+            private final HttpClientInboundHandler inboundHandler;
+            
+            public RequestSubscriber(HttpClientInboundHandler inboundHandler) {
+                this.inboundHandler = inboundHandler;
+            }
 
-                GenericFutureListener<Future<Void>> onChannelWriteComplete = (Future<Void> future) -> {
-                    if (!future.isSuccess()) {
-                        subscription.cancel();
-                        emitError(future.cause());
-                    }
-                };
+            @Override
+            public void onSubscribe(Subscription s) {
+                subscription = s;
+                inboundHandler.requestContentSubscription = subscription;
+                subscription.request(1);
+            }
 
-                @Override
-                public void onNext(ByteBuffer buf) {
-                    if (done) {
-                        return;
-                    }
-                    try {
-                        channel
-                            .writeAndFlush(Unpooled.wrappedBuffer(buf))
-                            .addListener(onChannelWriteComplete);
-
-                        if (channel.isWritable()) {
-                            subscription.request(1);
-                        }
-                    } catch (Exception e) {
-                        subscription.cancel();
-                        onError(e);
-                    }
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    if (done) {
-                        return;
-                    }
-                    done = true;
-                    emitError(t);
-                }
-
-                @Override
-                public void onComplete() {
-                    if (done) {
-                        return;
-                    }
-                    done = true;
-                    try {
-                        writeBodyEnd();
-                    } catch (Exception e) {
-                        emitError(e);
-                    }
+            GenericFutureListener<Future<Void>> onChannelWriteComplete = (Future<Void> future) -> {
+                if (!future.isSuccess()) {
+                    subscription.cancel();
+                    emitError(future.cause());
                 }
             };
+
+            @Override
+            public void onNext(ByteBuffer buf) {
+                if (done) {
+                    return;
+                }
+                try {
+                    channel
+                        .writeAndFlush(Unpooled.wrappedBuffer(buf))
+                        .addListener(onChannelWriteComplete);
+
+                    if (channel.isWritable()) {
+                        subscription.request(1);
+                    }
+                } catch (Exception e) {
+                    subscription.cancel();
+                    onError(e);
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                if (done) {
+                    return;
+                }
+                done = true;
+                emitError(t);
+            }
+
+            @Override
+            public void onComplete() {
+                if (done) {
+                    return;
+                }
+                done = true;
+                try {
+                    writeBodyEnd();
+                } catch (Exception e) {
+                    emitError(e);
+                }
+            }
         }
 
         private void writeRequest(final DefaultHttpRequest raw) {
@@ -547,6 +551,7 @@ public final class NettyClient extends HttpClient {
         }
         return raw;
     }
+    
 
     /**
      * Emits HTTP response content from Netty.

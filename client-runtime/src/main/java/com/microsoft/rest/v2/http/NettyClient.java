@@ -277,17 +277,17 @@ public final class NettyClient extends HttpClient {
                 } else if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRED_CONTENT_NOT_SUBSCRIBED)) {
                     break;
                 } else if (state.compareAndSet(s,  s)) {
-                    break;
+                    return;
                 }
             }
             
-            final HttpClientInboundHandler inboundHandler = channel.pipeline().get(HttpClientInboundHandler.class);
+            final HttpClientInboundHandler inboundHandler = 
+                    channel.pipeline().get(HttpClientInboundHandler.class);
             inboundHandler.responseEmitter = responseEmitter;
             inboundHandler.acquisitionListener = this;
             //TODO do we need a memory barrier here to ensure vis of responseEmitter in other threads?
             
             responseEmitter.setDisposable(createDisposable());
-
             
             try {
                 configurePipeline(channel, request);
@@ -335,7 +335,9 @@ public final class NettyClient extends HttpClient {
                         return;
                     }
                     try {
-                        channel.writeAndFlush(Unpooled.wrappedBuffer(buf)).addListener(onChannelWriteComplete);
+                        channel
+                            .writeAndFlush(Unpooled.wrappedBuffer(buf))
+                            .addListener(onChannelWriteComplete);
 
                         if (channel.isWritable()) {
                             subscription.request(1);

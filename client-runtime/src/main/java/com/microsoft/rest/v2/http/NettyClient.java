@@ -285,8 +285,7 @@ public final class NettyClient extends HttpClient {
             
             final HttpClientInboundHandler inboundHandler = 
                     channel.pipeline().get(HttpClientInboundHandler.class);
-            inboundHandler.responseEmitter = responseEmitter;
-            inboundHandler.acquisitionListener = this;
+            inboundHandler.setFields(responseEmitter, this, channel);
             //TODO do we need a memory barrier here to ensure vis of responseEmitter in other threads?
             
             responseEmitter.setDisposable(createDisposable());
@@ -423,7 +422,12 @@ public final class NettyClient extends HttpClient {
         
         private boolean transition(int s, int from, int to) {
             if (s == from) {
-                return state.compareAndSet(s, to);
+                if (state.compareAndSet(s, to) ) {
+                    System.out.println("transition "+ from + "->" + to);
+                    return true;
+                } else {
+                    return false;
+                }
             } else {
                 return false;
             }
@@ -431,7 +435,7 @@ public final class NettyClient extends HttpClient {
 
         void emitError(Throwable throwable) {
 //            System.out.println("emitting error " + throwable.getMessage());
-            throwable.printStackTrace();
+//            throwable.printStackTrace();
             while (true) {
                 int s = state.get();
                 if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
@@ -781,6 +785,28 @@ public final class NettyClient extends HttpClient {
         }
 
     }
+    
+    private static final class ChannelSubscription implements Subscription {
+        
+        private final Channel channel;
+        private final AcquisitionListener acquisitionListener;
+        
+        ChannelSubscription(Channel channel, AcquisitionListener acquisitionListener) {
+            this.channel = channel;
+            this.acquisitionListener = acquisitionListener;
+        }
+        
+        @Override
+        public void request(long n) {
+            Preconditions.checkArgument(n == 1, "requests must be one at a time!");
+            channel.read();
+        }
+
+        @Override
+        public void cancel() {
+            acquisitionListener.contentDone();
+        }
+    }
 
     private static final class HttpClientInboundHandler extends ChannelInboundHandlerAdapter {
         private SingleEmitter<HttpResponse> responseEmitter;
@@ -791,26 +817,27 @@ public final class NettyClient extends HttpClient {
         //TODO may not need to be volatile, depends on eventLoop involvement
         private volatile Subscription requestContentSubscription;
         private final NettyAdapter adapter;
-
+        
         private HttpClientInboundHandler(NettyAdapter adapter) {
             this.adapter = adapter;
+        }
+        
+        void setFields(SingleEmitter<HttpResponse> responseEmitter, AcquisitionListener acquisitionListener, Channel channel) {
+            // this will be called before request has been initiated
+            this.responseEmitter = responseEmitter;
+            this.acquisitionListener = acquisitionListener;
+            this.contentEmitter = new ResponseContentFlowable(
+                    acquisitionListener, new ChannelSubscription(channel, acquisitionListener));
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            adapter.channelPool.release(ctx.channel());
-            if (contentEmitter != null) {
-                contentEmitter.onError(cause);
-            } else {
-                acquisitionListener.emitError(cause);
-            }
+            acquisitionListener.emitError(cause);
         }
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            if (contentEmitter != null) {
-                contentEmitter.chunkCompleted();
-            }
+            contentEmitter.chunkCompleted();
         }
 
         @Override
@@ -830,25 +857,6 @@ public final class NettyClient extends HttpClient {
                     exceptionCaught(ctx, response.decoderResult().cause());
                     return;
                 }
-
-                contentEmitter = new ResponseContentFlowable(acquisitionListener, new Subscription() {
-                    @Override
-                    public void request(long n) {
-                        Preconditions.checkArgument(n == 1, "requests must be one at a time!");
-                        ctx.channel().read();
-                    }
-
-                    @Override
-                    public void cancel() {
-                        ctx.channel().eventLoop().execute(() -> {
-                            if (contentEmitter != null) {
-                                adapter.channelPool.closeAndRelease(ctx.channel());
-                                contentEmitter = null;
-                            }
-                        });
-                    }
-                });
-
                 // Scheduler scheduler = Schedulers.from(ctx.channel().eventLoop());
                 responseEmitter.onSuccess(new NettyResponse(response, contentEmitter));
             }
@@ -864,14 +872,15 @@ public final class NettyClient extends HttpClient {
 
             if (msg instanceof LastHttpContent) {
                 contentEmitter = null;
-                adapter.channelPool.release(ctx.channel());
+                acquisitionListener.contentDone();
             }
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            if (contentEmitter != null) {
-                contentEmitter.channelInactive();
+            ResponseContentFlowable ce = contentEmitter;
+            if (ce != null) {
+                ce.channelInactive();
             }
             super.channelInactive(ctx);
         }

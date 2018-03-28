@@ -17,7 +17,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -60,7 +59,6 @@ import io.reactivex.internal.queue.SpscLinkedArrayQueue;
 import io.reactivex.internal.subscriptions.SubscriptionHelper;
 import io.reactivex.internal.util.BackpressureHelper;
 import io.reactivex.plugins.RxJavaPlugins;
-import io.reactivex.schedulers.Schedulers;
 
 /**
  * An HttpClient that is implemented using Netty.
@@ -238,9 +236,9 @@ public final class NettyClient extends HttpClient {
         private final SharedChannelPool channelPool;
         private final HttpRequest request;
         private final SingleEmitter<HttpResponse> responseEmitter;
-        private final AtomicInteger state = new AtomicInteger(ACQUIRING_CONTENT_NOT_SUBSCRIBED);
+        private final AtomicInteger state = new AtomicInteger(ACQUIRING_NOT_DISPOSED);
 
-        private static final int ACQUIRING_CONTENT_NOT_SUBSCRIBED = 0;
+        private static final int ACQUIRING_NOT_DISPOSED = 0;
         private static final int ACQUIRING_DISPOSED = 1;
         // ACQUIRING_CONTENT_SUBSCRIBED = 1; is not possible
         private static final int ACQUIRED_CONTENT_NOT_SUBSCRIBED = 2;
@@ -265,17 +263,18 @@ public final class NettyClient extends HttpClient {
         @Override
         public void operationComplete(Future<? super Channel> cf) {
             if (!cf.isSuccess()) {
-                emitErrorIfSubscribed(cf.cause());
+                emitError(cf.cause());
                 return;
             }
-
             channel = (Channel) cf.getNow();
             while (true) {
                 int s = state.get();
                 if (transition(s, ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
                     channelPool.closeAndRelease(channel);
                     return;
-                } else if (transition(s, ACQUIRING_CONTENT_NOT_SUBSCRIBED, ACQUIRED_CONTENT_NOT_SUBSCRIBED)) {
+                } else if (transition(s, CHANNEL_RELEASED, CHANNEL_RELEASED)) {
+                    return;
+                } else if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRED_CONTENT_NOT_SUBSCRIBED)) {
                     break;
                 } else if (state.compareAndSet(s,  s)) {
                     break;
@@ -288,27 +287,33 @@ public final class NettyClient extends HttpClient {
             
             responseEmitter.setDisposable(createDisposable());
 
-            configurePipeline(channel, request);
-
-            final DefaultHttpRequest raw = createDefaultHttpRequest(request);
-
+            
             try {
+                configurePipeline(channel, request);
+
+                final DefaultHttpRequest raw = createDefaultHttpRequest(request);
+
                 writeRequest(raw);
 
                 if (request.body() == null) {
-                    writeEmptyBody();
+                    writeBodyEnd();
                 } else {
                     request.body().subscribe(createSubscriber(inboundHandler));
                 }
             } catch (Exception e) {
-                emitErrorIfSubscribed(e);
+                emitError(e);
             }
         }
 
         private FlowableSubscriber<ByteBuffer> createSubscriber(final HttpClientInboundHandler inboundHandler) {
             return new FlowableSubscriber<ByteBuffer>() {
                 Subscription subscription;
-
+                
+                // we need a done flag because an onNext emission can throw and emit an Error 
+                // event though the onNext cancels the subscription that is best endeavours for the 
+                // upstream so we need to be defensive about terminal events that follow
+                private boolean done;
+                
                 @Override
                 public void onSubscribe(Subscription s) {
                     subscription = s;
@@ -319,13 +324,15 @@ public final class NettyClient extends HttpClient {
                 GenericFutureListener<Future<Void>> onChannelWriteComplete = (Future<Void> future) -> {
                     if (!future.isSuccess()) {
                         subscription.cancel();
-                        channelPool.closeAndRelease(channel);
-                        emitErrorIfSubscribed(future.cause());
+                        emitError(future.cause());
                     }
                 };
 
                 @Override
                 public void onNext(ByteBuffer buf) {
+                    if (done) {
+                        return;
+                    }
                     try {
                         channel.writeAndFlush(Unpooled.wrappedBuffer(buf)).addListener(onChannelWriteComplete);
 
@@ -334,54 +341,56 @@ public final class NettyClient extends HttpClient {
                         }
                     } catch (Exception e) {
                         subscription.cancel();
-                        emitErrorIfSubscribed(e);
+                        onError(e);
                     }
                 }
 
                 @Override
                 public void onError(Throwable t) {
-                    channelPool.closeAndRelease(channel);
-                    emitErrorIfSubscribed(t);
+                    if (done) {
+                        return;
+                    }
+                    done = true;
+                    emitError(t);
                 }
 
                 @Override
                 public void onComplete() {
+                    if (done) {
+                        return;
+                    }
+                    done = true;
                     try {
-                        channel.writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT)
-                                .addListener((Future<Void> future) -> {
-                                    if (!future.isSuccess()) {
-                                        channelPool.closeAndRelease(channel);
-                                        emitErrorIfSubscribed(future.cause());
-                                    } else {
-                                        channel.read();
-                                    }
-                                });
+                        writeBodyEnd();
                     } catch (Exception e) {
-                        emitErrorIfSubscribed(e);
+                        emitError(e);
                     }
                 }
             };
         }
 
-        private void writeEmptyBody() {
-            channel.writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT)
+        private void writeRequest(final DefaultHttpRequest raw) {
+            channel //
+                    .write(raw) //
                     .addListener((Future<Void> future) -> {
-                        if (future.isSuccess()) {
-                            channel.read();
-                        } else {
-                            channelPool.closeAndRelease(channel);
-                            emitErrorIfSubscribed(future.cause());
+                        if (!future.isSuccess()) {
+                            emitError(future.cause());
                         }
                     });
         }
 
-        private void writeRequest(final DefaultHttpRequest raw) {
-            channel.write(raw).addListener((Future<Void> future) -> {
-                if (!future.isSuccess()) {
-                    dispose();
-                    emitErrorIfSubscribed(future.cause());
-                }
-            });
+        private void writeBodyEnd() {
+            channel //
+                    .writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT) //
+                    .addListener((Future<Void> future) -> {
+                        if (future.isSuccess()) {
+                            // reads the response status code and headers and may also read some of the
+                            // response body which will be buffered in ResponseContentFlowable
+                            channel.read();
+                        } else {
+                            emitError(future.cause());
+                        }
+                    });
         }
 
         private Disposable createDisposable() {
@@ -415,9 +424,22 @@ public final class NettyClient extends HttpClient {
             }
         }
 
-        private void emitErrorIfSubscribed(Throwable throwable) {
-            if (!responseEmitter.isDisposed()) {
-                responseEmitter.onError(throwable);
+        void emitError(Throwable throwable) {
+            while (true) {
+                int s = state.get();
+                if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
+                    responseEmitter.onError(throwable);
+                    break;
+                } else if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
+                    content.onError(throwable);
+                    break;
+                } else if (transition(s, ACQUIRED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
+                    closeAndReleaseChannel();
+                    responseEmitter.onError(throwable);
+                    break;
+                } else if (state.compareAndSet(s, s)) {
+                    break;
+                }
             }
         }
         
@@ -448,29 +470,14 @@ public final class NettyClient extends HttpClient {
         void contentDone() {
             while (true) {
                 int s = state.get();
-                if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_CONTENT_DONE)) {
-                    //TODO is this valid? Even though we have received a complete ok response
-                    // from the request it is still possible that the request has not finished! Perhaps we should wait for the request to finish writing?
-                    channelPool.closeAndRelease(channel);
-                }
-            }
-        }
-
-        @Override
-        public void dispose() {
-            while (true) {
-                int s = state.get();
-                if (transition(s, ACQUIRING_CONTENT_NOT_SUBSCRIBED, ACQUIRING_DISPOSED)) {
-                    // haven't got the channel to be able to release it yet
-                    // but check in operationComplete will release it
+                if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
+                    // Even though we have received a complete ok response
+                    // from the request it is still possible that the request has not finished! 
+                    // Rikki Gibson 
+                    closeAndReleaseChannel();
                     return;
-                } else if (transition(s, ACQUIRED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
-                    channelPool.closeAndRelease(channel);
-                    return;
-                } else if (transition(s, ACQUIRED_CONTENT_DONE, CHANNEL_RELEASED)) {
-                    channelPool.closeAndRelease(channel);
-                    return;
-                } else if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
+                } else if (transition(s, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
+                    closeAndReleaseChannel();
                     return;
                 } else if (state.compareAndSet(s, s)) {
                     return;
@@ -479,9 +486,36 @@ public final class NettyClient extends HttpClient {
         }
 
         @Override
+        public void dispose() {
+            while (true) {
+                int s = state.get();
+                if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
+                    // haven't got the channel to be able to release it yet
+                    // but check in operationComplete will release it
+                    return;
+                } else if (transition(s, ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
+                    closeAndReleaseChannel();
+                    return;
+                } else if (transition(s, ACQUIRED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
+                    closeAndReleaseChannel();
+                    return;
+                } else if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
+                    return;
+                } else if (state.compareAndSet(s, s)) {
+                    return;
+                }
+            }
+        }
+        
+        private void closeAndReleaseChannel() {
+            channelPool.closeAndRelease(channel);
+        }
+
+        @Override
         public boolean isDisposed() {
             return state.get() == CHANNEL_RELEASED;
         }
+
     }
 
     private static void configurePipeline(Channel channel, HttpRequest request) {
@@ -552,7 +586,7 @@ public final class NettyClient extends HttpClient {
                 subscriber = s;
                 s.onSubscribe(this);
 
-                acquisitionListener.contentSubscribed(this);
+                acquisitionListener.contentSubscribed(this); 
                 
                 // now that subscriber has been set enable the drain loop
                 wip.lazySet(0);
@@ -756,9 +790,7 @@ public final class NettyClient extends HttpClient {
             if (contentEmitter != null) {
                 contentEmitter.onError(cause);
             } else {
-                if (responseEmitter != null && !responseEmitter.isDisposed()) {
-                responseEmitter.onError(cause);
-            }
+                acquisitionListener.emitError(cause);
             }
         }
 
@@ -774,7 +806,6 @@ public final class NettyClient extends HttpClient {
             if (ctx.channel().isWritable()) {
                 requestContentSubscription.request(1);
             }
-
             super.channelWritabilityChanged(ctx);
         }
 

@@ -18,7 +18,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Proxy;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -34,7 +33,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.net.ssl.SSLSocketFactory;
 
 /**
  * Token based credentials for use with a REST Service Client.
@@ -209,25 +207,5 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
         } catch (CertificateException e) {
             throw new RuntimeException(e);
         }
-    }
-
-     /**
-     * Set the proxy used for accessing Active Directory.
-     * @param proxy the proxy to use
-     * @return the credential itself
-     */
-    public ApplicationTokenCredentials withProxy(Proxy proxy) {
-        this.setProxy(proxy);
-        return this;
-    }
-        
-    /**
-     * Set the ssl socket factory used for accessing Active Directory.
-     * @param sslSocketFactory the SSLSocketFactory to use
-     * @return the credential itself
-     */
-    public ApplicationTokenCredentials withSSLSocketFactory(SSLSocketFactory sslSocketFactory) {
-        this.setSslSocketFactory(sslSocketFactory);
-        return this;
     }
 }

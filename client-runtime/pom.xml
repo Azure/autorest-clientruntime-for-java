@@ -5,17 +5,18 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.microsoft.rest</groupId>
+
   <parent>
     <groupId>com.microsoft.azure</groupId>
     <artifactId>autorest-clientruntime-for-java</artifactId>
-    <version>1.3.1-SNAPSHOT</version>
+    <version>1.3.2-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <groupId>com.microsoft.rest</groupId>
   <artifactId>client-runtime</artifactId>
   <packaging>jar</packaging>
-
   <name>Java Client Runtime for AutoRest</name>
   <description>This package contains the basic runtime for AutoRest generated Java clients.</description>
   <url>https://github.com/Azure/autorest-clientruntime-for-java</url>

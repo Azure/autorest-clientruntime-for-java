@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -46,7 +47,6 @@ import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.flow.FlowControlHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -286,7 +286,7 @@ public final class NettyClient extends HttpClient {
             
             final HttpClientInboundHandler inboundHandler = 
                     channel.pipeline().get(HttpClientInboundHandler.class);
-            inboundHandler.setFields(responseEmitter, this, channel);
+            inboundHandler.setFields(responseEmitter, this);
             //TODO do we need a memory barrier here to ensure vis of responseEmitter in other threads?
             
             responseEmitter.setDisposable(createDisposable());
@@ -778,15 +778,14 @@ public final class NettyClient extends HttpClient {
                 c.release();
             }
         }
-
     }
     
     private static final class ChannelSubscription implements Subscription {
         
-        private final Channel channel;
+        private final AtomicReference<Channel> channel;
         private final AcquisitionListener acquisitionListener;
         
-        ChannelSubscription(Channel channel, AcquisitionListener acquisitionListener) {
+        ChannelSubscription(AtomicReference<Channel> channel, AcquisitionListener acquisitionListener) {
             this.channel = channel;
             this.acquisitionListener = acquisitionListener;
         }
@@ -794,7 +793,10 @@ public final class NettyClient extends HttpClient {
         @Override
         public void request(long n) {
             Preconditions.checkArgument(n == 1, "requests must be one at a time!");
-            channel.read();
+            Channel c = channel.get();
+            if (c!=null) {
+                c.read();
+            }
         }
 
         @Override
@@ -811,18 +813,23 @@ public final class NettyClient extends HttpClient {
         private AcquisitionListener acquisitionListener;
         //TODO may not need to be volatile, depends on eventLoop involvement
         private volatile Subscription requestContentSubscription;
-        boolean hasRead;
-        FlowControlHandler f;
+
+        private AtomicReference<Channel> channel = new AtomicReference<Channel>();
         
         HttpClientInboundHandler() {
         }
         
-        void setFields(SingleEmitter<HttpResponse> responseEmitter, AcquisitionListener acquisitionListener, Channel channel) {
+        void setFields(SingleEmitter<HttpResponse> responseEmitter, AcquisitionListener acquisitionListener) {
             // this will be called before request has been initiated
             this.responseEmitter = responseEmitter;
             this.acquisitionListener = acquisitionListener;
             this.contentEmitter = new ResponseContentFlowable(
                     acquisitionListener, new ChannelSubscription(channel, acquisitionListener));
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            channel.set(ctx.channel());
         }
 
         @Override
@@ -832,10 +839,6 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            if (!hasRead) {
-                System.out.println("huh!");
-            }
-            hasRead = false;
             contentEmitter.chunkCompleted();
         }
 
@@ -850,7 +853,6 @@ public final class NettyClient extends HttpClient {
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof io.netty.handler.codec.http.HttpResponse) {
-                hasRead = true;
                 io.netty.handler.codec.http.HttpResponse response = (io.netty.handler.codec.http.HttpResponse) msg;
 
                 if (response.decoderResult().isFailure()) {
@@ -870,6 +872,9 @@ public final class NettyClient extends HttpClient {
 
             if (msg instanceof LastHttpContent) {
                 acquisitionListener.contentDone();
+            } else {
+                // TODO Don't do this because doesn't respect backpressure
+                ctx.channel().read();
             }
         }
 

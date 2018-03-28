@@ -244,7 +244,7 @@ public final class NettyClient extends HttpClient {
         private static final int ACQUIRED_CONTENT_NOT_SUBSCRIBED = 2;
         private static final int ACQUIRED_CONTENT_SUBSCRIBED = 3;
         private static final int ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED = 4;
-        private static final int ACQUIRED_CONTENT_DONE = 5;
+        private static final int ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED = 5;
         private static final int CHANNEL_RELEASED = 6;
 
         // synchronized by `state`
@@ -283,6 +283,7 @@ public final class NettyClient extends HttpClient {
             
             final HttpClientInboundHandler inboundHandler = channel.pipeline().get(HttpClientInboundHandler.class);
             inboundHandler.responseEmitter = responseEmitter;
+            inboundHandler.acquisitionListener = this;
             //TODO do we need a memory barrier here to ensure vis of responseEmitter in other threads?
             
             responseEmitter.setDisposable(createDisposable());
@@ -415,6 +416,7 @@ public final class NettyClient extends HttpClient {
         private boolean transition(int s, int from, int to) {
             if (s == from) {
                 if (state.compareAndSet(s, to)) {
+//                    System.out.println("transited from " + from + " to " + to);
                     return true;
                 } else {
                     return false;
@@ -425,6 +427,8 @@ public final class NettyClient extends HttpClient {
         }
 
         void emitError(Throwable throwable) {
+//            System.out.println("emitting error " + throwable.getMessage());
+            throwable.printStackTrace();
             while (true) {
                 int s = state.get();
                 if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
@@ -457,6 +461,9 @@ public final class NettyClient extends HttpClient {
                 if (transition(s, ACQUIRED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_CONTENT_SUBSCRIBED)) {
                     this.content = content;
                     return true;
+                } else if (transition(s, ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
+                    this.content = content;
+                    return true;
                 } else if (state.compareAndSet(s, s)) {
                     return false;
                 }
@@ -487,6 +494,7 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void dispose() {
+//            System.out.println("disposed");
             while (true) {
                 int s = state.get();
                 if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
@@ -496,8 +504,7 @@ public final class NettyClient extends HttpClient {
                 } else if (transition(s, ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
                     closeAndReleaseChannel();
                     return;
-                } else if (transition(s, ACQUIRED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
-                    closeAndReleaseChannel();
+                } else if (transition(s, ACQUIRED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED)) {
                     return;
                 } else if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
                     return;

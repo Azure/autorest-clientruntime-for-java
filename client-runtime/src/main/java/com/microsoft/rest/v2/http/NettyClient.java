@@ -415,12 +415,7 @@ public final class NettyClient extends HttpClient {
         
         private boolean transition(int s, int from, int to) {
             if (s == from) {
-                if (state.compareAndSet(s, to)) {
-//                    System.out.println("transited from " + from + " to " + to);
-                    return true;
-                } else {
-                    return false;
-                }
+                return state.compareAndSet(s, to);
             } else {
                 return false;
             }

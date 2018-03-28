@@ -323,6 +323,7 @@ public class RestProxyStressTests {
      */
     @Test
     public void download100MParallelTest() {
+        while (true) {
         final String sas = System.getenv("JAVA_SDK_TEST_SAS") == null ? "" : System.getenv("JAVA_SDK_TEST_SAS");
 
         List<byte[]> md5s = Flowable.range(0, NUM_FILES)
@@ -353,6 +354,7 @@ public class RestProxyStressTests {
         assertTrue(result);
         long durationMilliseconds = Duration.between(downloadStart, Instant.now()).toMillis();
         LoggerFactory.getLogger(getClass()).info("Download took " + durationMilliseconds + " milliseconds.");
+        }
     }
 
     @Test

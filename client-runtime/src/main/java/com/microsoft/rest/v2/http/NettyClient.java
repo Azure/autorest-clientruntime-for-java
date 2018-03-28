@@ -46,6 +46,7 @@ import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.flow.FlowControlHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -166,7 +167,7 @@ public final class NettyClient extends HttpClient {
                 public void channelCreated(Channel ch) throws Exception {
                     ch.pipeline().addLast("HttpResponseDecoder", new HttpResponseDecoder());
                     ch.pipeline().addLast("HttpRequestEncoder", new HttpRequestEncoder());
-                    ch.pipeline().addLast("HttpClientInboundHandler", new HttpClientInboundHandler(adapter));
+                    ch.pipeline().addLast("HttpClientInboundHandler", new HttpClientInboundHandler());
                 }
             }, poolSize);
         }
@@ -422,12 +423,7 @@ public final class NettyClient extends HttpClient {
         
         private boolean transition(int s, int from, int to) {
             if (s == from) {
-                if (state.compareAndSet(s, to) ) {
-                    System.out.println("transition "+ from + "->" + to);
-                    return true;
-                } else {
-                    return false;
-                }
+                return state.compareAndSet(s, to);
             } else {
                 return false;
             }
@@ -652,7 +648,6 @@ public final class NettyClient extends HttpClient {
 
         void chunkCompleted() {
             if (done) {
-                RxJavaPlugins.onError(new IllegalStateException("chunk completion event occurred after done is true"));
                 return;
             }
             chunkRequested.set(false);
@@ -812,14 +807,14 @@ public final class NettyClient extends HttpClient {
         private SingleEmitter<HttpResponse> responseEmitter;
 
         // TODO does this need to be volatile
-        private ResponseContentFlowable contentEmitter;
+        private volatile ResponseContentFlowable contentEmitter;
         private AcquisitionListener acquisitionListener;
         //TODO may not need to be volatile, depends on eventLoop involvement
         private volatile Subscription requestContentSubscription;
-        private final NettyAdapter adapter;
+        boolean hasRead;
+        FlowControlHandler f;
         
-        private HttpClientInboundHandler(NettyAdapter adapter) {
-            this.adapter = adapter;
+        HttpClientInboundHandler() {
         }
         
         void setFields(SingleEmitter<HttpResponse> responseEmitter, AcquisitionListener acquisitionListener, Channel channel) {
@@ -837,6 +832,10 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            if (!hasRead) {
+                System.out.println("huh!");
+            }
+            hasRead = false;
             contentEmitter.chunkCompleted();
         }
 
@@ -851,6 +850,7 @@ public final class NettyClient extends HttpClient {
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof io.netty.handler.codec.http.HttpResponse) {
+                hasRead = true;
                 io.netty.handler.codec.http.HttpResponse response = (io.netty.handler.codec.http.HttpResponse) msg;
 
                 if (response.decoderResult().isFailure()) {
@@ -865,23 +865,17 @@ public final class NettyClient extends HttpClient {
                 HttpContent content = (HttpContent) msg;
 
                 // channelRead can still come through even after a Subscription.cancel event
-                if (contentEmitter != null) {
-                    contentEmitter.onReceivedContent(content);
-                }
+                contentEmitter.onReceivedContent(content);
             }
 
             if (msg instanceof LastHttpContent) {
-                contentEmitter = null;
                 acquisitionListener.contentDone();
             }
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            ResponseContentFlowable ce = contentEmitter;
-            if (ce != null) {
-                ce.channelInactive();
-            }
+            contentEmitter.channelInactive();
             super.channelInactive(ctx);
         }
 

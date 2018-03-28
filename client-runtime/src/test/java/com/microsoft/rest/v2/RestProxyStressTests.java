@@ -36,6 +36,8 @@ import io.reactivex.SingleSource;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import io.reactivex.internal.functions.Functions;
+import io.reactivex.schedulers.Schedulers;
+
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -68,8 +70,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertTrue;
 
-@Ignore("Should only be run manually")
+//@Ignore("Should only be run manually")
 public class RestProxyStressTests {
     private static IOService service;
 
@@ -319,7 +322,7 @@ public class RestProxyStressTests {
      * Run after running one of the corresponding upload tests.
      */
     @Test
-    public void download100MParallelTest() throws Exception {
+    public void download100MParallelTest() {
         final String sas = System.getenv("JAVA_SDK_TEST_SAS") == null ? "" : System.getenv("JAVA_SDK_TEST_SAS");
 
         List<byte[]> md5s = Flowable.range(0, NUM_FILES)
@@ -329,18 +332,25 @@ public class RestProxyStressTests {
                 }).toList().blockingGet();
 
         Instant downloadStart = Instant.now();
-        Flowable.range(0, NUM_FILES)
+        boolean result = Flowable.range(0, NUM_FILES)
                 .zipWith(md5s, (id, md5) ->
                         service.download100M(String.valueOf(id), sas).flatMapCompletable(response -> {
                             final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
-                            Flowable<ByteBuffer> content = response.body().doOnNext(buf -> messageDigest.update(buf.slice()));
+                            Flowable<ByteBuffer> content = response.body()
+                                    .subscribeOn(Schedulers.io())
+                                    .rebatchRequests(1)
+                                    .doOnNext(buf -> messageDigest.update(buf.slice()));
 
                             return content.lastOrError().toCompletable().doOnComplete(() -> {
                                 assertArrayEquals(md5, messageDigest.digest());
                                 LoggerFactory.getLogger(getClass()).info("Finished downloading and MD5 validated for " + id);
                             });
                         }))
-                .flatMapCompletable(Functions.identity()).blockingAwait();
+                .flatMapCompletable(Functions.identity())
+                .subscribeOn(Schedulers.io())
+                .observeOn(Schedulers.io())
+                .blockingAwait(90, TimeUnit.SECONDS);
+        assertTrue(result);
         long durationMilliseconds = Duration.between(downloadStart, Instant.now()).toMillis();
         LoggerFactory.getLogger(getClass()).info("Download took " + durationMilliseconds + " milliseconds.");
     }

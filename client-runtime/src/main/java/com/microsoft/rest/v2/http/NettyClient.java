@@ -236,11 +236,13 @@ public final class NettyClient extends HttpClient {
         private final SharedChannelPool channelPool;
         private final HttpRequest request;
         private final SingleEmitter<HttpResponse> responseEmitter;
+        
+        // state is tracked to ensure that any races between write, read, 
+        // disposal, cancel, and request are properly handled via a serialized state machine. 
         private final AtomicInteger state = new AtomicInteger(ACQUIRING_NOT_DISPOSED);
-
+        
         private static final int ACQUIRING_NOT_DISPOSED = 0;
         private static final int ACQUIRING_DISPOSED = 1;
-        // ACQUIRING_CONTENT_SUBSCRIBED = 1; is not possible
         private static final int ACQUIRED_CONTENT_NOT_SUBSCRIBED = 2;
         private static final int ACQUIRED_CONTENT_SUBSCRIBED = 3;
         private static final int ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED = 4;

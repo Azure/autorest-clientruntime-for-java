@@ -429,7 +429,7 @@ public final class RestClient {
          * @return the builder itself for chaining
          */
         public Builder withRetryStrategy(RetryStrategy strategy) {
-            this.retryStrategy = retryStrategy;
+            this.retryStrategy = strategy;
             return this;
         }
 

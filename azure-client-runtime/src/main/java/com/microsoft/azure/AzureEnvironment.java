@@ -8,6 +8,7 @@ package com.microsoft.azure;
 
 import com.microsoft.rest.protocol.Environment;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -16,7 +17,9 @@ import java.util.Map;
 /**
  * An instance of this class describes an environment in Azure.
  */
-public final class AzureEnvironment implements Environment {
+public final class AzureEnvironment implements Environment, Serializable {
+    private static final long serialVersionUID = 2419074576693L;
+
     /** the map of all endpoints. */
     private final Map<String, String> endpoints;
 

@@ -8,12 +8,15 @@ package com.microsoft.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
  * The Resource model.
  */
-public class Resource {
+public class Resource implements Serializable {
+    private static final long serialVersionUID = -123489719074576693L;
+
     /**
      * Resource Id.
      */

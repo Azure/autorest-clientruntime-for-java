@@ -6,10 +6,14 @@
 
 package com.microsoft.azure;
 
+import java.io.Serializable;
+
 /**
  * The SubResource model.
  */
-public class SubResource {
+public class SubResource implements Serializable {
+    private static final long serialVersionUID = 1189719074576693L;
+
     /**
      * Resource Id.
      */

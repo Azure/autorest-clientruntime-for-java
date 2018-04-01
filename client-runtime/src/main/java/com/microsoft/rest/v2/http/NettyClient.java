@@ -739,6 +739,9 @@ public final class NettyClient extends HttpClient {
                         }
                     }
                     if (e > 0) {
+                        // it's tempting to use the result of this method to avoid 
+                        // another volatile read of requested but to avoid race conditions 
+                        // it's essential that requested is read again AFTER wip is changed.
                         BackpressureHelper.produced(requested, e);
                     } 
                     missed = wip.addAndGet(-missed);
@@ -827,6 +830,7 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            // TODO can ctx.channel() return a different object at some point in the lifecycle?
             channel.set(ctx.channel());
         }
 

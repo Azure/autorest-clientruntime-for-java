@@ -740,6 +740,8 @@ public final class NettyClient extends HttpClient {
                     }
                     if (e > 0) {
                         r = BackpressureHelper.produced(requested, e);
+                    } else {
+                        r = requested.get();
                     }
                     missed = wip.addAndGet(-missed);
                     if (missed == 0) {

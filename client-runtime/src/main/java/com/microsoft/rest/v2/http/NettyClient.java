@@ -700,8 +700,8 @@ public final class NettyClient extends HttpClient {
                     return;
                 }
                 int missed = 1;
-                long r = requested.get();
                 while (true) {
+                    long r = requested.get();
                     long e = 0;
                     while (e != r) {
                         // Note that an error can shortcut the emission of content that is currently on
@@ -739,10 +739,8 @@ public final class NettyClient extends HttpClient {
                         }
                     }
                     if (e > 0) {
-                        r = BackpressureHelper.produced(requested, e);
-                    } else {
-                        r = requested.get();
-                    }
+                        BackpressureHelper.produced(requested, e);
+                    } 
                     missed = wip.addAndGet(-missed);
                     if (missed == 0) {
                         return;
@@ -872,10 +870,7 @@ public final class NettyClient extends HttpClient {
 
             if (msg instanceof LastHttpContent) {
                 acquisitionListener.contentDone();
-            } else {
-                // TODO Don't do this because doesn't respect backpressure
-                ctx.channel().read();
-            }
+            } 
         }
 
         @Override

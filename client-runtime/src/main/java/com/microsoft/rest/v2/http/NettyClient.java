@@ -277,7 +277,7 @@ public final class NettyClient extends HttpClient {
                     return;
                 } else if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRED_CONTENT_NOT_SUBSCRIBED)) {
                     break;
-                } else if (state.compareAndSet(s,  s)) {
+                } else {
                     return;
                 }
             }
@@ -440,7 +440,7 @@ public final class NettyClient extends HttpClient {
                     closeAndReleaseChannel();
                     responseEmitter.onError(throwable);
                     break;
-                } else if (state.compareAndSet(s, s)) {
+                } else {
                     break;
                 }
             }
@@ -463,7 +463,7 @@ public final class NettyClient extends HttpClient {
                 } else if (transition(s, ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
                     this.content = content;
                     return true;
-                } else if (state.compareAndSet(s, s)) {
+                } else {
                     return false;
                 }
             }
@@ -485,7 +485,7 @@ public final class NettyClient extends HttpClient {
                 } else if (transition(s, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
                     closeAndReleaseChannel();
                     return;
-                } else if (state.compareAndSet(s, s)) {
+                } else {
                     return;
                 }
             }
@@ -506,7 +506,7 @@ public final class NettyClient extends HttpClient {
                     return;
                 } else if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
                     return;
-                } else if (state.compareAndSet(s, s)) {
+                } else {
                     return;
                 }
             }

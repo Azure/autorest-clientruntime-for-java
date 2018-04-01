@@ -212,7 +212,7 @@ public final class NettyClient extends HttpClient {
     
     private static  void addHeaders(final HttpRequest request) {
         request.withHeader(io.netty.handler.codec.http.HttpHeaderNames.HOST.toString(), request.url().getHost())
-                .withHeader(io.netty.handler.codec.http.HttpHeaderNames.CONNECTION.toString(),
+               .withHeader(io.netty.handler.codec.http.HttpHeaderNames.CONNECTION.toString(),
                         io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE.toString());
     }
 
@@ -316,7 +316,7 @@ public final class NettyClient extends HttpClient {
 
             private final HttpClientInboundHandler inboundHandler;
             
-            public RequestSubscriber(HttpClientInboundHandler inboundHandler) {
+            RequestSubscriber(HttpClientInboundHandler inboundHandler) {
                 this.inboundHandler = inboundHandler;
             }
 
@@ -428,8 +428,6 @@ public final class NettyClient extends HttpClient {
         }
 
         void emitError(Throwable throwable) {
-//            System.out.println("emitting error " + throwable.getMessage());
-//            throwable.printStackTrace();
             while (true) {
                 int s = state.get();
                 if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
@@ -495,7 +493,6 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void dispose() {
-//            System.out.println("disposed");
             while (true) {
                 int s = state.get();
                 if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
@@ -679,19 +676,18 @@ public final class NettyClient extends HttpClient {
 
         private void drain() {
             // Below is a non-blocking technique to ensure serialization (in-order
-            // processing) of the block inside the if statement
-            // and also to ensure no race conditions exist where items on the queue would be
-            // missed.
+            // processing) of the block inside the if statement and also to ensure 
+            // no race conditions exist where items on the queue would be missed.
             //
             // wip = `work in progress` and follows a naming convention in RxJava
             //
-            // `missed` is a clever little trick to ensure that we only do as many loops as
-            // actually required. If `drain` is called
-            // say 10 times while the `drain` loop is active then we notice that there are
-            // possibly extra items on the queue that arrived
-            // just after we found none left (and before the method exits). We don't need to
-            // loop around ten times but only once because
-            // all items will be picked up from the queue in one additional polling loop.
+            // `missed` is a clever little trick to ensure that we only do as many 
+            // loops as actually required. If `drain` is called say 10 times while
+            // the `drain` loop is active then we notice that there are possibly 
+            // extra items on the queue that arrived just after we found none left
+            // (and before the method exits). We don't need to loop around ten times
+            // but only once because all items will be picked up from the queue in
+            // one additional polling loop.
             if (wip.getAndIncrement() == 0) {
                 // need to check cancelled even if there are no requests
                 if (cancelled) {
@@ -705,10 +701,8 @@ public final class NettyClient extends HttpClient {
                     long e = 0;
                     while (e != r) {
                         // Note that an error can shortcut the emission of content that is currently on
-                        // the queue.
-                        // This is probably desirable generally because it prevents work that being done
-                        // downstream
-                        // that might be thrown away anyway due to the error.
+                        // the queue. This is probably desirable generally because it prevents work that being done
+                        // downstream that might be thrown away anyway due to the error.
                         Throwable error = err;
                         if (error != null) {
                             releaseQueue();
@@ -795,7 +789,7 @@ public final class NettyClient extends HttpClient {
         public void request(long n) {
             Preconditions.checkArgument(n == 1, "requests must be one at a time!");
             Channel c = channel.get();
-            if (c!=null) {
+            if (c != null) {
                 c.read();
             }
         }

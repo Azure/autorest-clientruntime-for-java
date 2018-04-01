@@ -72,7 +72,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
-//@Ignore("Should only be run manually")
+@Ignore("Should only be run manually")
 public class RestProxyStressTests {
     private static IOService service;
 

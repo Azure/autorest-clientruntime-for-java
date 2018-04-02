@@ -9,7 +9,6 @@ package com.microsoft.rest;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Primitives;
 import com.google.common.reflect.TypeToken;
-
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.joda.time.Period;
@@ -19,7 +18,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Validates user provided parameters are not null if they are required.

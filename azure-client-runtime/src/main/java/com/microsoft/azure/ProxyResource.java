@@ -8,8 +8,6 @@ package com.microsoft.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Map;
-
 /**
  * The Proxy Resource model.
  */

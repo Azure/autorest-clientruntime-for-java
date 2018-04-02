@@ -9,11 +9,11 @@ package com.microsoft.rest;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Primitives;
 import com.google.common.reflect.TypeToken;
-
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.joda.time.Period;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.List;
@@ -57,59 +57,69 @@ public final class Validator {
             return;
         }
 
-        for (Class<?> c : parameterToken.getTypes().classes().rawTypes()) {
-            // Ignore checks for Object type.
-            if (c.isAssignableFrom(Object.class)) {
+        Annotation skipParentAnnotation = parameterType.getAnnotation(SkipParentValidation.class);
+
+        if (skipParentAnnotation == null) {
+            for (Class<?> c : parameterToken.getTypes().classes().rawTypes()) {
+                validateClass(c, parameter);
+            }
+        } else {
+            validateClass(parameterType, parameter);
+        }
+    }
+
+    private static void validateClass(Class<?> c, Object parameter) {
+        // Ignore checks for Object type.
+        if (c.isAssignableFrom(Object.class)) {
+            return;
+        }
+        for (Field field : c.getDeclaredFields()) {
+            field.setAccessible(true);
+            int mod = field.getModifiers();
+            // Skip static fields since we don't have any, skip final fields since users can't modify them
+            if (Modifier.isFinal(mod) || Modifier.isStatic(mod)) {
                 continue;
             }
-            for (Field field : c.getDeclaredFields()) {
-                field.setAccessible(true);
-                int mod = field.getModifiers();
-                // Skip static fields since we don't have any, skip final fields since users can't modify them
-                if (Modifier.isFinal(mod) || Modifier.isStatic(mod)) {
-                    continue;
+            JsonProperty annotation = field.getAnnotation(JsonProperty.class);
+            // Skip read-only properties (WRITE_ONLY)
+            if (annotation != null && annotation.access().equals(JsonProperty.Access.WRITE_ONLY)) {
+                continue;
+            }
+            Object property;
+            try {
+                property = field.get(parameter);
+            } catch (IllegalAccessException e) {
+                throw new IllegalArgumentException(e.getMessage(), e);
+            }
+            if (property == null) {
+                if (annotation != null && annotation.required()) {
+                    throw new IllegalArgumentException(field.getName() + " is required and cannot be null.");
                 }
-                JsonProperty annotation = field.getAnnotation(JsonProperty.class);
-                // Skip read-only properties (WRITE_ONLY)
-                if (annotation != null && annotation.access().equals(JsonProperty.Access.WRITE_ONLY)) {
-                    continue;
-                }
-                Object property;
+            } else {
                 try {
-                    property = field.get(parameter);
-                } catch (IllegalAccessException e) {
-                    throw new IllegalArgumentException(e.getMessage(), e);
-                }
-                if (property == null) {
-                    if (annotation != null && annotation.required()) {
-                        throw new IllegalArgumentException(field.getName() + " is required and cannot be null.");
+                    Class<?> propertyType = property.getClass();
+                    if (TypeToken.of(List.class).isSupertypeOf(propertyType)) {
+                        List<?> items = (List<?>) property;
+                        for (Object item : items) {
+                            Validator.validate(item);
+                        }
                     }
-                } else {
-                    try {
-                        Class<?> propertyType = property.getClass();
-                        if (TypeToken.of(List.class).isSupertypeOf(propertyType)) {
-                            List<?> items = (List<?>) property;
-                            for (Object item : items) {
-                                Validator.validate(item);
-                            }
+                    else if (TypeToken.of(Map.class).isSupertypeOf(propertyType)) {
+                        Map<?, ?> entries = (Map<?, ?>) property;
+                        for (Map.Entry<?, ?> entry : entries.entrySet()) {
+                            Validator.validate(entry.getKey());
+                            Validator.validate(entry.getValue());
                         }
-                        else if (TypeToken.of(Map.class).isSupertypeOf(propertyType)) {
-                            Map<?, ?> entries = (Map<?, ?>) property;
-                            for (Map.Entry<?, ?> entry : entries.entrySet()) {
-                                Validator.validate(entry.getKey());
-                                Validator.validate(entry.getValue());
-                            }
-                        }
-                        else if (parameterType != propertyType) {
-                            Validator.validate(property);
-                        }
-                    } catch (IllegalArgumentException ex) {
-                        if (ex.getCause() == null) {
-                            // Build property chain
-                            throw new IllegalArgumentException(field.getName() + "." + ex.getMessage());
-                        } else {
-                            throw ex;
-                        }
+                    }
+                    else if (parameter.getClass() != propertyType) {
+                        Validator.validate(property);
+                    }
+                } catch (IllegalArgumentException ex) {
+                    if (ex.getCause() == null) {
+                        // Build property chain
+                        throw new IllegalArgumentException(field.getName() + "." + ex.getMessage());
+                    } else {
+                        throw ex;
                     }
                 }
             }

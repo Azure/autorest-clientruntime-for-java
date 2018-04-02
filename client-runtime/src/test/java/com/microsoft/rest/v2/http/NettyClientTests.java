@@ -242,7 +242,7 @@ public class NettyClientTests {
                                     .body() //
                                     .doOnNext(bb -> md.update(bb)) //
                                     .map(bb -> new NumberedByteBuffer(n, bb))
-                                    .doOnComplete(() -> System.out.println("completed " + n)) //
+//                                    .doOnComplete(() -> System.out.println("completed " + n)) //
                                     .doOnComplete(() -> Assert.assertArrayEquals("wrong digest!", expectedDigest,
                                             md.digest()));
                         }))

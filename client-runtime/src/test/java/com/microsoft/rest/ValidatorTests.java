@@ -137,6 +137,12 @@ public class ValidatorTests {
         Validator.validate(textNode);
     }
 
+    @Test
+    public void validateSkipParent() throws Exception {
+        Child child = new Child();
+        Validator.validate(child);
+    }
+
     public final class IntWrapper {
         @JsonProperty(required = true)
         // CHECKSTYLE IGNORE VisibilityModifier FOR NEXT 2 LINES
@@ -190,5 +196,15 @@ public class ValidatorTests {
         // CHECKSTYLE IGNORE VisibilityModifier FOR NEXT 2 LINES
         public String id;
         public String tag;
+    }
+
+    public abstract class Parent {
+        @JsonProperty(required = true)
+        public String requiredField;
+    }
+
+    @SkipParentValidation
+    public final class Child extends Parent {
+        public String optionalField;
     }
 }

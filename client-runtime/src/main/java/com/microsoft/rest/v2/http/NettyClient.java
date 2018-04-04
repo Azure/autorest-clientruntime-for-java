@@ -873,7 +873,9 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            contentEmitter.channelInactive();
+            if (contentEmitter != null) {
+                contentEmitter.channelInactive();
+            }
             super.channelInactive(ctx);
         }
 

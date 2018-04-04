@@ -207,6 +207,8 @@ public final class FlowableUtil {
     
     private static final class FileReadSubscription2  extends AtomicInteger implements Subscription {
 
+        private static final int NOT_SET = -1;
+
         private static final long serialVersionUID = -6831808726875304256L;
         
         private final AtomicLong requested = new AtomicLong();
@@ -231,7 +233,7 @@ public final class FlowableUtil {
 
         public FileReadSubscription2(AsynchronousFileChannel fileChannel, long offset, long length,
                 Subscriber<? super ByteBuffer> subscriber) {
-            this.position = -1;
+            this.position = NOT_SET;
             this.fileChannel = fileChannel;
             this.offset = offset;
             this.length = length;
@@ -250,7 +252,7 @@ public final class FlowableUtil {
             // the wip counter is `this` (a way of saving allocations)
             if (getAndIncrement() == 0) {
                 // on first drain (first request) we initiate the first read
-                if (position == -1) {
+                if (position == NOT_SET) {
                     position = offset;
                     doRead();
                 }

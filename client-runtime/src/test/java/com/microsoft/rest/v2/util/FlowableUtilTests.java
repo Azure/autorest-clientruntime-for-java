@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
@@ -84,6 +85,41 @@ public class FlowableUtilTests {
                 .subscribeOn(Schedulers.io()) //
                 .observeOn(Schedulers.io()) //
                 .blockingForEach(bb -> digest.update(bb));
+                
+        assertArrayEquals(expected, digest.digest());
+    }
+    
+    @Test
+    public void testBackpressureLongInput() throws IOException, NoSuchAlgorithmException {
+        File file = new File("target/test4");
+        byte[] array = "1234567690".getBytes(StandardCharsets.UTF_8);
+        int n = 1_000_000;
+        MessageDigest digest = MessageDigest.getInstance("MD5");
+        try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file))) {
+            for (int i = 0; i < 1_000_000; i++) {
+                out.write(array);
+                digest.update(array);
+            }
+        }
+        byte[] expected = digest.digest();
+        digest.reset();
+        AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ);
+        FlowableUtil.readFile(channel) //
+                .rebatchRequests(1) //
+                .subscribeOn(Schedulers.io()) //
+                .observeOn(Schedulers.io()) //
+                .doOnNext(bb -> digest.update(bb)) //
+                .test(0) //
+                .assertNoValues() //
+                .requestMore(1) //
+                .awaitCount(1) //
+                .assertValueCount(1) 
+                .requestMore(1) //
+                .awaitCount(2) //
+                .assertValueCount(2) //
+                .requestMore(Long.MAX_VALUE) //
+                .awaitDone(20, TimeUnit.SECONDS) //
+                .assertComplete();
                 
         assertArrayEquals(expected, digest.digest());
     }

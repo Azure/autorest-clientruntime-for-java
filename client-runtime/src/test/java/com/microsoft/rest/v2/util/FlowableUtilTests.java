@@ -72,7 +72,7 @@ public class FlowableUtilTests {
     public void testAsynchronyLongInput() throws IOException, NoSuchAlgorithmException {
         File file = new File("target/test4");
         byte[] array = "1234567690".getBytes(StandardCharsets.UTF_8);
-        MessageDigest digest = MessageDigest.getInstance("MD5");
+        MessageDigest digest = digest = MessageDigest.getInstance("MD5");
         try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file))) {
             for (int i = 0; i < NUM_CHUNKS_IN_LONG_INPUT; i++) {
                 out.write(array);
@@ -97,7 +97,7 @@ public class FlowableUtilTests {
     public void testBackpressureLongInput() throws IOException, NoSuchAlgorithmException {
         File file = new File("target/test4");
         byte[] array = "1234567690".getBytes(StandardCharsets.UTF_8);
-        MessageDigest digest = MessageDigest.getInstance("MD5");
+        MessageDigest digest = digest = MessageDigest.getInstance("MD5");
         try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file))) {
             for (int i = 0; i < NUM_CHUNKS_IN_LONG_INPUT; i++) {
                 out.write(array);
@@ -126,6 +126,38 @@ public class FlowableUtilTests {
                 
         assertArrayEquals(expected, digest.digest());
         file.delete();
+    }
+    
+    @Test
+    public void testSplitForMultipleSplitSizesFromOneTo16() throws NoSuchAlgorithmException {
+        ByteBuffer bb = ByteBuffer.allocateDirect(1000);
+        for (int i = 0;i < 1000;i++) {
+            bb.put((byte) i);
+        }
+        bb.flip();
+        MessageDigest digest = MessageDigest.getInstance("MD5");
+        digest.update(bb);
+        byte[] expected = digest.digest();
+        for (int size=1; size<16; size++) {
+            digest.reset();
+            FlowableUtil //
+                .split(bb, 3) //
+                .doOnNext(b -> digest.update(b)) //
+                .test()
+                .assertComplete();
+            assertArrayEquals(expected, digest.digest());
+        }
+    }
+    
+    @Test
+    public void testSplitOnEmptyContent() throws NoSuchAlgorithmException {
+        ByteBuffer bb = ByteBuffer.allocateDirect(16);
+        bb.flip();
+        FlowableUtil //
+            .split(bb, 3) //
+            .test() //
+            .assertValueCount(0) //
+            .assertComplete();
     }
 
     private static byte[] toBytes(ByteBuffer bb) {

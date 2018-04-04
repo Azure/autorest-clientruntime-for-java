@@ -256,11 +256,11 @@ public final class FlowableUtil {
                     position = offset;
                     doRead();
                 }
-                if (cancelled) {
-                    return;
-                }
                 int missed = 1;
                 while (true) {
+                    if (cancelled) {
+                        return;
+                    }
                     boolean emitted = false;
                     if (requested.get() > 0) {
                         // read d before next to avoid race
@@ -296,13 +296,18 @@ public final class FlowableUtil {
         }
         
         private void doRead() {
-            int maxRequired = (int) (offset + length - position);
-            //check for overflow
-            if (maxRequired < 0) {
-                maxRequired = Integer.MAX_VALUE;
-            }
-            ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, maxRequired));
+            ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, maxRequired()));
             fileChannel.read(innerBuf, position, innerBuf, onReadComplete);
+        }
+
+        private int maxRequired() {
+            int maxRequired = (int) (offset + length - position);
+            // support really large files by checking for overflow
+            if (maxRequired < 0) {
+                return Integer.MAX_VALUE;
+            } else {
+                return maxRequired;
+            }
         }
         
         private final CompletionHandler<Integer, ByteBuffer> onReadComplete = new CompletionHandler<Integer, ByteBuffer>() {
@@ -312,7 +317,7 @@ public final class FlowableUtil {
                     if (bytesRead == -1) {
                         done = true;
                     } else {
-                        int bytesWanted = (int) Math.min(bytesRead, offset + length - position);
+                        int bytesWanted = (int) Math.min(bytesRead, maxRequired());
                         //noinspection NonAtomicOperationOnVolatileField
                         position += bytesWanted;
                         buffer.flip();

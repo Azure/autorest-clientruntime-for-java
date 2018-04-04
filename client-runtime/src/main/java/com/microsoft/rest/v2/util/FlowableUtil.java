@@ -9,6 +9,7 @@ package com.microsoft.rest.v2.util;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.google.common.reflect.TypeToken;
+
 import io.reactivex.Completable;
 import io.reactivex.CompletableEmitter;
 import io.reactivex.CompletableOnSubscribe;
@@ -19,6 +20,7 @@ import io.reactivex.Single;
 import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
+import io.reactivex.internal.subscriptions.SubscriptionHelper;
 import io.reactivex.internal.util.BackpressureHelper;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -30,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -168,8 +171,7 @@ public final class FlowableUtil {
      * @return the Flowable.
      */
     public static Flowable<ByteBuffer> readFile(final AsynchronousFileChannel fileChannel, final long offset, final long length) {
-        Flowable<ByteBuffer> fileStream = new FileReadFlowable(fileChannel, offset, length);
-        return fileStream;
+        return new FileReadFlowable2(fileChannel, offset, length);
     }
 
     /**
@@ -184,6 +186,156 @@ public final class FlowableUtil {
     }
 
     private static final int CHUNK_SIZE = 8192;
+    
+    private static final class FileReadFlowable2 extends Flowable<ByteBuffer> {
+        private final AsynchronousFileChannel fileChannel;
+        private final long offset;
+        private final long length;
+
+        FileReadFlowable2(AsynchronousFileChannel fileChannel, long offset, long length) {
+            this.fileChannel = fileChannel;
+            this.offset = offset;
+            this.length = length;
+        }
+
+        @Override
+        protected void subscribeActual(Subscriber<? super ByteBuffer> s) {
+            FileReadSubscription2 subscription = new FileReadSubscription2(fileChannel, offset, length, s);
+            s.onSubscribe(subscription);
+        }
+    }
+    
+    private static final class FileReadSubscription2  extends AtomicInteger implements Subscription {
+
+        private static final long serialVersionUID = -6831808726875304256L;
+        
+        private final AtomicLong requested = new AtomicLong();
+
+        private final AsynchronousFileChannel fileChannel;
+
+        private final long offset;
+
+        private final long length;
+
+        private final Subscriber<? super ByteBuffer> subscriber;
+        
+        private volatile boolean done;
+        
+        private Throwable error;
+        
+        private volatile ByteBuffer next;
+        
+        private volatile long position;
+
+        private volatile boolean cancelled;
+
+        public FileReadSubscription2(AsynchronousFileChannel fileChannel, long offset, long length,
+                Subscriber<? super ByteBuffer> subscriber) {
+            this.position = -1;
+            this.fileChannel = fileChannel;
+            this.offset = offset;
+            this.length = length;
+            this.subscriber = subscriber;
+        }
+
+        @Override
+        public void request(long n) {
+            if (SubscriptionHelper.validate(n)) {
+                BackpressureHelper.add(requested, n);
+                drain();
+            }
+        }
+
+        private void drain() {
+            // the wip counter is `this` (a way of saving allocations)
+            if (getAndIncrement() == 0) {
+                // on first drain (first request) we initiate the first read
+                if (position == -1) {
+                    position = offset;
+                    doRead();
+                }
+                if (cancelled) {
+                    return;
+                }
+                int missed = 1;
+                while (true) {
+                    boolean emitted = false;
+                    if (requested.get() > 0) {
+                        // read d before next to avoid race
+                        boolean d = done;
+                        ByteBuffer bb = next;
+                        if (bb != null) {
+                            emitted = true;
+                            next = null;
+                            subscriber.onNext(bb);
+                        } 
+                        if (d) {
+                            if (error != null) {
+                                subscriber.onError(error);
+                                // exit without reducing wip so that further drains will be noops
+                                return;
+                            } else {
+                                subscriber.onComplete();
+                                // exit without reducing wip so that further drains will be noops
+                                return;
+                            }
+                        } 
+                    } 
+                    if (emitted) {
+                        BackpressureHelper.produced(requested, 1);
+                        doRead();
+                    }
+                    missed = addAndGet(-missed);
+                    if (missed == 0) {
+                        return;
+                    }
+                }
+            }
+        }
+        
+        //must be called from the drain loop only for visibility of `position`
+        private void doRead() {
+            ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, (int) (offset + length - position)));
+            fileChannel.read(innerBuf, position, innerBuf, onReadComplete);
+        }
+        
+        private final CompletionHandler<Integer, ByteBuffer> onReadComplete = new CompletionHandler<Integer, ByteBuffer>() {
+            @Override
+            public void completed(Integer bytesRead, ByteBuffer buffer) {
+                if (!cancelled) {
+                    if (bytesRead == -1) {
+                        done = true;
+                    } else {
+                        int bytesWanted = (int) Math.min(bytesRead, offset + length - position);
+                        //noinspection NonAtomicOperationOnVolatileField
+                        position += bytesWanted;
+                        buffer.flip();
+                        next = buffer;
+                        if (position >= offset + length) {
+                            done = true;
+                        } 
+                    }
+                    drain();
+                }
+            }
+
+            @Override
+            public void failed(Throwable exc, ByteBuffer attachment) {
+                if (!cancelled) {
+                    error = exc;
+                    done = true;
+                    drain();
+                }
+            }
+        };
+
+        @Override
+        public void cancel() {
+            cancelled = true;
+        }
+        
+    }
+    
     private static class FileReadFlowable extends Flowable<ByteBuffer> {
         private final AsynchronousFileChannel fileChannel;
         private final long offset;

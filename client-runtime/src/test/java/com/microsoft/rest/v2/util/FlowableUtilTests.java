@@ -63,6 +63,7 @@ public class FlowableUtilTests {
                 .blockingGet() //
                 .toByteArray();
         assertEquals("hello there", new String(bytes, StandardCharsets.UTF_8));
+        file.delete();
     }
     
     private static final int NUM_CHUNKS_IN_LONG_INPUT = 10_000_000;
@@ -89,6 +90,7 @@ public class FlowableUtilTests {
                 .blockingForEach(bb -> digest.update(bb));
                 
         assertArrayEquals(expected, digest.digest());
+        file.delete();
     }
     
     @Test
@@ -123,6 +125,7 @@ public class FlowableUtilTests {
                 .assertComplete();
                 
         assertArrayEquals(expected, digest.digest());
+        file.delete();
     }
 
     private static byte[] toBytes(ByteBuffer bb) {

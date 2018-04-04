@@ -231,7 +231,7 @@ public final class FlowableUtil {
 
         private volatile boolean cancelled;
 
-        public FileReadSubscription2(AsynchronousFileChannel fileChannel, long offset, long length,
+        FileReadSubscription2(AsynchronousFileChannel fileChannel, long offset, long length,
                 Subscriber<? super ByteBuffer> subscriber) {
             this.position = NOT_SET;
             this.fileChannel = fileChannel;
@@ -296,7 +296,12 @@ public final class FlowableUtil {
         }
         
         private void doRead() {
-            ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, (int) (offset + length - position)));
+            int maxRequired = (int) (offset + length - position);
+            //check for overflow
+            if (maxRequired < 0) {
+                maxRequired = Integer.MAX_VALUE;
+            }
+            ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, maxRequired));
             fileChannel.read(innerBuf, position, innerBuf, onReadComplete);
         }
         

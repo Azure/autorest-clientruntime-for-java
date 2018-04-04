@@ -293,7 +293,6 @@ public final class FlowableUtil {
             }
         }
         
-        //must be called from the drain loop only for visibility of `position`
         private void doRead() {
             ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, (int) (offset + length - position)));
             fileChannel.read(innerBuf, position, innerBuf, onReadComplete);

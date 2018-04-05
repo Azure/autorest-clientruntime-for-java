@@ -6,13 +6,13 @@
 
 package com.microsoft.rest.v2;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import org.threeten.bp.OffsetDateTime;
+import org.threeten.bp.ZoneId;
+import org.threeten.bp.format.DateTimeFormatter;
 import java.util.Locale;
 
 /**
- * Simple wrapper over java.time.OffsetDateTime used for specifying RFC1123 format during serialization/deserialization.
+ * Simple wrapper over org.threeten.bp.OffsetDateTime used for specifying RFC1123 format during serialization/deserialization.
  */
 public final class DateTimeRfc1123 {
     /**

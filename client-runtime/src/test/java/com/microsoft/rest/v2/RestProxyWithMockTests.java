@@ -17,9 +17,9 @@ import io.reactivex.Single;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import org.threeten.bp.Instant;
+import org.threeten.bp.OffsetDateTime;
+import org.threeten.bp.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

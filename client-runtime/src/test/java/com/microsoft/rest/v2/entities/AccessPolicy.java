@@ -12,7 +12,7 @@ package com.microsoft.rest.v2.entities;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.time.OffsetDateTime;
+import org.threeten.bp.OffsetDateTime;
 
 /**
  * An Access policy.

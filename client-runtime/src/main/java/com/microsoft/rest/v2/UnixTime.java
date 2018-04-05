@@ -6,12 +6,12 @@
 
 package com.microsoft.rest.v2;
 
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import org.threeten.bp.Instant;
+import org.threeten.bp.OffsetDateTime;
+import org.threeten.bp.ZoneOffset;
 
 /**
- * Simple wrapper over java.time.OffsetDateTime used for specifying unix seconds format during serialization/deserialization.
+ * Simple wrapper over org.threeten.bp.OffsetDateTime used for specifying unix seconds format during serialization/deserialization.
  */
 public final class UnixTime {
     /**

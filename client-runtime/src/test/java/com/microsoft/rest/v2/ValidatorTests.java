@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.time.LocalDate;
+import org.threeten.bp.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

@@ -6,6 +6,7 @@
 
 package com.microsoft.rest.v2;
 
+import com.google.common.io.BaseEncoding;
 import com.microsoft.rest.v2.annotations.BodyParam;
 import com.microsoft.rest.v2.annotations.DELETE;
 import com.microsoft.rest.v2.annotations.ExpectedResponses;
@@ -51,12 +52,12 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.Base64;
+import org.threeten.bp.Duration;
+import org.threeten.bp.Instant;
+import org.threeten.bp.OffsetDateTime;
+import org.threeten.bp.ZoneId;
+import org.threeten.bp.format.DateTimeFormatter;
+
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -257,7 +258,7 @@ public class RestProxyStressTests {
                     Flowable<ByteBuffer> stream = FlowableUtil.readFile(fileStream);
                     return service.upload100MB(String.valueOf(id), sas, "BlockBlob", stream, FILE_SIZE).flatMapCompletable(response -> {
                         String base64MD5 = response.rawHeaders().get("Content-MD5");
-                        byte[] receivedMD5 = Base64.getDecoder().decode(base64MD5);
+                        byte[] receivedMD5 = BaseEncoding.base64().decode(base64MD5);
                         assertArrayEquals(md5, receivedMD5);
                         return Completable.complete();
                     });
@@ -293,7 +294,7 @@ public class RestProxyStressTests {
                     Flowable<ByteBuffer> stream = FlowableUtil.split(fileStream.map(FileChannel.MapMode.READ_ONLY, 0, fileStream.size()), CHUNK_SIZE);
                     return service.upload100MB(String.valueOf(id), sas, "BlockBlob", stream, FILE_SIZE).flatMapCompletable(response -> {
                         String base64MD5 = response.rawHeaders().get("Content-MD5");
-                        byte[] receivedMD5 = Base64.getDecoder().decode(base64MD5);
+                        byte[] receivedMD5 = BaseEncoding.base64().decode(base64MD5);
                         assertArrayEquals(md5, receivedMD5);
                         return Completable.complete();
                     });
@@ -376,7 +377,7 @@ public class RestProxyStressTests {
                     return service.upload100MB("copy-" + integer, sas, "BlockBlob", downloadContent, FILE_SIZE)
                             .flatMapCompletable(uploadResponse -> {
                                 String base64MD5 = uploadResponse.rawHeaders().get("Content-MD5");
-                                byte[] uploadMD5 = Base64.getDecoder().decode(base64MD5);
+                                byte[] uploadMD5 = BaseEncoding.base64().decode(base64MD5);
                                 assertArrayEquals(diskMd5, uploadMD5);
                                 LoggerFactory.getLogger(getClass()).info("Finished upload and validation for id " + id);
                                 return Completable.complete();

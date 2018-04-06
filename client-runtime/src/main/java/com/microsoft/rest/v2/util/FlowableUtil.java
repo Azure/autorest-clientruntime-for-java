@@ -250,15 +250,15 @@ public final class FlowableUtil {
                         if (cancelled) {
                             return;
                         }
-                        boolean emitted = false;
                         if (requested.get() > 0) {
                             // read d before next to avoid race
                             boolean d = done;
                             ByteBuffer bb = next;
                             if (bb != null) {
-                                emitted = true;
                                 next = null;
                                 subscriber.onNext(bb);
+                                BackpressureHelper.produced(requested, 1);
+                                doRead();
                             } 
                             if (d) {
                                 if (error != null) {
@@ -272,10 +272,6 @@ public final class FlowableUtil {
                                 }
                             } 
                         } 
-                        if (emitted) {
-                            BackpressureHelper.produced(requested, 1);
-                            doRead();
-                        }
                         missed = addAndGet(-missed);
                         if (missed == 0) {
                             return;

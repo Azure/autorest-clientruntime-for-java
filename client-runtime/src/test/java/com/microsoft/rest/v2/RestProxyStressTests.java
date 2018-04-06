@@ -28,6 +28,8 @@ import com.microsoft.rest.v2.policy.RequestPolicy;
 import com.microsoft.rest.v2.policy.RequestPolicyFactory;
 import com.microsoft.rest.v2.policy.RequestPolicyOptions;
 import com.microsoft.rest.v2.util.FlowableUtil;
+import io.netty.util.ResourceLeak;
+import io.netty.util.ResourceLeakDetector;
 import io.reactivex.Completable;
 import io.reactivex.CompletableSource;
 import io.reactivex.Flowable;
@@ -79,6 +81,9 @@ public class RestProxyStressTests {
 
     @BeforeClass
     public static void setup() {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+        LoggerFactory.getLogger(RestProxyStressTests.class).info("ResourceLeakDetector level: " + ResourceLeakDetector.getLevel());
+
         HttpHeaders headers = new HttpHeaders()
                 .set("x-ms-version", "2017-04-17");
         HttpPipelineBuilder builder = new HttpPipelineBuilder()
@@ -277,7 +282,7 @@ public class RestProxyStressTests {
                         assertArrayEquals(md5, receivedMD5);
                         return Completable.complete();
                     });
-                }).flatMapCompletable(Functions.identity(), false, 1).blockingAwait();
+                }).flatMapCompletable(Functions.identity(), false, 30).blockingAwait();
         long durationMilliseconds = Duration.between(start, Instant.now()).toMillis();
         LoggerFactory.getLogger(getClass()).info("Upload took " + durationMilliseconds + " milliseconds.");
     }

@@ -15,11 +15,15 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Random;
 
 public class MockServer {
     private static class TestHandler extends HandlerWrapper {
         @Override
         public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException {
+            System.out.println("Received request for " + baseRequest.getRequestURL());
+            Random random = new Random();
+
             byte[] buf = new byte[8192];
             InputStream is = request.getInputStream();
             MessageDigest md5;
@@ -35,6 +39,13 @@ public class MockServer {
                     break;
                 }
                 md5.update(buf, 0, bytesRead);
+
+                int randomNumber = random.nextInt(100000);
+                if (randomNumber == 12345) {
+                    response.setStatus(503);
+                    baseRequest.setHandled(true);
+                    return;
+                }
             }
 
             byte[] md5Digest = md5.digest();

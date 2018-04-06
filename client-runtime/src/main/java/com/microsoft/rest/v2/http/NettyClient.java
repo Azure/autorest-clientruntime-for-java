@@ -329,8 +329,12 @@ public final class NettyClient extends HttpClient {
 
             GenericFutureListener<Future<Void>> onChannelWriteComplete = (Future<Void> future) -> {
                 if (!future.isSuccess()) {
+                    done = true;
                     subscription.cancel();
                     emitError(future.cause());
+                }
+                else if (channel.isWritable()) {
+                    subscription.request(1);
                 }
             };
 
@@ -343,10 +347,6 @@ public final class NettyClient extends HttpClient {
                     channel
                         .writeAndFlush(Unpooled.wrappedBuffer(buf))
                         .addListener(onChannelWriteComplete);
-
-                    if (channel.isWritable()) {
-                        subscription.request(1);
-                    }
                 } catch (Exception e) {
                     subscription.cancel();
                     onError(e);
@@ -855,7 +855,7 @@ public final class NettyClient extends HttpClient {
                     exceptionCaught(ctx, response.decoderResult().cause());
                     return;
                 }
-                // Scheduler scheduler = Schedulers.from(ctx.channel().eventLoop());
+
                 responseEmitter.onSuccess(new NettyResponse(response, contentEmitter));
             }
 

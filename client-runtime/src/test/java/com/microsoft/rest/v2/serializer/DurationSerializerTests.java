@@ -2,7 +2,7 @@ package com.microsoft.rest.v2.serializer;
 
 import org.junit.Test;
 
-import java.time.Duration;
+import org.threeten.bp.Duration;
 
 import static org.junit.Assert.*;
 

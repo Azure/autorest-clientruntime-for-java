@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.microsoft.aad.adal4j.AuthenticationResult;
 import com.microsoft.azure.management.apigeneration.Beta;
 
-import java.time.Instant;
+import org.threeten.bp.Instant;
 import java.util.Date;
 
 /**
@@ -71,7 +71,7 @@ final class AzureCliToken implements Cloneable {
 
     Date expiresOn() {
         if (expiresOnDate == null) {
-            expiresOnDate = Date.from(Instant.parse(expiresOn));
+            expiresOnDate = new Date(Instant.parse(expiresOn).toEpochMilli());
         }
         return expiresOnDate;
     }

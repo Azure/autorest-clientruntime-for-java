@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * A Netty channel pool implementation shared between multiple requests.
@@ -81,77 +82,83 @@ public class SharedChannelPool implements ChannelPool {
         } catch (SSLException e) {
             throw new RuntimeException(e);
         }
-        this.executor = Executors.newSingleThreadExecutor(runnable -> {
-            Thread thread = new Thread(runnable, "SharedChannelPool-worker");
-            thread.setDaemon(true);
-            return thread;
+        this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable runnable) {
+                Thread thread = new Thread(runnable, "SharedChannelPool-worker");
+                thread.setDaemon(true);
+                return thread;
+            }
         });
 
-        executor.submit(() -> {
-            while (!closed) {
-                try {
-                    final ChannelRequest request;
-                    final ChannelFuture channelFuture;
-                    // Synchronizing just to be notified when requests is non-empty
-                    synchronized (requests) {
-                        while (requests.isEmpty() && !closed) {
-                            requests.wait();
-                        }
-                    }
-                    request = requests.poll();
-
-                    synchronized (sync) {
-                        while (leased.size() >= poolSize && !closed) {
-                            sync.wait();
-                        }
-
-                        if (closed) {
-                            break;
-                        }
-
-                        if (available.containsKey(request.uri)) {
-                            Channel channel = available.poll(request.uri);
-                            if (isChannelHealthy(channel)) {
-                                handler.channelAcquired(channel);
-                                request.promise.setSuccess(channel);
-                                leased.put(request.uri, channel);
-                                continue;
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                while (!closed) {
+                    try {
+                        final ChannelRequest request;
+                        final ChannelFuture channelFuture;
+                        // Synchronizing just to be notified when requests is non-empty
+                        synchronized (requests) {
+                            while (requests.isEmpty() && !closed) {
+                                requests.wait();
                             }
                         }
-                        // Create a new channel - remove an available one if size overflows
-                        if (available.size() > 0 && available.size() + leased.size() >= poolSize) {
-                            available.poll().close();
-                        }
-                        int port;
-                        if (request.uri.getPort() < 0) {
-                            port = "https".equals(request.uri.getScheme()) ? 443 : 80;
-                        } else {
-                            port = request.uri.getPort();
-                        }
-                        channelFuture = SharedChannelPool.this.bootstrap.clone().connect(request.uri.getHost(), port);
+                        request = requests.poll();
 
-                        channelFuture.channel().attr(CHANNEL_URI).set(request.uri);
+                        synchronized (sync) {
+                            while (leased.size() >= poolSize && !closed) {
+                                sync.wait();
+                            }
 
-                        // Apply SSL handler for https connections
-                        if ("https".equalsIgnoreCase(request.uri.getScheme())) {
-                            channelFuture.channel().pipeline().addFirst(sslContext.newHandler(channelFuture.channel().alloc(), request.uri.getHost(), port));
-                        }
+                            if (closed) {
+                                break;
+                            }
 
-                        channelFuture.addListener(new GenericFutureListener<Future<? super Void>>() {
-                            @Override
-                            public void operationComplete(Future<? super Void> future) throws Exception {
-                                if (channelFuture.isSuccess()) {
-                                    handler.channelAcquired(channelFuture.channel());
-                                    leased.put(request.uri, channelFuture.channel());
-                                    request.promise.setSuccess(channelFuture.channel());
-                                } else {
-                                    request.promise.setFailure(channelFuture.cause());
+                            if (available.containsKey(request.uri)) {
+                                Channel channel = available.poll(request.uri);
+                                if (isChannelHealthy(channel)) {
+                                    handler.channelAcquired(channel);
+                                    request.promise.setSuccess(channel);
+                                    leased.put(request.uri, channel);
+                                    continue;
                                 }
                             }
-                        });
+                            // Create a new channel - remove an available one if size overflows
+                            if (available.size() > 0 && available.size() + leased.size() >= poolSize) {
+                                available.poll().close();
+                            }
+                            int port;
+                            if (request.uri.getPort() < 0) {
+                                port = "https".equals(request.uri.getScheme()) ? 443 : 80;
+                            } else {
+                                port = request.uri.getPort();
+                            }
+                            channelFuture = SharedChannelPool.this.bootstrap.clone().connect(request.uri.getHost(), port);
+
+                            channelFuture.channel().attr(CHANNEL_URI).set(request.uri);
+
+                            // Apply SSL handler for https connections
+                            if ("https".equalsIgnoreCase(request.uri.getScheme())) {
+                                channelFuture.channel().pipeline().addFirst(sslContext.newHandler(channelFuture.channel().alloc(), request.uri.getHost(), port));
+                            }
+
+                            channelFuture.addListener(new GenericFutureListener<Future<? super Void>>() {
+                                @Override
+                                public void operationComplete(Future<? super Void> future) throws Exception {
+                                    if (channelFuture.isSuccess()) {
+                                        handler.channelAcquired(channelFuture.channel());
+                                        leased.put(request.uri, channelFuture.channel());
+                                        request.promise.setSuccess(channelFuture.channel());
+                                    } else {
+                                        request.promise.setFailure(channelFuture.cause());
+                                    }
+                                }
+                            });
+                        }
+                    } catch (Exception e) {
+                        throw Exceptions.propagate(e);
                     }
-                } catch (Exception e) {
-                    throw Exceptions.propagate(e);
                 }
             }
         });
@@ -213,12 +220,17 @@ public class SharedChannelPool implements ChannelPool {
      * @return a Future representing the operation.
      */
     public Future<Void> closeAndRelease(final Channel channel) {
-        return channel.close().addListener(future -> release(channel));
+        return channel.close().addListener(new GenericFutureListener<Future<? super Void>>() {
+            @Override
+            public void operationComplete(Future<? super Void> future) throws Exception {
+                SharedChannelPool.this.release(channel);
+            }
+        });
     }
 
     @Override
     public Future<Void> release(final Channel channel) {
-        return this.release(channel, this.bootstrap.config().group().next().newPromise());
+        return this.release(channel, this.bootstrap.config().group().next().<Void>newPromise());
     }
 
     @Override

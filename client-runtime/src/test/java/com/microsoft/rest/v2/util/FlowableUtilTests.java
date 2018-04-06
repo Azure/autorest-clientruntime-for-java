@@ -139,7 +139,9 @@ public class FlowableUtilTests {
         digest.update(bb);
         byte[] expected = digest.digest();
         for (int size=1; size<16; size++) {
+            System.out.println("size="+ size);
             digest.reset();
+            bb.position(0);
             FlowableUtil //
                 .split(bb, 3) //
                 .doOnNext(b -> digest.update(b)) //

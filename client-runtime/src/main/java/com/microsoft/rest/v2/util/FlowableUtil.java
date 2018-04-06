@@ -204,7 +204,7 @@ public final class FlowableUtil {
             s.onSubscribe(subscription);
         }
         
-        private final class FileReadSubscription  extends AtomicInteger implements Subscription {
+        private final class FileReadSubscription  extends AtomicInteger implements Subscription, CompletionHandler<Integer, ByteBuffer> {
 
             private static final int NOT_SET = -1;
 
@@ -286,7 +286,7 @@ public final class FlowableUtil {
             
             private void doRead() {
                 ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, maxRequired()));
-                fileChannel.read(innerBuf, position, innerBuf, onReadComplete);
+                fileChannel.read(innerBuf, position, innerBuf, this);
             }
 
             private int maxRequired() {
@@ -299,35 +299,33 @@ public final class FlowableUtil {
                 }
             }
             
-            private final CompletionHandler<Integer, ByteBuffer> onReadComplete = new CompletionHandler<Integer, ByteBuffer>() {
-                @Override
-                public void completed(Integer bytesRead, ByteBuffer buffer) {
-                    if (!cancelled) {
-                        if (bytesRead == -1) {
-                            done = true;
-                        } else {
-                            int bytesWanted = (int) Math.min(bytesRead, maxRequired());
-                            //noinspection NonAtomicOperationOnVolatileField
-                            position += bytesWanted;
-                            buffer.flip();
-                            next = buffer;
-                            if (position >= offset + length) {
-                                done = true;
-                            } 
-                        }
-                        drain();
-                    }
-                }
-
-                @Override
-                public void failed(Throwable exc, ByteBuffer attachment) {
-                    if (!cancelled) {
-                        error = exc;
+            @Override
+            public void completed(Integer bytesRead, ByteBuffer buffer) {
+                if (!cancelled) {
+                    if (bytesRead == -1) {
                         done = true;
-                        drain();
+                    } else {
+                        int bytesWanted = (int) Math.min(bytesRead, maxRequired());
+                        //noinspection NonAtomicOperationOnVolatileField
+                        position += bytesWanted;
+                        buffer.flip();
+                        next = buffer;
+                        if (position >= offset + length) {
+                            done = true;
+                        } 
                     }
+                    drain();
                 }
-            };
+            }
+
+            @Override
+            public void failed(Throwable exc, ByteBuffer attachment) {
+                if (!cancelled) {
+                    error = exc;
+                    done = true;
+                    drain();
+                }
+            }
 
             @Override
             public void cancel() {

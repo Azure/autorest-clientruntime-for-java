@@ -347,7 +347,7 @@ public final class FlowableUtil {
         return Flowable.generate(new Callable<Integer>() {
             @Override
             public Integer call() throws Exception {
-                return 0;
+                return whole.position();
             }
         }, new BiFunction<Integer, Emitter<ByteBuffer>, Integer>() {
             @Override

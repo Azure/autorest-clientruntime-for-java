@@ -106,6 +106,18 @@
       <version>2.15.0</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-http</artifactId>
+      <version>9.4.8.v20171121</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>9.4.8.v20171121</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -150,6 +162,21 @@
             <contextPath>/javasdktest/upload</contextPath>
           </webApp>
           <webAppSourceDirectory>temp/</webAppSourceDirectory>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <goals><goal>java</goal></goals>
+          </execution>
+        </executions>
+        <configuration>
+          <mainClass>com.microsoft.rest.v2.MockServer</mainClass>
+          <classpathScope>test</classpathScope>
         </configuration>
       </plugin>
     </plugins>

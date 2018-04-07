@@ -210,7 +210,7 @@ public final class NettyClient extends HttpClient {
         }
     }
     
-    private static  void addHeaders(final HttpRequest request) {
+    private static void addHeaders(final HttpRequest request) {
         request.withHeader(io.netty.handler.codec.http.HttpHeaderNames.HOST.toString(), request.url().getHost())
                .withHeader(io.netty.handler.codec.http.HttpHeaderNames.CONNECTION.toString(),
                         io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE.toString());
@@ -238,7 +238,7 @@ public final class NettyClient extends HttpClient {
         private final HttpRequest request;
         private final SingleEmitter<HttpResponse> responseEmitter;
         
-        // state is tracked to ensure that any races between write, read, 
+        // state is tracked to ensure that any races between write, read,
         // disposal, cancel, and request are properly handled via a serialized state machine. 
         private final AtomicInteger state = new AtomicInteger(ACQUIRING_NOT_DISPOSED);
         
@@ -835,7 +835,11 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            contentEmitter.chunkCompleted();
+            if (contentEmitter != null) {
+                // It doesn't seem like this should be possible since we set this volatile field
+                // before we begin writing request content, but it can happen under high load
+                contentEmitter.chunkCompleted();
+            }
         }
 
         @Override

@@ -274,8 +274,23 @@ public class RestProxyStressTests {
         Instant start = Instant.now();
         Flowable.range(0, NUM_FILES)
                 .zipWith(md5s, (id, md5) -> {
-                    final AsynchronousFileChannel fileStream = AsynchronousFileChannel.open(TEMP_FOLDER_PATH.resolve("100m-" + id + ".dat"));
-                    Flowable<ByteBuffer> stream = FlowableUtil.readFile(fileStream);
+//                    final AsynchronousFileChannel fileStream = AsynchronousFileChannel.open(TEMP_FOLDER_PATH.resolve("100m-" + id + ".dat"));
+                    Flowable<ByteBuffer> stream = Flowable.generate(() -> FileChannel.open(TEMP_FOLDER_PATH.resolve("100m-" + id + ".dat")),
+                            (fc, emitter) -> {
+                                if (Thread.currentThread().getName().contains("EventLoopGroup")) {
+                                    LoggerFactory.getLogger(getClass()).info("Bad thread used for blocking I/O: " + Thread.currentThread().getName());
+                                    emitter.onError(new IllegalStateException(Thread.currentThread().getName()));
+                                }
+
+                                ByteBuffer bb = ByteBuffer.allocate(8192);
+                                int bytesRead = fc.read(bb);
+                                if (bytesRead == -1) {
+                                    emitter.onComplete();
+                                } else {
+                                    emitter.onNext((ByteBuffer) bb.flip());
+                                }
+                            }, FileChannel::close);
+                    stream = stream.subscribeOn(Schedulers.io());
                     return service.upload100MB(String.valueOf(id), sas, "BlockBlob", stream, FILE_SIZE).flatMapCompletable(response -> {
                         String base64MD5 = response.rawHeaders().get("Content-MD5");
                         byte[] receivedMD5 = Base64.getDecoder().decode(base64MD5);

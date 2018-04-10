@@ -415,7 +415,7 @@ public final class NettyClient extends HttpClient {
                             break;
                         }
                     } else {
-                        break;
+                        throw new RuntimeException("unexpected!");
                     }
                 }
             }

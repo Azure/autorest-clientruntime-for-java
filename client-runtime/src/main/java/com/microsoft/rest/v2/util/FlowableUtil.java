@@ -289,17 +289,24 @@ public final class FlowableUtil {
             }
             
             private void doRead() {
-                ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, maxRequired()));
-                fileChannel.read(innerBuf, position, innerBuf, this);
+                // use local variable to limit volatile reads
+                long pos = position;
+                ByteBuffer innerBuf = ByteBuffer.allocate(Math.min(CHUNK_SIZE, maxRequired(pos)));
+                fileChannel.read(innerBuf, pos, innerBuf, this);
             }
 
-            private int maxRequired() {
-                int maxRequired = (int) (offset + length - position);
-                // support really large files by checking for overflow
-                if (maxRequired < 0) {
-                    return Integer.MAX_VALUE;
+            private int maxRequired(long pos) {
+                long maxRequired = offset + length - pos;
+                if (maxRequired <= 0) {
+                    return 0;
                 } else {
-                    return maxRequired;
+                    int m = (int) (maxRequired);
+                    // support really large files by checking for overflow
+                    if (m < 0) {
+                        return Integer.MAX_VALUE;
+                    } else {
+                        return m;
+                    }
                 }
             }
             
@@ -309,12 +316,15 @@ public final class FlowableUtil {
                     if (bytesRead == -1) {
                         done = true;
                     } else {
-                        int bytesWanted = (int) Math.min(bytesRead, maxRequired());
+                        long pos = position;
+                        int bytesWanted = (int) Math.min(bytesRead, maxRequired(pos));
+                        // use local variable to perform one less volatile read
+                        long position2 = pos + bytesWanted;
                         //noinspection NonAtomicOperationOnVolatileField
-                        position += bytesWanted;
+                        position = position2;
                         buffer.flip();
                         next = buffer;
-                        if (position >= offset + length) {
+                        if (position2 >= offset + length) {
                             done = true;
                         } 
                     }

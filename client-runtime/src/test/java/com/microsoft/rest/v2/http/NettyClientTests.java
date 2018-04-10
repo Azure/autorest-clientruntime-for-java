@@ -135,7 +135,7 @@ public class NettyClientTests {
     }
     
     @Test
-    public void testRequestBodyEndsInErrorShouldPropagateToResponse() {
+    public void testRequestBodyIsErrorShouldPropagateToResponse() {
         HttpClient client = HttpClient.createDefault();
         HttpRequest request = new HttpRequest("", HttpMethod.POST, url(server, "/shortPost"), null) //
                 .withBody(Flowable.error(new RuntimeException("boo")));
@@ -144,6 +144,26 @@ public class NettyClientTests {
                 .awaitDone(10, TimeUnit.SECONDS) //
                 .assertNoValues() //
                 .assertErrorMessage("boo");
+    }
+    
+    @Test
+    public void testRequestBodyEndsInErrorShouldPropagateToResponse() {
+        HttpClient client = HttpClient.createDefault();
+        HttpRequest request = new HttpRequest("", HttpMethod.POST, url(server, "/shortPost"), null) //
+                .withBody(Flowable.just("abcdefgh") //
+                        .repeat(1000) //
+                        .map(NettyClientTests::toByteBuffer) //
+                        .concatWith(Flowable.error(new RuntimeException("boo"))));
+        client.sendRequestAsync(request)
+                .test() //
+                .awaitDone(10, TimeUnit.SECONDS) //
+                .assertNoValues() //
+                .assertErrorMessage("boo");
+    }
+    
+    
+    private static ByteBuffer toByteBuffer(String s) {
+        return ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8));
     }
 
     @Test

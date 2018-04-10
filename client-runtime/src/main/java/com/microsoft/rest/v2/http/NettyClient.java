@@ -334,14 +334,12 @@ public final class NettyClient extends HttpClient {
                     subscription.cancel();
                     emitError(future.cause());
                 } else {
-                    System.out.println(Thread.currentThread().getName() + " requesting");
                     subscription.request(1);
                 }
             };
 
             @Override
             public void onNext(ByteBuffer buf) {
-                System.out.println(Thread.currentThread().getName() + " arrived");
                 if (done) {
                     return;
                 }

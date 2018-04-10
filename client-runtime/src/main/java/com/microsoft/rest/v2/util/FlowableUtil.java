@@ -316,7 +316,7 @@ public final class FlowableUtil {
                     if (bytesRead == -1) {
                         done = true;
                     } else {
-                        // use local variable to perform one less volatile read
+                        // use local variable to perform fewer volatile reads
                         long pos = position;
                         int bytesWanted = (int) Math.min(bytesRead, maxRequired(pos));
                         long position2 = pos + bytesWanted;
@@ -336,6 +336,8 @@ public final class FlowableUtil {
             @Override
             public void failed(Throwable exc, ByteBuffer attachment) {
                 if (!cancelled) {
+                    // must set error before setting done to true
+                    // so that is visible in drain loop
                     error = exc;
                     done = true;
                     drain();

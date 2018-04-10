@@ -225,8 +225,8 @@ public final class FlowableUtil {
             private volatile boolean cancelled;
 
             FileReadSubscription(Subscriber<? super ByteBuffer> subscriber) {
-                this.position = NOT_SET;
                 this.subscriber = subscriber;
+                this.position = NOT_SET;
             }
 
             @Override
@@ -251,15 +251,17 @@ public final class FlowableUtil {
                             return;
                         }
                         if (requested.get() > 0) {
+                            boolean emitted = false;
                             // read d before next to avoid race
                             boolean d = done;
                             ByteBuffer bb = next;
                             if (bb != null) {
                                 next = null;
                                 subscriber.onNext(bb);
-                                BackpressureHelper.produced(requested, 1);
-                                doRead();
-                            } 
+                                emitted = true;
+                            } else {
+                                emitted = false;
+                            }
                             if (d) {
                                 if (error != null) {
                                     subscriber.onError(error);
@@ -271,6 +273,12 @@ public final class FlowableUtil {
                                     return;
                                 }
                             } 
+                            if (emitted) {
+                                // do this after checking d to avoid calling read 
+                                // when done
+                                BackpressureHelper.produced(requested, 1);
+                                doRead();
+                            }
                         } 
                         missed = addAndGet(-missed);
                         if (missed == 0) {

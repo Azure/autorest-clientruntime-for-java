@@ -53,6 +53,7 @@ public class NettyClientTests {
         server.stubFor(WireMock.get("/long").willReturn(WireMock.aResponse().withBody(LONG_BODY)));
         server.stubFor(WireMock.get("/error")
                 .willReturn(WireMock.aResponse().withBody("error").withStatus(500)));
+        server.stubFor(WireMock.put("/put").willReturn(WireMock.aResponse().withStatus(201)));
         server.start();
         // ResourceLeakDetector.setLevel(Level.PARANOID);
     }
@@ -324,6 +325,21 @@ public class NettyClientTests {
                         .info("Shutdown started before sending request. Retry attempt " + (i + 1));
             }
         }
+    }
+
+    @Test
+    public void testRequestBodyErrorPropagatesInResponse() throws Exception {
+        Flowable<ByteBuffer> body = Flowable
+                .just(ByteBuffer.allocate(128))
+                .concatWith(Flowable.error(new IOException()));
+        HttpClient client = HttpClient.createDefault();
+        HttpRequest request = new HttpRequest("", HttpMethod.PUT, url(server, "/put"),
+                new HttpHeaders().set("Content-Length", "256"), body, null);
+        client.sendRequestAsync(request)
+                .test()
+                .awaitDone(10, TimeUnit.SECONDS)
+                .assertNoValues()
+                .assertError(IOException.class);
     }
 
     private static URL url(WireMockServer server, String path) {

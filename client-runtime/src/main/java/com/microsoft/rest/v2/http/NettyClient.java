@@ -272,11 +272,15 @@ public final class NettyClient extends HttpClient {
             channel = (Channel) cf.getNow();
             while (true) {
                 int s = state.get();
-                if (transition(s, ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
-                    channelPool.closeAndRelease(channel);
-                    return;
-                } else if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRED_CONTENT_NOT_SUBSCRIBED)) {
-                    break;
+                if (s == ACQUIRING_DISPOSED) {
+                    if (transition(ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
+                        channelPool.closeAndRelease(channel);
+                        return;
+                    }
+                } else if (s == ACQUIRING_NOT_DISPOSED) {
+                    if (transition(ACQUIRING_NOT_DISPOSED, ACQUIRED_CONTENT_NOT_SUBSCRIBED)) {
+                        break;
+                    }
                 } else {
                     return;
                 }
@@ -286,8 +290,6 @@ public final class NettyClient extends HttpClient {
                     channel.pipeline().get(HttpClientInboundHandler.class);
             inboundHandler.setFields(responseEmitter, this);
             //TODO do we need a memory barrier here to ensure vis of responseEmitter in other threads?
-            
-            responseEmitter.setDisposable(createDisposable());
             
             try {
                 configurePipeline(channel, request);
@@ -331,11 +333,15 @@ public final class NettyClient extends HttpClient {
                 if (!future.isSuccess()) {
                     subscription.cancel();
                     emitError(future.cause());
+                } else {
+                    System.out.println(Thread.currentThread().getName() + " requesting");
+                    subscription.request(1);
                 }
             };
 
             @Override
             public void onNext(ByteBuffer buf) {
+                System.out.println(Thread.currentThread().getName() + " arrived");
                 if (done) {
                     return;
                 }
@@ -343,10 +349,6 @@ public final class NettyClient extends HttpClient {
                     channel
                         .writeAndFlush(Unpooled.wrappedBuffer(buf))
                         .addListener(onChannelWriteComplete);
-
-                    if (channel.isWritable()) {
-                        subscription.request(1);
-                    }
                 } catch (Exception e) {
                     subscription.cancel();
                     onError(e);
@@ -355,7 +357,10 @@ public final class NettyClient extends HttpClient {
 
             @Override
             public void onError(Throwable t) {
+                // TODO should we wrap the throwable so that the client 
+                // knows that the error occurred from the request body?
                 if (done) {
+                    RxJavaPlugins.onError(t);
                     return;
                 }
                 done = true;
@@ -400,46 +405,31 @@ public final class NettyClient extends HttpClient {
                     });
         }
 
-        private Disposable createDisposable() {
-            return new Disposable() {
-                
-                final AtomicBoolean disposed = new AtomicBoolean(false);
-
-                @Override
-                public void dispose() {
-                    if (disposed.compareAndSet(false, true)) {
-                        dispose();
-                    }
-                }
-
-                @Override
-                public boolean isDisposed() {
-                    return disposed.get();
-                }
-            };
-        }
-        
-        private boolean transition(int s, int from, int to) {
-            if (s == from) {
-                return state.compareAndSet(s, to);
-            } else {
-                return false;
-            }
+        private boolean transition(int from, int to) {
+            return state.compareAndSet(from, to);
         }
 
         void emitError(Throwable throwable) {
+            // TODO remove printStackTrace
+            throwable.printStackTrace();
             while (true) {
                 int s = state.get();
-                if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
-                    responseEmitter.onError(throwable);
-                    break;
-                } else if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
-                    content.onError(throwable);
-                    break;
-                } else if (transition(s, ACQUIRED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
-                    closeAndReleaseChannel();
-                    responseEmitter.onError(throwable);
-                    break;
+                if (s == ACQUIRING_NOT_DISPOSED) {
+                    if (transition(ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
+                        responseEmitter.onError(throwable);
+                        break;
+                    }
+                } else if (s == ACQUIRED_CONTENT_SUBSCRIBED) {
+                    if (transition(ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
+                        content.onError(throwable);
+                        break;
+                    }
+                } else if (s == ACQUIRED_CONTENT_NOT_SUBSCRIBED) {
+                    if (transition(ACQUIRED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
+                        closeAndReleaseChannel();
+                        responseEmitter.onError(throwable);
+                        break;
+                    }
                 } else {
                     break;
                 }
@@ -457,12 +447,16 @@ public final class NettyClient extends HttpClient {
         boolean contentSubscribed(ResponseContentFlowable content) {
             while (true) {
                 int s = state.get();
-                if (transition(s, ACQUIRED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_CONTENT_SUBSCRIBED)) {
-                    this.content = content;
-                    return true;
-                } else if (transition(s, ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
-                    this.content = content;
-                    return true;
+                if (s == ACQUIRED_CONTENT_NOT_SUBSCRIBED) {
+                    if (transition(ACQUIRED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_CONTENT_SUBSCRIBED)) {
+                        this.content = content;
+                        return true;
+                    }
+                } else if (s == ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED) {
+                    if (transition(ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
+                        this.content = content;
+                        return true;
+                    }
                 } else {
                     return false;
                 }
@@ -476,15 +470,18 @@ public final class NettyClient extends HttpClient {
         void contentDone() {
             while (true) {
                 int s = state.get();
-                if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
-                    // Even though we have received a complete ok response
-                    // from the request it is still possible that the request has not finished! 
-                    // Rikki Gibson 
-                    closeAndReleaseChannel();
-                    return;
-                } else if (transition(s, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
-                    closeAndReleaseChannel();
-                    return;
+                if (s == ACQUIRED_CONTENT_SUBSCRIBED) {
+                    if (transition(ACQUIRED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
+                        // Even though we have received a complete ok response
+                        // from the request it is still possible that the request has not finished!
+                        closeAndReleaseChannel();
+                        return;
+                    }
+                } else if (s == ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED) {
+                    if (transition(ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
+                        closeAndReleaseChannel();
+                        return;
+                    }
                 } else {
                     return;
                 }
@@ -495,17 +492,25 @@ public final class NettyClient extends HttpClient {
         public void dispose() {
             while (true) {
                 int s = state.get();
-                if (transition(s, ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
-                    // haven't got the channel to be able to release it yet
-                    // but check in operationComplete will release it
-                    return;
-                } else if (transition(s, ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
-                    closeAndReleaseChannel();
-                    return;
-                } else if (transition(s, ACQUIRED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED)) {
-                    return;
-                } else if (transition(s, ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
-                    return;
+                if (s == ACQUIRING_NOT_DISPOSED) {
+                    if (transition(ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
+                        // haven't got the channel to be able to release it yet
+                        // but check in operationComplete will release it
+                        return;
+                    }
+                } else if (s == ACQUIRING_DISPOSED) {
+                    if (transition(ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
+                        closeAndReleaseChannel();
+                        return;
+                    }
+                } else if (s == ACQUIRED_CONTENT_NOT_SUBSCRIBED) {
+                    if (transition(ACQUIRED_CONTENT_NOT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED)) {
+                        return;
+                    }
+                } else if (s == ACQUIRED_CONTENT_SUBSCRIBED) {
+                    if (transition(ACQUIRED_CONTENT_SUBSCRIBED, ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED)) {
+                        return;
+                    }
                 } else {
                     return;
                 }

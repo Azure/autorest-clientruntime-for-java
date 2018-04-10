@@ -255,6 +255,15 @@ public final class NettyClient extends HttpClient {
         
         //synchronized by `state`
         private ResponseContentFlowable content;
+        
+        private final AtomicInteger writing = new AtomicInteger();
+        private volatile RequestSubscriber requestSubscriber;
+        
+        private static final int WRITE_COMPLETED_WRITABLE = 0;
+        private static final int WRITING_WRITABLE = 1;
+        private static final int WRITE_COMPLETED_NOT_WRITABLE = 2;
+        private static final int WRITING_NOT_WRITABLE = 3;
+        
 
         AcquisitionListener(SharedChannelPool channelPool, final HttpRequest request,
                 SingleEmitter<HttpResponse> responseEmitter) {
@@ -301,14 +310,15 @@ public final class NettyClient extends HttpClient {
                 if (request.body() == null) {
                     writeBodyEnd();
                 } else {
-                    request.body().subscribe(new RequestSubscriber(inboundHandler));
+                    requestSubscriber = new RequestSubscriber(inboundHandler);
+                    request.body().subscribe(requestSubscriber);
                 }
             } catch (Exception e) {
                 emitError(e);
             }
         }
         
-        private final class RequestSubscriber implements FlowableSubscriber<ByteBuffer> {
+        private final class RequestSubscriber implements FlowableSubscriber<ByteBuffer>, GenericFutureListener<Future<Void>> {
             Subscription subscription;
             
             // we need a done flag because an onNext emission can throw and emit an Error 
@@ -317,6 +327,12 @@ public final class NettyClient extends HttpClient {
             private boolean done;
 
             private final HttpClientInboundHandler inboundHandler;
+            
+            private final AtomicInteger writing = new AtomicInteger();
+            private static final int WRITE_COMPLETED_WRITABLE = 0;
+            private static final int WRITING_WRITABLE = 1;
+            private static final int WRITE_COMPLETED_NOT_WRITABLE = 2;
+            private static final int WRITING_NOT_WRITABLE = 3;
             
             RequestSubscriber(HttpClientInboundHandler inboundHandler) {
                 this.inboundHandler = inboundHandler;
@@ -329,24 +345,16 @@ public final class NettyClient extends HttpClient {
                 subscription.request(1);
             }
 
-            GenericFutureListener<Future<Void>> onChannelWriteComplete = (Future<Void> future) -> {
-                if (!future.isSuccess()) {
-                    subscription.cancel();
-                    emitError(future.cause());
-                } else {
-                    subscription.request(1);
-                }
-            };
-
             @Override
             public void onNext(ByteBuffer buf) {
                 if (done) {
                     return;
                 }
                 try {
+                    writing();
                     channel
                         .writeAndFlush(Unpooled.wrappedBuffer(buf))
-                        .addListener(onChannelWriteComplete);
+                        .addListener(this);
                 } catch (Exception e) {
                     subscription.cancel();
                     onError(e);
@@ -377,6 +385,85 @@ public final class NettyClient extends HttpClient {
                     emitError(e);
                 }
             }
+            
+            @Override
+            public void operationComplete(Future<Void> future) throws Exception {
+                if (!future.isSuccess()) {
+                    subscription.cancel();
+                    emitError(future.cause());
+                } else {
+                    writeComplete();
+                }
+            }
+            
+            private void writing() {
+                while (true) {
+                    int s = writing.get();
+                    if (s == WRITE_COMPLETED_NOT_WRITABLE) {
+                        if (writing.compareAndSet(s, WRITING_NOT_WRITABLE)) {
+                            break;
+                        }
+                    } else if (s == WRITE_COMPLETED_WRITABLE) {
+                        if (writing.compareAndSet(s, WRITING_WRITABLE)) {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+            private void writeComplete() {
+                while (true) {
+                    int s = writing.get();
+                    if (s == WRITING_NOT_WRITABLE) {
+                        if (writing.compareAndSet(s, WRITE_COMPLETED_NOT_WRITABLE)) {
+                            break;
+                        }
+                    } else if (s == WRITING_WRITABLE) {
+                        if (writing.compareAndSet(s, WRITE_COMPLETED_WRITABLE)) {
+                            subscription.request(1);
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            void channelWritable(boolean writable) {
+                while (true) {
+                    int s = writing.get();
+                    if (writable) {
+                        if (s == WRITE_COMPLETED_NOT_WRITABLE) {
+                            if (writing.compareAndSet(s, WRITE_COMPLETED_WRITABLE)) {
+                                subscription.request(1);
+                                break;
+                            }
+                        } else if (s == WRITING_NOT_WRITABLE) {
+                            if (writing.compareAndSet(s, WRITING_WRITABLE)) {
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    } else {
+                        if (s == WRITE_COMPLETED_WRITABLE) {
+                            if (writing.compareAndSet(s, WRITE_COMPLETED_NOT_WRITABLE)) {
+                                subscription.request(1);
+                                break;
+                            }
+                        } else if (s == WRITING_WRITABLE) {
+                            if (writing.compareAndSet(s, WRITING_NOT_WRITABLE)) {
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+
         }
 
         private void writeRequest(final DefaultHttpRequest raw) {
@@ -522,6 +609,12 @@ public final class NettyClient extends HttpClient {
         @Override
         public boolean isDisposed() {
             return state.get() == CHANNEL_RELEASED;
+        }
+
+        public void channelWritable(boolean writable) {
+            if (requestSubscriber != null) {
+                requestSubscriber.channelWritable(writable);
+            }
         }
 
     }
@@ -843,9 +936,7 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-            if (ctx.channel().isWritable()) {
-                requestContentSubscription.request(1);
-            }
+            acquisitionListener.channelWritable(ctx.channel().isWritable());
             super.channelWritabilityChanged(ctx);
         }
 

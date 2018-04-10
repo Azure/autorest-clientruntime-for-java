@@ -336,6 +336,8 @@ public final class FlowableUtil {
             @Override
             public void failed(Throwable exc, ByteBuffer attachment) {
                 if (!cancelled) {
+                    // must set error before setting done to true
+                    // so that is visible in drain loop
                     error = exc;
                     done = true;
                     drain();

@@ -450,7 +450,6 @@ public final class NettyClient extends HttpClient {
                     } else {
                         if (s == WRITE_COMPLETED_WRITABLE) {
                             if (writing.compareAndSet(s, WRITE_COMPLETED_NOT_WRITABLE)) {
-                                subscription.request(1);
                                 break;
                             }
                         } else if (s == WRITING_WRITABLE) {

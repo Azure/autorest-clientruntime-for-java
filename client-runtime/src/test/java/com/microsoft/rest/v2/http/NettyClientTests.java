@@ -75,7 +75,7 @@ public class NettyClientTests {
         checkBodyReceived(LONG_BODY, "/long");
     }
 
-    
+
     @Test
     public void testMultipleSubscriptionsEmitsError() {
         HttpResponse response = getResponse("/short");
@@ -133,7 +133,7 @@ public class NettyClientTests {
                 .requestMore(Long.MAX_VALUE) //
                 .awaitDone(20, TimeUnit.SECONDS).assertComplete();
     }
-    
+
     @Test
     public void testRequestBodyIsErrorShouldPropagateToResponse() {
         HttpClient client = HttpClient.createDefault();
@@ -145,7 +145,7 @@ public class NettyClientTests {
                 .assertNoValues() //
                 .assertErrorMessage("boo");
     }
-    
+
     @Test
     public void testRequestBodyEndsInErrorShouldPropagateToResponse() {
         HttpClient client = HttpClient.createDefault();
@@ -160,8 +160,8 @@ public class NettyClientTests {
                 .assertNoValues() //
                 .assertErrorMessage("boo");
     }
-    
-    
+
+
     private static ByteBuffer toByteBuffer(String s) {
         return ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8));
     }
@@ -240,7 +240,7 @@ public class NettyClientTests {
             ss.close();
         }
     }
-    
+
     @Test
     public void testConcurrentRequests() throws NoSuchAlgorithmException {
         long t = System.currentTimeMillis();
@@ -361,7 +361,7 @@ public class NettyClientTests {
         }
         return s.toString();
     }
-    
+
     private void checkBodyReceived(String expectedBody, String path) {
         HttpClient client = HttpClient.createDefault();
         HttpResponse response = doRequest(client, path);

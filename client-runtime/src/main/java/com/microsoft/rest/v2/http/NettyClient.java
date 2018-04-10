@@ -70,7 +70,7 @@ public final class NettyClient extends HttpClient {
 
     /**
      * Creates NettyClient.
-     * 
+     *
      * @param configuration
      *            the HTTP client configuration.
      * @param adapter
@@ -209,8 +209,8 @@ public final class NettyClient extends HttpClient {
             });
         }
     }
-    
-    private static  void addHeaders(final HttpRequest request) {
+
+    private static void addHeaders(final HttpRequest request) {
         request.withHeader(io.netty.handler.codec.http.HttpHeaderNames.HOST.toString(), request.url().getHost())
                .withHeader(io.netty.handler.codec.http.HttpHeaderNames.CONNECTION.toString(),
                         io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE.toString());
@@ -237,11 +237,11 @@ public final class NettyClient extends HttpClient {
         private final SharedChannelPool channelPool;
         private final HttpRequest request;
         private final SingleEmitter<HttpResponse> responseEmitter;
-        
-        // state is tracked to ensure that any races between write, read, 
-        // disposal, cancel, and request are properly handled via a serialized state machine. 
+
+        // state is tracked to ensure that any races between write, read,
+        // disposal, cancel, and request are properly handled via a serialized state machine.
         private final AtomicInteger state = new AtomicInteger(ACQUIRING_NOT_DISPOSED);
-        
+
         private static final int ACQUIRING_NOT_DISPOSED = 0;
         private static final int ACQUIRING_DISPOSED = 1;
         private static final int ACQUIRED_CONTENT_NOT_SUBSCRIBED = 2;
@@ -252,7 +252,7 @@ public final class NettyClient extends HttpClient {
 
         // synchronized by `state`
         private Channel channel;
-        
+
         //synchronized by `state`
         private ResponseContentFlowable content;
         
@@ -294,12 +294,12 @@ public final class NettyClient extends HttpClient {
                     return;
                 }
             }
-            
-            final HttpClientInboundHandler inboundHandler = 
+
+            final HttpClientInboundHandler inboundHandler =
                     channel.pipeline().get(HttpClientInboundHandler.class);
             inboundHandler.setFields(responseEmitter, this);
             //TODO do we need a memory barrier here to ensure vis of responseEmitter in other threads?
-            
+
             try {
                 configurePipeline(channel, request);
 
@@ -320,9 +320,9 @@ public final class NettyClient extends HttpClient {
         
         private final class RequestSubscriber implements FlowableSubscriber<ByteBuffer>, GenericFutureListener<Future<Void>> {
             Subscription subscription;
-            
-            // we need a done flag because an onNext emission can throw and emit an Error 
-            // event though the onNext cancels the subscription that is best endeavours for the 
+
+            // we need a done flag because an onNext emission can throw and emit an Error
+            // event though the onNext cancels the subscription that is best endeavours for the
             // upstream so we need to be defensive about terminal events that follow
             private boolean done;
 
@@ -333,7 +333,7 @@ public final class NettyClient extends HttpClient {
             private static final int WRITING_WRITABLE = 1;
             private static final int WRITE_COMPLETED_NOT_WRITABLE = 2;
             private static final int WRITING_NOT_WRITABLE = 3;
-            
+
             RequestSubscriber(HttpClientInboundHandler inboundHandler) {
                 this.inboundHandler = inboundHandler;
             }
@@ -363,7 +363,7 @@ public final class NettyClient extends HttpClient {
 
             @Override
             public void onError(Throwable t) {
-                // TODO should we wrap the throwable so that the client 
+                // TODO should we wrap the throwable so that the client
                 // knows that the error occurred from the request body?
                 if (done) {
                     RxJavaPlugins.onError(t);
@@ -520,11 +520,11 @@ public final class NettyClient extends HttpClient {
                 }
             }
         }
-        
+
         /**
          * Returns false if and only if content subscription should be immediately
          * cancelled.
-         * 
+         *
          * @param content
          * @return false if and only if content subscription should be immediately
          *     cancelled
@@ -547,10 +547,10 @@ public final class NettyClient extends HttpClient {
                 }
             }
         }
-        
+
         /**
          * Is called when content flowable terminates or is cancelled.
-         * 
+         *
          **/
         void contentDone() {
             while (true) {
@@ -601,7 +601,7 @@ public final class NettyClient extends HttpClient {
                 }
             }
         }
-        
+
         private void closeAndReleaseChannel() {
             channelPool.closeAndRelease(channel);
         }
@@ -644,7 +644,7 @@ public final class NettyClient extends HttpClient {
         }
         return raw;
     }
-    
+
 
     /**
      * Emits HTTP response content from Netty.
@@ -688,8 +688,8 @@ public final class NettyClient extends HttpClient {
                 subscriber = s;
                 s.onSubscribe(this);
 
-                acquisitionListener.contentSubscribed(this); 
-                
+                acquisitionListener.contentSubscribed(this);
+
                 // now that subscriber has been set enable the drain loop
                 wip.lazySet(0);
 
@@ -772,14 +772,14 @@ public final class NettyClient extends HttpClient {
 
         private void drain() {
             // Below is a non-blocking technique to ensure serialization (in-order
-            // processing) of the block inside the if statement and also to ensure 
+            // processing) of the block inside the if statement and also to ensure
             // no race conditions exist where items on the queue would be missed.
             //
             // wip = `work in progress` and follows a naming convention in RxJava
             //
-            // `missed` is a clever little trick to ensure that we only do as many 
+            // `missed` is a clever little trick to ensure that we only do as many
             // loops as actually required. If `drain` is called say 10 times while
-            // the `drain` loop is active then we notice that there are possibly 
+            // the `drain` loop is active then we notice that there are possibly
             // extra items on the queue that arrived just after we found none left
             // (and before the method exits). We don't need to loop around ten times
             // but only once because all items will be picked up from the queue in
@@ -829,11 +829,11 @@ public final class NettyClient extends HttpClient {
                         }
                     }
                     if (e > 0) {
-                        // it's tempting to use the result of this method to avoid 
-                        // another volatile read of requested but to avoid race conditions 
+                        // it's tempting to use the result of this method to avoid
+                        // another volatile read of requested but to avoid race conditions
                         // it's essential that requested is read again AFTER wip is changed.
                         BackpressureHelper.produced(requested, e);
-                    } 
+                    }
                     missed = wip.addAndGet(-missed);
                     if (missed == 0) {
                         return;
@@ -870,17 +870,17 @@ public final class NettyClient extends HttpClient {
             }
         }
     }
-    
+
     private static final class ChannelSubscription implements Subscription {
-        
+
         private final AtomicReference<Channel> channel;
         private final AcquisitionListener acquisitionListener;
-        
+
         ChannelSubscription(AtomicReference<Channel> channel, AcquisitionListener acquisitionListener) {
             this.channel = channel;
             this.acquisitionListener = acquisitionListener;
         }
-        
+
         @Override
         public void request(long n) {
             Preconditions.checkArgument(n == 1, "requests must be one at a time!");
@@ -906,10 +906,10 @@ public final class NettyClient extends HttpClient {
         private volatile Subscription requestContentSubscription;
 
         private AtomicReference<Channel> channel = new AtomicReference<Channel>();
-        
+
         HttpClientInboundHandler() {
         }
-        
+
         void setFields(SingleEmitter<HttpResponse> responseEmitter, AcquisitionListener acquisitionListener) {
             // this will be called before request has been initiated
             this.responseEmitter = responseEmitter;
@@ -931,7 +931,13 @@ public final class NettyClient extends HttpClient {
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            contentEmitter.chunkCompleted();
+            if (contentEmitter != null) {
+                // It doesn't seem like this should be possible since we set this volatile field
+                // before we begin writing request content, but it can happen under high load
+                contentEmitter.chunkCompleted();
+            } else {
+                LoggerFactory.getLogger(getClass()).warn("contentEmitter was null!");
+            }
         }
 
         @Override
@@ -949,7 +955,7 @@ public final class NettyClient extends HttpClient {
                     exceptionCaught(ctx, response.decoderResult().cause());
                     return;
                 }
-                // Scheduler scheduler = Schedulers.from(ctx.channel().eventLoop());
+
                 responseEmitter.onSuccess(new NettyResponse(response, contentEmitter));
             }
 
@@ -962,7 +968,7 @@ public final class NettyClient extends HttpClient {
 
             if (msg instanceof LastHttpContent) {
                 acquisitionListener.contentDone();
-            } 
+            }
         }
 
         @Override
@@ -991,7 +997,7 @@ public final class NettyClient extends HttpClient {
         /**
          * Create a Netty client factory, specifying the event loop group size and the
          * channel pool size.
-         * 
+         *
          * @param eventLoopGroupSize
          *            the number of event loop executors
          * @param channelPoolSize

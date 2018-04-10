@@ -328,7 +328,14 @@ public final class NettyClient extends HttpClient {
 
             private final HttpClientInboundHandler inboundHandler;
             
+            /**
+             * Ensures that requests are only made of upstream once the last write has completed 
+             * and the channel can be written to synchronously (when isWritable is false writes
+             * are buffered). 
+             */
             private final AtomicInteger writing = new AtomicInteger();
+            
+            //states for `writing`
             private static final int WRITE_COMPLETED_WRITABLE = 0;
             private static final int WRITING_WRITABLE = 1;
             private static final int WRITE_COMPLETED_NOT_WRITABLE = 2;

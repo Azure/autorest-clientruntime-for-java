@@ -1,7 +1,6 @@
 package com.microsoft.rest.v2.http;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -53,6 +52,8 @@ public class NettyClientTests {
         server.stubFor(WireMock.get("/long").willReturn(WireMock.aResponse().withBody(LONG_BODY)));
         server.stubFor(WireMock.get("/error")
                 .willReturn(WireMock.aResponse().withBody("error").withStatus(500)));
+        server.stubFor(
+                WireMock.post("/shortPost").willReturn(WireMock.aResponse().withBody(SHORT_BODY)));
         server.start();
         // ResourceLeakDetector.setLevel(Level.PARANOID);
     }
@@ -74,20 +75,7 @@ public class NettyClientTests {
         checkBodyReceived(LONG_BODY, "/long");
     }
 
-    private void checkBodyReceived(String expectedBody, String path) {
-        HttpClient client = HttpClient.createDefault();
-        HttpResponse response = doRequest(client, path);
-        String s = new String(response.bodyAsByteArray().blockingGet(),
-                StandardCharsets.UTF_8);
-        assertEquals(expectedBody, s);
-    }
-
-    private HttpResponse doRequest(HttpClient client, String path) {
-        HttpRequest request = new HttpRequest("", HttpMethod.GET, url(server, path), null);
-        HttpResponse response = client.sendRequestAsync(request).blockingGet();
-        return response;
-    }
-
+    
     @Test
     public void testMultipleSubscriptionsEmitsError() {
         HttpResponse response = getResponse("/short");
@@ -144,6 +132,18 @@ public class NettyClientTests {
                 .awaitCount(4) //
                 .requestMore(Long.MAX_VALUE) //
                 .awaitDone(20, TimeUnit.SECONDS).assertComplete();
+    }
+    
+    @Test
+    public void testRequestBodyEndsInErrorShouldPropagateToResponse() {
+        HttpClient client = HttpClient.createDefault();
+        HttpRequest request = new HttpRequest("", HttpMethod.POST, url(server, "/shortPost"), null) //
+                .withBody(Flowable.error(new RuntimeException("boo")));
+        client.sendRequestAsync(request)
+                .test() //
+                .awaitDone(10, TimeUnit.SECONDS) //
+                .assertNoValues() //
+                .assertErrorMessage("boo");
     }
 
     @Test
@@ -340,6 +340,20 @@ public class NettyClientTests {
             s.append("abcdefghijk");
         }
         return s.toString();
+    }
+    
+    private void checkBodyReceived(String expectedBody, String path) {
+        HttpClient client = HttpClient.createDefault();
+        HttpResponse response = doRequest(client, path);
+        String s = new String(response.bodyAsByteArray().blockingGet(),
+                StandardCharsets.UTF_8);
+        assertEquals(expectedBody, s);
+    }
+
+    private HttpResponse doRequest(HttpClient client, String path) {
+        HttpRequest request = new HttpRequest("", HttpMethod.GET, url(server, path), null);
+        HttpResponse response = client.sendRequestAsync(request).blockingGet();
+        return response;
     }
 
 }

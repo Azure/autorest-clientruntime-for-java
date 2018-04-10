@@ -7,6 +7,7 @@ import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.server.handler.ResourceHandler;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -21,7 +22,8 @@ public class MockServer {
     private static class TestHandler extends HandlerWrapper {
         @Override
         public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException {
-            System.out.println("Received request for " + baseRequest.getRequestURL());
+            LoggerFactory.getLogger(getClass()).info("Received request for " + baseRequest.getRequestURL());
+            baseRequest.setHandled(true);
             Random random = new Random();
 
             byte[] buf = new byte[8192];
@@ -42,8 +44,15 @@ public class MockServer {
 
                 int randomNumber = random.nextInt(100000);
                 if (randomNumber == 12345) {
+                    LoggerFactory.getLogger(getClass()).info("Server had a transient error.");
                     response.setStatus(503);
-                    baseRequest.setHandled(true);
+                    response.getWriter().println("Error! Please try again.");
+
+                    // Appears to be necessary to read all the request content to prevent hangs
+                    // Would like to be able to test scenarios where the server drops the connection
+                    // when we're in the middle of sending request content.
+                    while (is.read(buf) != -1);
+
                     return;
                 }
             }
@@ -52,7 +61,6 @@ public class MockServer {
             String encodedMD5 = Base64.getEncoder().encodeToString(md5Digest);
             response.setStatus(201);
             response.setHeader("Content-MD5", encodedMD5);
-            baseRequest.setHandled(true);
         }
     }
 

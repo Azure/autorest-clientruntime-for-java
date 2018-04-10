@@ -316,12 +316,13 @@ public final class FlowableUtil {
                     if (bytesRead == -1) {
                         done = true;
                     } else {
+                        // use local variable to perform one less volatile read
                         long pos = position;
                         int bytesWanted = (int) Math.min(bytesRead, maxRequired(pos));
-                        // use local variable to perform one less volatile read
                         long position2 = pos + bytesWanted;
                         //noinspection NonAtomicOperationOnVolatileField
                         position = position2;
+                        buffer.position(bytesWanted);
                         buffer.flip();
                         next = buffer;
                         if (position2 >= offset + length) {

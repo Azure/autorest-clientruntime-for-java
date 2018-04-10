@@ -68,7 +68,13 @@ public class MockServer {
         Server server = new Server(11081);
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(true);
-        resourceHandler.setResourceBase("client-runtime/temp/");
+
+        String tempPath = System.getenv("JAVA_STRESS_TEST_TEMP_PATH");
+        if (tempPath == null || tempPath.isEmpty()) {
+            tempPath = "client-runtime/temp";
+        }
+
+        resourceHandler.setResourceBase(tempPath);
         ContextHandler ch = new ContextHandler("/javasdktest/upload");
         ch.setHandler(resourceHandler);
 

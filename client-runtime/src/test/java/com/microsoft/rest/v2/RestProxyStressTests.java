@@ -99,6 +99,12 @@ public class RestProxyStressTests {
         builder.withHttpLoggingPolicy(HttpLogDetailLevel.BASIC);
 
         service = RestProxy.create(IOService.class, builder.build());
+
+        String tempFolderPath = System.getenv("JAVA_STRESS_TEST_TEMP_PATH");
+        if (tempFolderPath == null || tempFolderPath.isEmpty()) {
+            tempFolderPath = "temp";
+        }
+        TEMP_FOLDER_PATH = Paths.get(tempFolderPath);
     }
 
     private static final class AddDatePolicyFactory implements RequestPolicyFactory {
@@ -191,7 +197,7 @@ public class RestProxyStressTests {
         Single<VoidResponse> deleteContainer(@PathParam("id") String id, @PathParam(value = "sas", encoded = true) String sas);
     }
 
-    private static final Path TEMP_FOLDER_PATH = Paths.get("temp");
+    private static Path TEMP_FOLDER_PATH;
     private static final int NUM_FILES = 100;
     private static final int FILE_SIZE = 1024 * 1024 * 100;
     private static final int CHUNK_SIZE = 8192;

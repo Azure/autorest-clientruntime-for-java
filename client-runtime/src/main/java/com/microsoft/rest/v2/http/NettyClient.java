@@ -198,14 +198,6 @@ public final class NettyClient extends HttpClient {
                 AcquisitionListener listener = new AcquisitionListener(channelPool, request, responseEmitter);
                 responseEmitter.setDisposable(listener);
                 channelPool.acquire(channelAddress).addListener(listener);
-            }).onErrorResumeNext((Throwable throwable) -> {
-                if (throwable instanceof EncoderException) {
-                    LoggerFactory.getLogger(getClass()).warn("Got EncoderException: " + throwable.getMessage());
-                    //TODO what is this, a retry? Should have a time delay? Max number of retries?
-                    return sendRequestInternalAsync(request, proxy);
-                } else {
-                    return Single.error(throwable);
-                }
             });
         }
     }

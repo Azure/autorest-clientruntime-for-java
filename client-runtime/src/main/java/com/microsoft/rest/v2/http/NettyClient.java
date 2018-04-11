@@ -256,14 +256,7 @@ public final class NettyClient extends HttpClient {
         //synchronized by `state`
         private ResponseContentFlowable content;
         
-        private final AtomicInteger writing = new AtomicInteger();
         private volatile RequestSubscriber requestSubscriber;
-        
-        private static final int WRITE_COMPLETED_WRITABLE = 0;
-        private static final int WRITING_WRITABLE = 1;
-        private static final int WRITE_COMPLETED_NOT_WRITABLE = 2;
-        private static final int WRITING_NOT_WRITABLE = 3;
-        
 
         AcquisitionListener(SharedChannelPool channelPool, final HttpRequest request,
                 SingleEmitter<HttpResponse> responseEmitter) {

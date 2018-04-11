@@ -36,8 +36,9 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import io.reactivex.internal.functions.Functions;
 
+import org.junit.After;
 import org.junit.Assume;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
@@ -75,8 +76,26 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
 public class RestProxyStressTests {
-    private static IOService service;
+    private static IOService service = createService();
     private static Process mockServer;
+
+    private static IOService createService() {
+        HttpHeaders headers = new HttpHeaders()
+                .set("x-ms-version", "2017-04-17");
+        HttpPipelineBuilder builder = new HttpPipelineBuilder()
+                .withRequestPolicy(new AddDatePolicyFactory())
+                .withRequestPolicy(new AddHeadersPolicyFactory(headers))
+                .withRequestPolicy(new ThrottlingRetryPolicyFactory());
+
+        String liveStressTests = System.getenv("JAVA_SDK_TEST_SAS");
+        if (liveStressTests == null || liveStressTests.isEmpty()) {
+            builder.withRequestPolicy(new HostPolicyFactory("http://localhost:11081"));
+        }
+
+        builder.withHttpLoggingPolicy(HttpLogDetailLevel.BASIC);
+
+        return RestProxy.create(IOService.class, builder.build());
+    }
 
     private static Process launchTestServer() throws IOException {
         String javaHome = System.getProperty("java.home");
@@ -104,30 +123,14 @@ public class RestProxyStressTests {
         return process;
     }
 
-    @BeforeClass
-    public static void setup() throws Exception {
+    @Before
+    public void setup() throws Exception {
         Assume.assumeTrue(
                 "Set the environment variable JAVA_SDK_STRESS_TESTS to \"true\" to run stress tests",
                 Boolean.parseBoolean(System.getenv("JAVA_SDK_STRESS_TESTS")));
 
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
         LoggerFactory.getLogger(RestProxyStressTests.class).info("ResourceLeakDetector level: " + ResourceLeakDetector.getLevel());
-
-        HttpHeaders headers = new HttpHeaders()
-                .set("x-ms-version", "2017-04-17");
-        HttpPipelineBuilder builder = new HttpPipelineBuilder()
-                .withRequestPolicy(new AddDatePolicyFactory())
-                .withRequestPolicy(new AddHeadersPolicyFactory(headers))
-                .withRequestPolicy(new ThrottlingRetryPolicyFactory());
-
-        String liveStressTests = System.getenv("JAVA_SDK_TEST_SAS");
-        if (liveStressTests == null || liveStressTests.isEmpty()) {
-            builder.withRequestPolicy(new HostPolicyFactory("http://localhost:11081"));
-        }
-
-        builder.withHttpLoggingPolicy(HttpLogDetailLevel.BASIC);
-
-        service = RestProxy.create(IOService.class, builder.build());
 
         String tempFolderPath = System.getenv("JAVA_STRESS_TEST_TEMP_PATH");
         if (tempFolderPath == null || tempFolderPath.isEmpty()) {
@@ -139,7 +142,8 @@ public class RestProxyStressTests {
         mockServer = launchTestServer();
     }
 
-    public static void teardown() throws Exception {
+    @After
+    public void teardown() throws Exception {
         mockServer.destroy();
     }
 

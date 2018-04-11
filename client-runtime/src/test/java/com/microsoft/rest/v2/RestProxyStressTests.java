@@ -81,7 +81,7 @@ public class RestProxyStressTests {
 
     @BeforeClass
     public static void setup() {
-//        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
         LoggerFactory.getLogger(RestProxyStressTests.class).info("ResourceLeakDetector level: " + ResourceLeakDetector.getLevel());
 
         HttpHeaders headers = new HttpHeaders()

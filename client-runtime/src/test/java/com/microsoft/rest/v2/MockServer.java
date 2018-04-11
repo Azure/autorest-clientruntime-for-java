@@ -59,7 +59,11 @@ public class MockServer {
 
             byte[] md5Digest = md5.digest();
             String encodedMD5 = Base64.getEncoder().encodeToString(md5Digest);
-            response.setStatus(201);
+            if (request.getMethod().equals("DELETE")) {
+                response.setStatus(202);
+            } else {
+                response.setStatus(201);
+            }
             response.setHeader("Content-MD5", encodedMD5);
         }
     }

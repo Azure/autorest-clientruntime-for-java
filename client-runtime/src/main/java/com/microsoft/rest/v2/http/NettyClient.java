@@ -926,8 +926,6 @@ public final class NettyClient extends HttpClient {
                 // It doesn't seem like this should be possible since we set this volatile field
                 // before we begin writing request content, but it can happen under high load
                 contentEmitter.chunkCompleted();
-            } else {
-                LoggerFactory.getLogger(getClass()).warn("contentEmitter was null!");
             }
         }
 

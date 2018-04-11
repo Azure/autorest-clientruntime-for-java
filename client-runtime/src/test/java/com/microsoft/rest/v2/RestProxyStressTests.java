@@ -81,7 +81,7 @@ public class RestProxyStressTests {
 
     @BeforeClass
     public static void setup() {
-        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+//        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
         LoggerFactory.getLogger(RestProxyStressTests.class).info("ResourceLeakDetector level: " + ResourceLeakDetector.getLevel());
 
         HttpHeaders headers = new HttpHeaders()
@@ -410,17 +410,32 @@ public class RestProxyStressTests {
     public void testHighParallelism() throws Exception {
         final String sas = System.getenv("JAVA_SDK_TEST_SAS") == null ? "" : System.getenv("JAVA_SDK_TEST_SAS");
 
+        HttpHeaders headers = new HttpHeaders()
+                .set("x-ms-version", "2017-04-17");
+        HttpPipelineBuilder builder = new HttpPipelineBuilder()
+                .withRequestPolicy(new AddDatePolicyFactory())
+                .withRequestPolicy(new AddHeadersPolicyFactory(headers))
+                .withRequestPolicy(new ThrottlingRetryPolicyFactory());
+
+        if (sas == null || sas.isEmpty()) {
+            builder.withRequestPolicy(new HostPolicyFactory("http://localhost:11081"));
+        }
+
+        final IOService innerService = RestProxy.create(IOService.class, builder.build());
+
         Flowable.range(0, 10000)
                 .flatMapCompletable(integer ->
-                        service.createContainer(integer.toString(), sas).toCompletable()
+                        innerService.createContainer(integer.toString(), sas).toCompletable()
                                 .onErrorResumeNext(throwable -> {
-                                    if (throwable instanceof RestException && ((RestException) throwable).response().statusCode() == 409) {
-                                        return Completable.complete();
-                                    } else {
-                                        return Completable.error(throwable);
+                                    if (throwable instanceof RestException) {
+                                        RestException restException = (RestException) throwable;
+                                        if ((restException.response().statusCode() == 409 || restException.response().statusCode() == 404)) {
+                                            return Completable.complete();
+                                        }
                                     }
+                                    return Completable.error(throwable);
                                 })
-                                .andThen(service.deleteContainer(integer.toString(), sas).toCompletable()))
+                                .andThen(innerService.deleteContainer(integer.toString(), sas).toCompletable()))
                 .blockingAwait();
     }
 }

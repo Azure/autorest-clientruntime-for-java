@@ -96,22 +96,18 @@ public class RestProxyStressTests {
 
     @BeforeClass
     public static void beforeClass() throws IOException {
-        Assume.assumeTrue(
-                "Set the environment variable JAVA_SDK_STRESS_TESTS to \"true\" to run stress tests",
-                Boolean.parseBoolean(System.getenv("JAVA_SDK_STRESS_TESTS")));
+//        Assume.assumeTrue(
+//                "Set the environment variable JAVA_SDK_STRESS_TESTS to \"true\" to run stress tests",
+//                Boolean.parseBoolean(System.getenv("JAVA_SDK_STRESS_TESTS")));
 
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
         LoggerFactory.getLogger(RestProxyStressTests.class).info("ResourceLeakDetector level: " + ResourceLeakDetector.getLevel());
 
-        launchTestServer();
 
         String tempFolderPath = System.getenv("JAVA_STRESS_TEST_TEMP_PATH");
         if (tempFolderPath == null || tempFolderPath.isEmpty()) {
             tempFolderPath = "temp";
         }
-
-        TEMP_FOLDER_PATH = Paths.get(tempFolderPath);
-        create100MFiles(false);
 
         HttpHeaders headers = new HttpHeaders()
                 .set("x-ms-version", "2017-04-17");
@@ -122,16 +118,22 @@ public class RestProxyStressTests {
 
         String liveStressTests = System.getenv("JAVA_SDK_TEST_SAS");
         if (liveStressTests == null || liveStressTests.isEmpty()) {
+            launchTestServer();
             builder.withRequestPolicy(new HostPolicyFactory("http://localhost:" + port));
         }
 
         builder.withHttpLoggingPolicy(HttpLogDetailLevel.BASIC);
 
         service = RestProxy.create(IOService.class, builder.build());
+
+        TEMP_FOLDER_PATH = Paths.get(tempFolderPath);
+        create100MFiles(false);
     }
 
     private static void launchTestServer() throws IOException {
         String portString = System.getenv("JAVA_SDK_TEST_PORT");
+        // TODO: figure out why test server hangs only when spawned as a subprocess
+        Assume.assumeTrue("JAVA_SDK_TEST_PORT must specify the port of a running local server", portString != null);
         if (portString != null) {
             port = Integer.parseInt(portString, 10);
             LoggerFactory.getLogger(RestProxyStressTests.class).warn("Attempting to connect to already-running test server on port {}", port);
@@ -142,7 +144,7 @@ public class RestProxyStressTests {
             String className = MockServer.class.getCanonicalName();
 
             ProcessBuilder builder = new ProcessBuilder(
-                    javaExecutable, "-cp", classpath, className).redirectError(Redirect.INHERIT).redirectOutput(Redirect.INHERIT);
+                    javaExecutable, "-cp", classpath, className).redirectErrorStream(true).redirectOutput(Redirect.INHERIT);
             testServer = builder.start();
         }
     }

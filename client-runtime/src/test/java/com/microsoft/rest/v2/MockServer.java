@@ -65,6 +65,7 @@ public class MockServer {
                 response.setStatus(201);
             }
             response.setHeader("Content-MD5", encodedMD5);
+            LoggerFactory.getLogger(getClass()).info("Finished handling request " + baseRequest.getRequestURL());
         }
     }
 

@@ -345,7 +345,7 @@ public class RestProxyStressTests {
                         assertArrayEquals(md5, receivedMD5);
                         return Completable.complete();
                     });
-                }).flatMapCompletable(Functions.identity(), false, 30).blockingAwait();
+                }).flatMapCompletable(Functions.identity(), false, 15).blockingAwait();
         long durationMilliseconds = Duration.between(start, Instant.now()).toMillis();
         LoggerFactory.getLogger(getClass()).info("Upload took " + durationMilliseconds + " milliseconds.");
     }

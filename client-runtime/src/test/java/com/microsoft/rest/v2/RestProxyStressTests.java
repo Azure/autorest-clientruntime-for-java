@@ -36,17 +36,26 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import io.reactivex.internal.functions.Functions;
 
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.Result;
+import org.junit.runner.notification.RunListener;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.ProcessBuilder.Redirect;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
@@ -71,15 +80,39 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
 public class RestProxyStressTests {
-    private static IOService service = createService();
-    private static Process mockServer;
+    private static IOService service;
+    private static Process testServer;
+    // By default will spawn a test server running on the default port.
+    // If JAVA_SDK_TEST_PORT is specified in the environment, we assume
+    // the server is already running on that port.
+    private static int port = 8080;
 
-    private static IOService createService() {
+    @BeforeClass
+    public static void beforeClass() throws IOException {
+        Assume.assumeTrue(
+                "Set the environment variable JAVA_SDK_STRESS_TESTS to \"true\" to run stress tests",
+                Boolean.parseBoolean(System.getenv("JAVA_SDK_STRESS_TESTS")));
+
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+        LoggerFactory.getLogger(RestProxyStressTests.class).info("ResourceLeakDetector level: " + ResourceLeakDetector.getLevel());
+
+        launchTestServer();
+
+        String tempFolderPath = System.getenv("JAVA_STRESS_TEST_TEMP_PATH");
+        if (tempFolderPath == null || tempFolderPath.isEmpty()) {
+            tempFolderPath = "temp";
+        }
+
+        TEMP_FOLDER_PATH = Paths.get(tempFolderPath);
+        create100MFiles(false);
+
         HttpHeaders headers = new HttpHeaders()
                 .set("x-ms-version", "2017-04-17");
         HttpPipelineBuilder builder = new HttpPipelineBuilder()
@@ -89,62 +122,36 @@ public class RestProxyStressTests {
 
         String liveStressTests = System.getenv("JAVA_SDK_TEST_SAS");
         if (liveStressTests == null || liveStressTests.isEmpty()) {
-            builder.withRequestPolicy(new HostPolicyFactory("http://localhost:11081"));
+            builder.withRequestPolicy(new HostPolicyFactory("http://localhost:" + port));
         }
 
         builder.withHttpLoggingPolicy(HttpLogDetailLevel.BASIC);
 
-        return RestProxy.create(IOService.class, builder.build());
+        service = RestProxy.create(IOService.class, builder.build());
     }
 
-    private static Process launchTestServer() throws IOException {
-        String javaHome = System.getProperty("java.home");
-        String javaExecutable = javaHome + File.separator + "bin" + File.separator + "java";
-        String classpath = System.getProperty("java.class.path");
-        String className = MockServer.class.getCanonicalName();
+    private static void launchTestServer() throws IOException {
+        String portString = System.getenv("JAVA_SDK_TEST_PORT");
+        if (portString != null) {
+            port = Integer.parseInt(portString, 10);
+            LoggerFactory.getLogger(RestProxyStressTests.class).warn("Attempting to connect to already-running test server on port {}", port);
+        } else {
+            String javaHome = System.getProperty("java.home");
+            String javaExecutable = javaHome + File.separator + "bin" + File.separator + "java";
+            String classpath = System.getProperty("java.class.path");
+            String className = MockServer.class.getCanonicalName();
 
-        ProcessBuilder builder = new ProcessBuilder(
-                javaExecutable, "-cp", classpath, className);
-
-        Process process = builder.start();
-
-        // Wait for the child process to start
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-        String line;
-        while((line = reader.readLine()) != null) {
-            if (line.contains("Server - Started")) {
-                break;
-            } else if (line.contains("Address already in use")) {
-                LoggerFactory.getLogger(RestProxyStressTests.class).warn(line);
-                break;
-            }
+            ProcessBuilder builder = new ProcessBuilder(
+                    javaExecutable, "-cp", classpath, className).redirectError(Redirect.INHERIT).redirectOutput(Redirect.INHERIT);
+            testServer = builder.start();
         }
-
-        return process;
     }
 
-    @Before
-    public void setup() throws Exception {
-        Assume.assumeTrue(
-                "Set the environment variable JAVA_SDK_STRESS_TESTS to \"true\" to run stress tests",
-                Boolean.parseBoolean(System.getenv("JAVA_SDK_STRESS_TESTS")));
-
-        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-        LoggerFactory.getLogger(RestProxyStressTests.class).info("ResourceLeakDetector level: " + ResourceLeakDetector.getLevel());
-
-        String tempFolderPath = System.getenv("JAVA_STRESS_TEST_TEMP_PATH");
-        if (tempFolderPath == null || tempFolderPath.isEmpty()) {
-            tempFolderPath = "temp";
+    @AfterClass
+    public static void afterClass() throws Exception {
+        if (testServer != null) {
+            testServer.destroy();
         }
-        TEMP_FOLDER_PATH = Paths.get(tempFolderPath);
-        create100MFiles(false);
-
-        mockServer = launchTestServer();
-    }
-
-    @After
-    public void teardown() throws Exception {
-        mockServer.destroy();
     }
 
     private static final class AddDatePolicyFactory implements RequestPolicyFactory {
@@ -188,7 +195,7 @@ public class RestProxyStressTests {
 
             @Override
             public Single<HttpResponse> sendAsync(HttpRequest request) {
-                return sendAsync(request, 5 + ThreadLocalRandom.current().nextInt(10));
+                return sendAsync(request, 1 + ThreadLocalRandom.current().nextInt(5));
             }
 
             Single<HttpResponse> sendAsync(final HttpRequest request, final int waitTimeSeconds) {
@@ -465,7 +472,7 @@ public class RestProxyStressTests {
                 .withRequestPolicy(new ThrottlingRetryPolicyFactory());
 
         if (sas == null || sas.isEmpty()) {
-            builder.withRequestPolicy(new HostPolicyFactory("http://localhost:11081"));
+            builder.withRequestPolicy(new HostPolicyFactory("http://localhost:" + port));
         }
 
         final IOService innerService = RestProxy.create(IOService.class, builder.build());

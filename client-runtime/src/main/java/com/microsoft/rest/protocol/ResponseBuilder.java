@@ -126,6 +126,7 @@ public interface ResponseBuilder<T, E extends RestException> {
          *
          * @param <T> the type of the return object
          * @param <E> the type of the exception
+         * @param serializerAdapter the serializer adapter to deserialize the response
          * @return a response builder instance
          */
         <T, E extends RestException> ResponseBuilder<T, E> newInstance(final SerializerAdapter<?> serializerAdapter);

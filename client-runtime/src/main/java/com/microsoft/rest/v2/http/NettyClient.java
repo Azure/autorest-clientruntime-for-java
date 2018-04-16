@@ -601,7 +601,9 @@ public final class NettyClient extends HttpClient {
         }
 
         private void closeAndReleaseChannel() {
-            channelPool.closeAndRelease(channel);
+            if (channel != null) {
+                channelPool.closeAndRelease(channel);
+            }
         }
 
         @Override

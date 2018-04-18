@@ -216,6 +216,5 @@
     <module>client-runtime</module>
     <module>azure-client-runtime</module>
     <module>azure-client-authentication</module>
-    <module>client-runtime-native</module>
   </modules>
 </project>

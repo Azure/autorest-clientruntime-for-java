@@ -153,9 +153,8 @@ public final class NettyClient extends HttpClient {
             return result;
         }
 
-        private static SharedChannelPool createChannelPool(final NettyAdapter adapter, TransportConfig config,
+        private static SharedChannelPool createChannelPool(Bootstrap bootstrap, TransportConfig config,
                 int poolSize) {
-            Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(config.eventLoopGroup);
             bootstrap.channel(config.channelClass);
             bootstrap.option(ChannelOption.AUTO_READ, false);
@@ -174,13 +173,13 @@ public final class NettyClient extends HttpClient {
         private NettyAdapter() {
             TransportConfig config = loadTransport(0);
             this.eventLoopGroup = config.eventLoopGroup;
-            this.channelPool = createChannelPool(this, config, eventLoopGroup.executorCount() * 16);
+            this.channelPool = createChannelPool(new Bootstrap(), config, eventLoopGroup.executorCount() * 16);
         }
 
-        private NettyAdapter(int eventLoopGroupSize, int channelPoolSize) {
+        private NettyAdapter(Bootstrap baseBootstrap, int eventLoopGroupSize, int channelPoolSize) {
             TransportConfig config = loadTransport(eventLoopGroupSize);
             this.eventLoopGroup = config.eventLoopGroup;
-            this.channelPool = createChannelPool(this, config, channelPoolSize);
+            this.channelPool = createChannelPool(baseBootstrap, config, channelPoolSize);
         }
 
         private Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request, final Proxy proxy) {
@@ -312,14 +311,14 @@ public final class NettyClient extends HttpClient {
             private boolean done;
 
             private final HttpClientInboundHandler inboundHandler;
-            
+
             /**
-             * Ensures that requests are only made of upstream once the last write has completed 
+             * Ensures that requests are only made of upstream once the last write has completed
              * and the channel can be written to synchronously (when isWritable is false writes
-             * are buffered). 
+             * are buffered).
              */
             private final AtomicInteger writing = new AtomicInteger();
-            
+
             //states for `writing`
             private static final int WRITE_COMPLETED_WRITABLE = 0;
             private static final int WRITING_WRITABLE = 1;
@@ -342,11 +341,26 @@ public final class NettyClient extends HttpClient {
                 if (done) {
                     return;
                 }
+
                 try {
                     writing();
-                    channel
-                        .writeAndFlush(Unpooled.wrappedBuffer(buf))
-                        .addListener(this);
+                    // Always dispatching writes on the event loop prevents data corruption on macOS.
+                    // Since channel.write always dispatches to the event loop itself if needed internally,
+                    // it seems fine to do it here.
+                    channel.eventLoop().execute(() -> {
+                        try {
+                            channel
+                                    .write(Unpooled.wrappedBuffer(buf))
+                                    .addListener(this);
+                        } catch (Exception e) {
+                            subscription.cancel();
+                            onError(e);
+                        }
+                        writeComplete();
+                        if (writing.get() == WRITE_COMPLETED_NOT_WRITABLE) {
+                            channel.flush();
+                        }
+                    });
                 } catch (Exception e) {
                     subscription.cancel();
                     onError(e);
@@ -383,11 +397,9 @@ public final class NettyClient extends HttpClient {
                 if (!future.isSuccess()) {
                     subscription.cancel();
                     emitError(future.cause());
-                } else {
-                    writeComplete();
                 }
             }
-            
+
             private void writing() {
                 while (true) {
                     int s = writing.get();
@@ -404,7 +416,7 @@ public final class NettyClient extends HttpClient {
                     }
                 }
             }
-            
+
             private void writeComplete() {
                 while (true) {
                     int s = writing.get();
@@ -458,17 +470,19 @@ public final class NettyClient extends HttpClient {
         }
 
         private void writeRequest(final DefaultHttpRequest raw) {
-            channel //
-                    .write(raw) //
-                    .addListener((Future<Void> future) -> {
-                        if (!future.isSuccess()) {
-                            emitError(future.cause());
-                        }
-                    });
+            channel.eventLoop().execute(() ->
+                channel //
+                        .write(raw) //
+                        .addListener((Future<Void> future) -> {
+                            if (!future.isSuccess()) {
+                                emitError(future.cause());
+                            }
+                        })
+            );
         }
 
         private void writeBodyEnd() {
-            channel //
+            channel.eventLoop().execute(() -> channel //
                     .writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT) //
                     .addListener((Future<Void> future) -> {
                         if (future.isSuccess()) {
@@ -479,7 +493,7 @@ public final class NettyClient extends HttpClient {
                         } else {
                             emitError(future.cause());
                         }
-                    });
+                    }));
         }
 
         private boolean transition(int from, int to) {
@@ -487,8 +501,6 @@ public final class NettyClient extends HttpClient {
         }
 
         void emitError(Throwable throwable) {
-            // TODO remove printStackTrace
-            throwable.printStackTrace();
             while (true) {
                 int s = state.get();
                 if (s == ACQUIRING_NOT_DISPOSED) {
@@ -517,7 +529,7 @@ public final class NettyClient extends HttpClient {
          * Returns false if and only if content subscription should be immediately
          * cancelled.
          *
-         * @param content
+         * @param content the content that was subscribed to
          * @return false if and only if content subscription should be immediately
          *     cancelled
          */
@@ -994,13 +1006,15 @@ public final class NettyClient extends HttpClient {
          * Create a Netty client factory, specifying the event loop group size and the
          * channel pool size.
          *
+         * @param baseBootstrap
+         *            a channel Bootstrap to use as a basis for channel creation
          * @param eventLoopGroupSize
          *            the number of event loop executors
          * @param channelPoolSize
          *            the number of pooled channels (connections)
          */
-        public Factory(int eventLoopGroupSize, int channelPoolSize) {
-            this.adapter = new NettyAdapter(eventLoopGroupSize, channelPoolSize);
+        public Factory(Bootstrap baseBootstrap, int eventLoopGroupSize, int channelPoolSize) {
+            this.adapter = new NettyAdapter(baseBootstrap.clone(), eventLoopGroupSize, channelPoolSize);
         }
 
         @Override

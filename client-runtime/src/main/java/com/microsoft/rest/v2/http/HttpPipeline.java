@@ -102,7 +102,7 @@ public final class HttpPipeline {
      * @return The built HttpPipeline.
      */
     public static HttpPipeline build(HttpPipelineOptions pipelineOptions, RequestPolicyFactory... requestPolicyFactories) {
-        build(pipelineOptions, Arrays.asList(requestPolicyFactories));
+        return build(pipelineOptions, Arrays.asList(requestPolicyFactories));
     }
 
     /**

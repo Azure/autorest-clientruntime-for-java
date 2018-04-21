@@ -8,8 +8,6 @@ package com.microsoft.rest.v2.http;
 
 import io.reactivex.Flowable;
 import io.reactivex.Single;
-import io.reactivex.functions.Function;
-import org.reactivestreams.Publisher;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -49,12 +47,9 @@ public final class BufferedHttpResponse extends HttpResponse {
     public Single<byte[]> bodyAsByteArray() {
         if (body == null) {
             body = innerHttpResponse.bodyAsByteArray()
-                    .map(new Function<byte[], byte[]>() {
-                        @Override
-                        public byte[] apply(byte[] bytes) {
-                            body = Single.just(bytes);
-                            return bytes;
-                        }
+                    .map(bytes -> {
+                        body = Single.just(bytes);
+                        return bytes;
                     });
         }
         return body;
@@ -62,28 +57,28 @@ public final class BufferedHttpResponse extends HttpResponse {
 
     @Override
     public Flowable<ByteBuffer> body() {
-        return bodyAsByteArray().flatMapPublisher(new Function<byte[], Publisher<? extends ByteBuffer>>() {
-            @Override
-            public Publisher<? extends ByteBuffer> apply(byte[] bytes) throws Exception {
-                return Flowable.just(ByteBuffer.wrap(bytes));
-            }
-        });
+        return bodyAsByteArray().flatMapPublisher(bytes -> Flowable.just(ByteBuffer.wrap(bytes)));
     }
 
     @Override
     public Single<String> bodyAsString() {
         return bodyAsByteArray()
-                .map(new Function<byte[], String>() {
-                    @Override
-                    public String apply(byte[] bytes) {
-                        return bytes == null ? null : new String(bytes, StandardCharsets.UTF_8);
-                    }
-                });
+                .map(bytes -> bytes == null ? null : new String(bytes, StandardCharsets.UTF_8));
     }
 
     @Override
     public BufferedHttpResponse buffer() {
         return this;
+    }
+
+    @Override
+    public boolean isDecoded() {
+        return innerHttpResponse.isDecoded();
+    }
+
+    @Override
+    public boolean withIsDecoded(boolean isDecoded) {
+        return innerHttpResponse.withIsDecoded(isDecoded);
     }
 
     @Override

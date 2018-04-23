@@ -162,7 +162,9 @@ public final class NettyClient extends HttpClient {
             bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) TimeUnit.MINUTES.toMillis(3L));
             return new SharedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
                 @Override
-                public void channelCreated(Channel ch) throws Exception {
+                public synchronized void channelCreated(Channel ch) throws Exception {
+                    // Why is it necessary to have "synchronized" to prevent NRE in pipeline().get(Class<T>)?
+                    // Is channelCreated not run on the eventLoop assigned to the channel?
                     ch.pipeline().addLast("HttpResponseDecoder", new HttpResponseDecoder());
                     ch.pipeline().addLast("HttpRequestEncoder", new HttpRequestEncoder());
                     ch.pipeline().addLast("HttpClientInboundHandler", new HttpClientInboundHandler());

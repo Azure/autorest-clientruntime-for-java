@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
  */
 public final class BufferedHttpResponse extends HttpResponse {
     private final HttpResponse innerHttpResponse;
-    private Single<byte[]> body;
+    private final Single<byte[]> cachedBody;
 
     /**
      * Creates a buffered HTTP response.
@@ -25,7 +25,7 @@ public final class BufferedHttpResponse extends HttpResponse {
      */
     public BufferedHttpResponse(HttpResponse innerHttpResponse) {
         this.innerHttpResponse = innerHttpResponse;
-        this.body = null;
+        this.cachedBody = innerHttpResponse.bodyAsByteArray().cache();
     }
 
     @Override
@@ -45,14 +45,7 @@ public final class BufferedHttpResponse extends HttpResponse {
 
     @Override
     public Single<byte[]> bodyAsByteArray() {
-        if (body == null) {
-            body = innerHttpResponse.bodyAsByteArray()
-                    .map(bytes -> {
-                        body = Single.just(bytes);
-                        return bytes;
-                    });
-        }
-        return body;
+        return cachedBody;
     }
 
     @Override

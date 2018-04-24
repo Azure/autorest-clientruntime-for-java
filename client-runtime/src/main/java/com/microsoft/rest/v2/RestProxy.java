@@ -407,16 +407,17 @@ public class RestProxy implements InvocationHandler {
         final int responseStatusCode = response.statusCode();
 
         try {
-            final Single<?> asyncResult;
+            Single<?> asyncResult;
             if (entityTypeToken.isSubtypeOf(RestResponse.class)) {
-                final Constructor<? extends RestResponse<?, ?>> responseConstructor = getRestResponseConstructor(entityTypeToken);
+                Constructor<? extends RestResponse<?, ?>> responseConstructor = getRestResponseConstructor(entityTypeToken);
 
-                final Type[] deserializedTypes = getTypeArguments(entityTypeToken.getSupertype(RestResponse.class).getType());
-                final Type bodyType = deserializedTypes[1];
-                final HttpHeaders responseHeaders = response.headers();
-                final Object deserializedHeaders = response.deserializedHeaders();
+                Type[] deserializedTypes = getTypeArguments(entityTypeToken.getSupertype(RestResponse.class).getType());
 
-                final TypeToken bodyTypeToken = TypeToken.of(bodyType);
+                HttpHeaders responseHeaders = response.headers();
+                Object deserializedHeaders = response.deserializedHeaders();
+
+                Type bodyType = deserializedTypes[1];
+                TypeToken bodyTypeToken = TypeToken.of(bodyType);
                 if (bodyTypeToken.isSubtypeOf(Void.class)) {
                     asyncResult = response.body().lastElement().ignoreElement()
                             .andThen(Single.just(responseConstructor.newInstance(responseStatusCode, deserializedHeaders, responseHeaders.toMap(), null)));
@@ -424,17 +425,22 @@ public class RestProxy implements InvocationHandler {
                     final Map<String, String> rawHeaders = responseHeaders.toMap();
 
                     asyncResult = handleBodyReturnTypeAsync(response, methodParser, bodyType)
-                            .map(new Function<Object, RestResponse<?, ?>>() {
-                                @Override
-                                public RestResponse<?, ?> apply(Object body) throws Exception {
-                                    return responseConstructor.newInstance(responseStatusCode, deserializedHeaders, rawHeaders, body);
-                                }
-                            }).toSingle(responseConstructor.newInstance(responseStatusCode, deserializedHeaders, rawHeaders, null));
+                            .map((Function<Object, RestResponse<?, ?>>) body -> responseConstructor.newInstance(responseStatusCode, deserializedHeaders, rawHeaders, body))
+                            .toSingle(responseConstructor.newInstance(responseStatusCode, deserializedHeaders, rawHeaders, null));
+                }
+
+                Type headersType = deserializedTypes[0];
+                if (!response.isDecoded() && !TypeToken.of(headersType).isSubtypeOf(Void.class)) {
+                    asyncResult = asyncResult.toCompletable().andThen(Single.error(new RestException(
+                            "No deserialized headers were found. Please add a DecodingPolicyFactory to the HttpPipeline.",
+                            response,
+                            (Object) null)));
                 }
             } else {
                 // For now we're just throwing if the Maybe didn't emit a value.
                 asyncResult = handleBodyReturnTypeAsync(response, methodParser, entityType).toSingle();
             }
+
             return asyncResult;
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);

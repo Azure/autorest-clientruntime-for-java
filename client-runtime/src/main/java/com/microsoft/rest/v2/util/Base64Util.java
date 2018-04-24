@@ -18,7 +18,7 @@ public final class Base64Util {
      * @return the base64 encoded bytes
      */
     public static byte[] encode(byte[] src) {
-        return Base64.getEncoder().encode(src);
+        return src == null ? null : Base64.getEncoder().encode(src);
     }
 
     /**
@@ -27,7 +27,7 @@ public final class Base64Util {
      * @return the base64 URL encoded bytes
      */
     public static byte[] encodeURLWithoutPadding(byte[] src) {
-        return Base64.getUrlEncoder().withoutPadding().encode(src);
+        return src == null ? null : Base64.getUrlEncoder().withoutPadding().encode(src);
     }
 
     /**
@@ -36,7 +36,7 @@ public final class Base64Util {
      * @return the base64 encoded string
      */
     public static String encodeToString(byte[] src) {
-        return Base64.getEncoder().encodeToString(src);
+        return src == null ? null : Base64.getEncoder().encodeToString(src);
     }
 
     /**
@@ -45,7 +45,7 @@ public final class Base64Util {
      * @return the decoded byte array
      */
     public static byte[] decode(byte[] encoded) {
-        return Base64.getDecoder().decode(encoded);
+        return encoded == null ? null : Base64.getDecoder().decode(encoded);
     }
 
     /**
@@ -54,7 +54,7 @@ public final class Base64Util {
      * @return the decoded byte array
      */
     public static byte[] decodeURL(byte[] src) {
-        return Base64.getUrlDecoder().decode(src);
+        return src == null ? null : Base64.getUrlDecoder().decode(src);
     }
 
     /**
@@ -63,7 +63,7 @@ public final class Base64Util {
      * @return the decoded byte array
      */
     public static byte[] decodeString(String encoded) {
-        return Base64.getDecoder().decode(encoded);
+        return encoded == null ? null : Base64.getDecoder().decode(encoded);
     }
 
     private Base64Util() {

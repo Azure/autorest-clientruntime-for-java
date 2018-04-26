@@ -8,9 +8,9 @@ package com.microsoft.azure.arm.core;
 
 import com.microsoft.azure.AzureEnvironment;
 import com.microsoft.azure.AzureResponseBuilder;
-import com.microsoft.azure.credentials.ApplicationTokenCredentials;
 import com.microsoft.azure.arm.utils.ResourceManagerThrottlingInterceptor;
 import com.microsoft.azure.arm.utils.SdkContext;
+import com.microsoft.azure.credentials.ApplicationTokenCredentials;
 import com.microsoft.azure.serializer.AzureJacksonAdapter;
 import com.microsoft.rest.LogLevel;
 import com.microsoft.rest.RestClient;
@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.Proxy;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -206,6 +207,10 @@ public abstract class TestBase {
             if (!interceptorManager.isNoneMode()) {
                 builder.withNetworkInterceptor(interceptorManager.initInterceptor());
             }
+            Proxy proxy = proxy();
+            if (proxy != null) {
+                builder.withProxy(proxy);
+            }
             restClient = buildRestClient(builder.withInterceptor(new ResourceManagerThrottlingInterceptor()),false);
             defaultSubscription = credentials.defaultSubscriptionId();
             interceptorManager.addTextReplacementRule(defaultSubscription, ZERO_SUBSCRIPTION);
@@ -247,4 +252,8 @@ public abstract class TestBase {
 
     protected abstract void initializeClients(RestClient restClient, String defaultSubscription, String domain) throws IOException;
     protected abstract void cleanUpResources();
+
+    protected Proxy proxy() {
+        return null;
+    }
 }

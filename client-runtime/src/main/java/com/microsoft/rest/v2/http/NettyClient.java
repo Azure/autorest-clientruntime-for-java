@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.microsoft.rest.v2.util.FlowableUtil;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.LoggerFactory;
@@ -297,7 +298,15 @@ public final class NettyClient extends HttpClient {
                     writeBodyEnd();
                 } else {
                     requestSubscriber = new RequestSubscriber(inboundHandler);
-                    request.body().subscribe(requestSubscriber);
+                    String contentLengthHeader = request.headers().value("content-length");
+                    try {
+                        long contentLength = Long.parseLong(contentLengthHeader);
+                        request.body().lift(FlowableUtil.countingOperator(contentLength)).subscribe(requestSubscriber);
+                    } catch (NumberFormatException e) {
+                        String message = String.format(
+                                "Content-Length was expected to be a valid long but was \"%s\"", contentLengthHeader);
+                        throw new IllegalArgumentException(message, e);
+                    }
                 }
             } catch (Exception e) {
                 emitError(e);

@@ -12,6 +12,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.reactivex.Completable;
 import io.reactivex.Flowable;
+import io.reactivex.FlowableOperator;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Single;
 import io.reactivex.internal.subscriptions.SubscriptionHelper;
@@ -27,6 +28,7 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Contains helper methods for dealing with Flowables.
@@ -69,6 +71,70 @@ public final class FlowableUtil {
             }
 
         });
+    }
+    private static final class CountingOperator implements FlowableOperator<ByteBuffer, ByteBuffer> {
+        final long bytesExpected;
+        CountingOperator(long bytesExpected) {
+            if (bytesExpected < 0) {
+                throw new IllegalArgumentException("bytesExpected must be non-negative, but was " + bytesExpected);
+            }
+
+            this.bytesExpected = bytesExpected;
+        }
+
+        @Override
+        public Subscriber<? super ByteBuffer> apply(Subscriber<? super ByteBuffer> observer) {
+            final AtomicLong bytesRead = new AtomicLong();
+            final AtomicReference<Subscription> subscription = new AtomicReference<>();
+            return new Subscriber<ByteBuffer>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    subscription.set(s);
+                    observer.onSubscribe(s);
+                }
+
+                @Override
+                public void onNext(ByteBuffer byteBuffer) {
+                    long newBytesRead = bytesRead.addAndGet(byteBuffer.remaining());
+                    if (newBytesRead > bytesExpected) {
+                        subscription.get().cancel();
+                        observer.onError(new IllegalArgumentException("Flowable<ByteBuffer> emitted more bytes than the expected " + bytesExpected));
+                    } else {
+                        observer.onNext(byteBuffer);
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    observer.onError(t);
+                }
+
+                @Override
+                public void onComplete() {
+                    long count = bytesRead.get();
+                    if (count != bytesExpected) {
+                        observer.onError(new IllegalArgumentException(
+                                String.format("Flowable<ByteBuffer> emitted %d bytes instead of the expected %d bytes.",
+                                        count,
+                                        bytesExpected)));
+                    } else {
+                        observer.onComplete();
+                    }
+                }
+            };
+        }
+    }
+
+
+    /**
+     * Creates a FlowableOperator which can be applied with {@link Flowable#lift} to ensure
+     * that a Flowable emitting ByteBuffers emits the expected number of bytes.
+     *
+     * @param bytesExpected the number of bytes expected to be emitted
+     * @return the operator
+     */
+    public static FlowableOperator<ByteBuffer, ByteBuffer> countingOperator(long bytesExpected) {
+        return new CountingOperator(bytesExpected);
     }
 
     /**

@@ -29,7 +29,7 @@ public class FlowableUtilTests {
     @Test
     public void testCountingNotEnoughBytesEmitsError() {
         Flowable<ByteBuffer> content = Flowable.just(ByteBuffer.allocate(4));
-        content.lift(FlowableUtil.countingOperator(8))
+        content.compose(self -> FlowableUtil.ensureLength(self, 8))
                 .test()
                 .assertError(IllegalArgumentException.class);
     }
@@ -37,7 +37,7 @@ public class FlowableUtilTests {
     @Test
     public void testCountingTooManyBytesEmitsError() {
         Flowable<ByteBuffer> content = Flowable.just(ByteBuffer.allocate(4));
-        content.lift(FlowableUtil.countingOperator(1))
+        content.compose(self -> FlowableUtil.ensureLength(self, 1))
                 .test()
                 .assertError(IllegalArgumentException.class);
     }
@@ -46,7 +46,7 @@ public class FlowableUtilTests {
     @Test
     public void testCountingTooManyBytesCancelsSubscription() {
         Flowable<ByteBuffer> content = Flowable.just(ByteBuffer.allocate(4)).concatWith(Flowable.never());
-        content.lift(FlowableUtil.countingOperator(1))
+        content.compose(self -> FlowableUtil.ensureLength(self, 1))
                 .test()
                 .awaitDone(1, TimeUnit.SECONDS)
                 .assertError(IllegalArgumentException.class);
@@ -55,7 +55,7 @@ public class FlowableUtilTests {
     @Test
     public void testCountingExpectedNumberOfBytesSucceeds() {
         Flowable<ByteBuffer> content = Flowable.just(ByteBuffer.allocate(4));
-        content.lift(FlowableUtil.countingOperator(4))
+        content.compose(self -> FlowableUtil.ensureLength(self, 4))
                 .test()
                 .assertComplete();
     }

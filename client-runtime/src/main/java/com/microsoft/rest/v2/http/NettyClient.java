@@ -301,7 +301,7 @@ public final class NettyClient extends HttpClient {
                     String contentLengthHeader = request.headers().value("content-length");
                     try {
                         long contentLength = Long.parseLong(contentLengthHeader);
-                        request.body().lift(FlowableUtil.countingOperator(contentLength)).subscribe(requestSubscriber);
+                        request.body().compose(self -> FlowableUtil.ensureLength(self, contentLength)).subscribe(requestSubscriber);
                     } catch (NumberFormatException e) {
                         String message = String.format(
                                 "Content-Length was expected to be a valid long but was \"%s\"", contentLengthHeader);

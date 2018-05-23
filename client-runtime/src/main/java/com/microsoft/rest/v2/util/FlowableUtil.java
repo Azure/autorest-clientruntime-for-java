@@ -12,7 +12,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.reactivex.Completable;
 import io.reactivex.Flowable;
-import io.reactivex.FlowableOperator;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Single;
 import io.reactivex.internal.subscriptions.SubscriptionHelper;
@@ -26,9 +25,9 @@ import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Contains helper methods for dealing with Flowables.
@@ -72,32 +71,36 @@ public final class FlowableUtil {
 
         });
     }
-    private static final class CountingOperator implements FlowableOperator<ByteBuffer, ByteBuffer> {
+    private static final class CountingFlowable extends Flowable<ByteBuffer> {
+        final Flowable<ByteBuffer> source;
         final long bytesExpected;
-        CountingOperator(long bytesExpected) {
+        CountingFlowable(Flowable<ByteBuffer> source, long bytesExpected) {
             if (bytesExpected < 0) {
                 throw new IllegalArgumentException("bytesExpected must be non-negative, but was " + bytesExpected);
             }
 
+            this.source = Objects.requireNonNull(source, "source is null");
             this.bytesExpected = bytesExpected;
         }
 
         @Override
-        public Subscriber<? super ByteBuffer> apply(Subscriber<? super ByteBuffer> observer) {
-            final AtomicLong bytesRead = new AtomicLong();
-            final AtomicReference<Subscription> subscription = new AtomicReference<>();
-            return new Subscriber<ByteBuffer>() {
+        protected void subscribeActual(Subscriber<? super ByteBuffer> observer) {
+            source.subscribe(new Subscriber<ByteBuffer>() {
+                Subscription subscription;
+                long bytesRead = 0;
+
                 @Override
                 public void onSubscribe(Subscription s) {
-                    subscription.set(s);
+                    subscription = s;
                     observer.onSubscribe(s);
                 }
 
                 @Override
                 public void onNext(ByteBuffer byteBuffer) {
-                    long newBytesRead = bytesRead.addAndGet(byteBuffer.remaining());
+                    long newBytesRead = bytesRead + byteBuffer.remaining();
+                    bytesRead = newBytesRead;
                     if (newBytesRead > bytesExpected) {
-                        subscription.get().cancel();
+                        subscription.cancel();
                         observer.onError(new IllegalArgumentException("Flowable<ByteBuffer> emitted more bytes than the expected " + bytesExpected));
                     } else {
                         observer.onNext(byteBuffer);
@@ -111,7 +114,7 @@ public final class FlowableUtil {
 
                 @Override
                 public void onComplete() {
-                    long count = bytesRead.get();
+                    long count = bytesRead;
                     if (count != bytesExpected) {
                         observer.onError(new IllegalArgumentException(
                                 String.format("Flowable<ByteBuffer> emitted %d bytes instead of the expected %d bytes.",
@@ -121,20 +124,20 @@ public final class FlowableUtil {
                         observer.onComplete();
                     }
                 }
-            };
+            });
         }
     }
 
 
     /**
-     * Creates a FlowableOperator which can be applied with {@link Flowable#lift} to ensure
-     * that a Flowable emitting ByteBuffers emits the expected number of bytes.
+     * Ensures the given Flowable emits the expected number of bytes.
      *
+     * @param source the Flowable to check
      * @param bytesExpected the number of bytes expected to be emitted
      * @return the operator
      */
-    public static FlowableOperator<ByteBuffer, ByteBuffer> countingOperator(long bytesExpected) {
-        return new CountingOperator(bytesExpected);
+    public static Flowable<ByteBuffer> ensureLength(Flowable<ByteBuffer> source, long bytesExpected) {
+        return new CountingFlowable(source, bytesExpected);
     }
 
     /**

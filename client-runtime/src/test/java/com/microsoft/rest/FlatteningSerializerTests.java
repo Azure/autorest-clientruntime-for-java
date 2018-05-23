@@ -7,6 +7,9 @@
 package com.microsoft.rest;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.microsoft.rest.serializer.JacksonAdapter;
 import com.microsoft.rest.serializer.JsonFlatten;
 import org.junit.Assert;
@@ -30,10 +33,15 @@ public class FlatteningSerializerTests {
         foo.qux.put("a.b", "c.d");
 
         String serialized = new JacksonAdapter().serialize(foo);
-        Assert.assertEquals("{\"properties\":{\"bar\":\"hello.world\",\"props\":{\"baz\":[\"hello\",\"hello.world\"],\"q\":{\"qux\":{\"a.b\":\"c.d\",\"hello\":\"world\"}}}}}", serialized);
+        Assert.assertEquals("{\"$type\":\"foo\",\"properties\":{\"bar\":\"hello.world\",\"props\":{\"baz\":[\"hello\",\"hello.world\"],\"q\":{\"qux\":{\"a.b\":\"c.d\",\"hello\":\"world\"}}}}}", serialized);
     }
 
     @JsonFlatten
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "$type")
+    @JsonTypeName("foo")
+    @JsonSubTypes({
+            @JsonSubTypes.Type(name = "foochild", value = FooChild.class)
+    })
     private class Foo {
         @JsonProperty(value = "properties.bar")
         private String bar;
@@ -43,5 +51,11 @@ public class FlatteningSerializerTests {
         private Map<String, String> qux;
         @JsonProperty(value = "props.empty")
         private Integer empty;
+    }
+
+    @JsonFlatten
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "$type")
+    @JsonTypeName("foochild")
+    private class FooChild extends Foo {
     }
 }

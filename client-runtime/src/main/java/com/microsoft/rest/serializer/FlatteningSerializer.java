@@ -6,9 +6,7 @@
 
 package com.microsoft.rest.serializer;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -31,18 +29,14 @@ import org.joda.time.LocalDate;
 import org.joda.time.Period;
 
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
-
-import static com.fasterxml.jackson.core.JsonToken.START_OBJECT;
 
 /**
  * Custom serializer for serializing types with wrapped properties.
@@ -228,6 +222,6 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
 
     @Override
     public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSerializer) throws IOException {
-        serialize(value, gen, provider); // call your customized serialize method
+        serialize(value, gen, provider);
     }
 }

@@ -13,6 +13,7 @@ import io.netty.buffer.Unpooled;
 import io.reactivex.Completable;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
+import io.reactivex.FlowableTransformer;
 import io.reactivex.Single;
 import io.reactivex.internal.subscriptions.SubscriptionHelper;
 import io.reactivex.internal.util.BackpressureHelper;
@@ -132,12 +133,11 @@ public final class FlowableUtil {
     /**
      * Ensures the given Flowable emits the expected number of bytes.
      *
-     * @param source the Flowable to check
      * @param bytesExpected the number of bytes expected to be emitted
-     * @return the operator
+     * @return a Function which can be applied using {@link Flowable#compose}
      */
-    public static Flowable<ByteBuffer> ensureLength(Flowable<ByteBuffer> source, long bytesExpected) {
-        return new CountingFlowable(source, bytesExpected);
+    public static FlowableTransformer<ByteBuffer, ByteBuffer> ensureLength(long bytesExpected) {
+        return source -> new CountingFlowable(source, bytesExpected);
     }
 
     /**

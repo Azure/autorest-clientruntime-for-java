@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.microsoft.rest.v2.util.FlowableUtil;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.LoggerFactory;
@@ -60,6 +59,8 @@ import io.reactivex.internal.queue.SpscLinkedArrayQueue;
 import io.reactivex.internal.subscriptions.SubscriptionHelper;
 import io.reactivex.internal.util.BackpressureHelper;
 import io.reactivex.plugins.RxJavaPlugins;
+
+import static com.microsoft.rest.v2.util.FlowableUtil.ensureLength;
 
 /**
  * An HttpClient that is implemented using Netty.
@@ -301,7 +302,7 @@ public final class NettyClient extends HttpClient {
                     String contentLengthHeader = request.headers().value("content-length");
                     try {
                         long contentLength = Long.parseLong(contentLengthHeader);
-                        request.body().compose(self -> FlowableUtil.ensureLength(self, contentLength)).subscribe(requestSubscriber);
+                        request.body().compose(ensureLength(contentLength)).subscribe(requestSubscriber);
                     } catch (NumberFormatException e) {
                         String message = String.format(
                                 "Content-Length was expected to be a valid long but was \"%s\"", contentLengthHeader);

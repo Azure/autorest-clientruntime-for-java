@@ -1,5 +1,6 @@
 package com.microsoft.rest.v2.util;
 
+import static com.microsoft.rest.v2.util.FlowableUtil.ensureLength;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -29,7 +30,7 @@ public class FlowableUtilTests {
     @Test
     public void testCountingNotEnoughBytesEmitsError() {
         Flowable<ByteBuffer> content = Flowable.just(ByteBuffer.allocate(4));
-        content.compose(self -> FlowableUtil.ensureLength(self, 8))
+        content.compose(ensureLength(8))
                 .test()
                 .assertError(IllegalArgumentException.class);
     }
@@ -37,7 +38,7 @@ public class FlowableUtilTests {
     @Test
     public void testCountingTooManyBytesEmitsError() {
         Flowable<ByteBuffer> content = Flowable.just(ByteBuffer.allocate(4));
-        content.compose(self -> FlowableUtil.ensureLength(self, 1))
+        content.compose(ensureLength(1))
                 .test()
                 .assertError(IllegalArgumentException.class);
     }
@@ -46,7 +47,7 @@ public class FlowableUtilTests {
     @Test
     public void testCountingTooManyBytesCancelsSubscription() {
         Flowable<ByteBuffer> content = Flowable.just(ByteBuffer.allocate(4)).concatWith(Flowable.never());
-        content.compose(self -> FlowableUtil.ensureLength(self, 1))
+        content.compose(ensureLength(1))
                 .test()
                 .awaitDone(1, TimeUnit.SECONDS)
                 .assertError(IllegalArgumentException.class);
@@ -55,7 +56,7 @@ public class FlowableUtilTests {
     @Test
     public void testCountingExpectedNumberOfBytesSucceeds() {
         Flowable<ByteBuffer> content = Flowable.just(ByteBuffer.allocate(4));
-        content.compose(self -> FlowableUtil.ensureLength(self, 4))
+        content.compose(ensureLength(4))
                 .test()
                 .assertComplete();
     }

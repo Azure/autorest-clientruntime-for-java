@@ -143,8 +143,6 @@ public class MSICredentials extends AzureTokenCredentials {
             postData += String.format("&client_id=%s", this.clientId);
         } else if (this.identityId != null) {
             postData += String.format("&msi_res_id=%s", this.identityId);
-        } else {
-            throw new IllegalArgumentException("objectId, clientId or identityId must be set");
         }
         HttpURLConnection connection = null;
 
@@ -206,6 +204,8 @@ public class MSICredentials extends AzureTokenCredentials {
 
     private MSIToken retrieveTokenFromIDMSWithRetry() throws IOException {
         StringBuilder payload = new StringBuilder();
+        final int imdsUpgradeTimeInMs = 70 * 1000;
+
         //
         try {
             payload.append("api-version");
@@ -215,21 +215,21 @@ public class MSICredentials extends AzureTokenCredentials {
             payload.append("resource");
             payload.append("=");
             payload.append(URLEncoder.encode(this.resource, "UTF-8"));
-            payload.append("&");
             if (this.objectId != null) {
+                payload.append("&");
                 payload.append("object_id");
                 payload.append("=");
                 payload.append(URLEncoder.encode(this.objectId, "UTF-8"));
             } else if (this.clientId != null) {
+                payload.append("&");
                 payload.append("client_id");
                 payload.append("=");
                 payload.append(URLEncoder.encode(this.clientId, "UTF-8"));
             } else if (this.identityId != null) {
+                payload.append("&");
                 payload.append("msi_res_id");
                 payload.append("=");
                 payload.append(URLEncoder.encode(this.identityId, "UTF-8"));
-            } else {
-                throw new IllegalArgumentException("objectId, clientId or identityId must be set");
             }
         } catch (IOException exception) {
             throw new RuntimeException(exception);
@@ -252,12 +252,19 @@ public class MSICredentials extends AzureTokenCredentials {
                 return adapter.deserialize(result, MSIToken.class);
             } catch (Exception exception) {
                 int responseCode = connection.getResponseCode();
-                if (responseCode == 429 || responseCode == 404 || (responseCode >= 500 && responseCode <= 599)) {
-                    int retryTimeout = retrySlots.get(new Random().nextInt(retry)) * 1000;
-                    sleep(retryTimeout);
+                if (responseCode == 410 || responseCode == 429 || responseCode == 404 || (responseCode >= 500 && responseCode <= 599)) {
+                    int retryTimeoutInMs = retrySlots.get(new Random().nextInt(retry)) * 1000;
+                    // Error code 410 indicates IMDS upgrade is in progress, which can take up to 70s
+                    //
+                    retryTimeoutInMs = (responseCode == 410 && retryTimeoutInMs < imdsUpgradeTimeInMs) ? imdsUpgradeTimeInMs : retryTimeoutInMs;
                     retry++;
+                    if (retry > maxRetry) {
+                        break;
+                    } else {
+                        sleep(retryTimeoutInMs);
+                    }
                 } else {
-                    throw new RuntimeException(exception);
+                    throw new RuntimeException("Couldn't acquire access token from IMDS, verify your objectId, clientId or msiResourceId", exception);
                 }
             } finally {
                 if (connection != null) {

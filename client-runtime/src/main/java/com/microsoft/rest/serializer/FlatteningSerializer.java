@@ -6,8 +6,6 @@
 
 package com.microsoft.rest.serializer;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -16,12 +14,15 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import com.fasterxml.jackson.databind.ser.ResolvableSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.google.common.collect.Sets;
 import com.microsoft.rest.DateTimeRfc1123;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
@@ -31,8 +32,11 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Custom serializer for serializing types with wrapped properties.
@@ -98,7 +102,12 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
         return fields;
     }
 
-    private JsonNode serializePartial(Object value) {
+    @SuppressWarnings("unchecked")
+    private void escapeMapKeys(Object value) {
+        if (value == null) {
+            return;
+        }
+
         if (value.getClass().isPrimitive()
                 || value.getClass().isEnum()
                 || value instanceof LocalDate
@@ -106,70 +115,43 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
                 || value instanceof String
                 || value instanceof DateTimeRfc1123
                 || value instanceof Period) {
-            return mapper.valueToTree(value);
+            return;
         }
 
         int mod = value.getClass().getModifiers();
         if (Modifier.isFinal(mod) || Modifier.isStatic(mod)) {
-            return mapper.valueToTree(value);
+            return;
         }
 
         if (value instanceof List<?>) {
-            ArrayNode node = new ArrayNode(mapper.getNodeFactory());
             for (Object val : ((List<?>) value)) {
-                node.add(serializePartial(val));
+                escapeMapKeys(val);
             }
-            return node;
+            return;
         }
 
         if (value instanceof Map<?, ?>) {
-            ObjectNode node = new ObjectNode(mapper.getNodeFactory());
-            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
-                node.set((String) entry.getKey(), serializePartial(entry.getValue()));
+            for (String key : Sets.newHashSet(((Map<String, Object>) value).keySet())) {
+                if (key.contains(".")) {
+                    String newKey = key.replaceAll("((?<!\\\\))\\.", "\\.");
+                    Object val = ((Map<String, Object>) value).remove(key);
+                    ((Map<String, Object>) value).put(newKey, val);
+                }
             }
-            return node;
+            for (Object val : ((Map<?, ?>) value).values()) {
+                escapeMapKeys(val);
+            }
+            return;
         }
 
-        ObjectNode res = new ObjectNode(mapper.getNodeFactory());
         for (Field f : getAllDeclaredFields(value.getClass())) {
             f.setAccessible(true);
-            String wireName = f.getName();
-            ObjectNode pointer = res;
-            JsonProperty property = f.getAnnotation(JsonProperty.class);
-            if (property != null && Access.WRITE_ONLY.equals(property.access())) {
-                continue;
-            }
-            if (property != null && !property.value().isEmpty()) {
-                wireName = f.getAnnotation(JsonProperty.class).value();
-            }
             try {
-                Object propValue = f.get(value);
-                if (propValue != null) {
-                    if (value.getClass().isAnnotationPresent(JsonFlatten.class) && wireName.matches(".+[^\\\\]\\..+")) {
-                        String[] values = wireName.split("((?<!\\\\))\\.");
-                        for (int i = 0; i < values.length; ++i) {
-                            values[i] = values[i].replace("\\.", ".");
-                            if (i == values.length - 1) {
-                                break;
-                            }
-                            String val = values[i];
-                            if (!pointer.has(val)) {
-                                ObjectNode child = new ObjectNode(mapper.getNodeFactory());
-                                pointer.set(val, child);
-                                pointer = child;
-                            } else {
-                                pointer = (ObjectNode) pointer.get(val);
-                            }
-                        }
-                        wireName = values[values.length - 1];
-                    }
-                    pointer.set(wireName, serializePartial(propValue));
-                }
+                escapeMapKeys(f.get(value));
             } catch (IllegalAccessException e) {
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
         }
-        return res;
     }
 
     @Override
@@ -178,12 +160,68 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
             jgen.writeNull();
             return;
         }
-
-        jgen.writeTree(serializePartial(value));
+        escapeMapKeys(value);
+        // BFS for all collapsed properties
+        ObjectNode root = mapper.valueToTree(value);
+        ObjectNode res = root.deepCopy();
+        Queue<ObjectNode> source = new LinkedBlockingQueue<ObjectNode>();
+        Queue<ObjectNode> target = new LinkedBlockingQueue<ObjectNode>();
+        source.add(root);
+        target.add(res);
+        while (!source.isEmpty()) {
+            ObjectNode current = source.poll();
+            ObjectNode resCurrent = target.poll();
+            Iterator<Map.Entry<String, JsonNode>> fields = current.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                ObjectNode node = resCurrent;
+                String key = field.getKey();
+                JsonNode outNode = resCurrent.get(key);
+                if (field.getKey().matches(".+[^\\\\]\\..+")) {
+                    String[] values = field.getKey().split("((?<!\\\\))\\.");
+                    for (int i = 0; i < values.length; ++i) {
+                        values[i] = values[i].replace("\\.", ".");
+                        if (i == values.length - 1) {
+                            break;
+                        }
+                        String val = values[i];
+                        if (node.has(val)) {
+                            node = (ObjectNode) node.get(val);
+                        } else {
+                            ObjectNode child = new ObjectNode(JsonNodeFactory.instance);
+                            node.put(val, child);
+                            node = child;
+                        }
+                    }
+                    node.set(values[values.length - 1], resCurrent.get(field.getKey()));
+                    resCurrent.remove(field.getKey());
+                    outNode = node.get(values[values.length - 1]);
+                }
+                if (field.getValue() instanceof ObjectNode) {
+                    source.add((ObjectNode) field.getValue());
+                    target.add((ObjectNode) outNode);
+                } else if (field.getValue() instanceof ArrayNode
+                        && (field.getValue()).size() > 0
+                        && (field.getValue()).get(0) instanceof ObjectNode) {
+                    Iterator<JsonNode> sourceIt = field.getValue().elements();
+                    Iterator<JsonNode> targetIt = outNode.elements();
+                    while (sourceIt.hasNext()) {
+                        source.add((ObjectNode) sourceIt.next());
+                        target.add((ObjectNode) targetIt.next());
+                    }
+                }
+            }
+        }
+        jgen.writeTree(res);
     }
 
     @Override
     public void resolve(SerializerProvider provider) throws JsonMappingException {
         ((ResolvableSerializer) defaultSerializer).resolve(provider);
+    }
+
+    @Override
+    public void serializeWithType(Object value, JsonGenerator gen, SerializerProvider provider, TypeSerializer typeSerializer) throws IOException {
+        serialize(value, gen, provider);
     }
 }

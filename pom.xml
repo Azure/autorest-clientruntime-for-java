@@ -8,7 +8,7 @@
 
   <groupId>com.microsoft.azure</groupId>
   <artifactId>autorest-clientruntime-for-java</artifactId>
-  <version>1.5.1-SNAPSHOT</version>
+  <version>1.5.2-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>AutoRest Client Runtimes for Java</name>
@@ -147,7 +147,7 @@
           <dependency>
             <groupId>com.microsoft.azure</groupId>
             <artifactId>autorest-build-tools</artifactId>
-            <version>1.5.1-SNAPSHOT</version>
+            <version>1.5.2-SNAPSHOT</version>
           </dependency>
           <dependency>
             <groupId>com.puppycrawl.tools</groupId>
@@ -218,7 +218,7 @@
         <plugin>
           <groupId>com.microsoft.azure</groupId>
           <artifactId>bundler-maven-plugin</artifactId>
-          <version>0.0.2</version>
+          <version>0.0.4</version>
         </plugin>
       </plugins>
     </pluginManagement>

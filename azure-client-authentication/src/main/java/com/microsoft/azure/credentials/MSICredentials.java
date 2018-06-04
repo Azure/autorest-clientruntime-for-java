@@ -127,16 +127,19 @@ public class MSICredentials extends AzureTokenCredentials {
 
     @Override
     public String getToken(String resource) throws IOException {
+        if (resource == null || resource.isEmpty()) {
+            resource = this.resource;
+        }
         if (this.tokenSource == MSITokenSource.MSI_EXTENSION) {
-            return this.getTokenFromMSIExtension();
+            return this.getTokenFromMSIExtension(resource);
         } else {
-            return this.getTokenFromIMDSEndpoint();
+            return this.getTokenFromIMDSEndpoint(resource);
         }
     }
 
-    private String getTokenFromMSIExtension() throws IOException {
+    private String getTokenFromMSIExtension(String resource) throws IOException {
         URL url = new URL(String.format("http://localhost:%d/oauth2/token", this.msiPort));
-        String postData = String.format("resource=%s", this.resource);
+        String postData = String.format("resource=%s", resource);
         if (this.objectId != null) {
             postData += String.format("&object_id=%s", this.objectId);
         } else if (this.clientId != null) {
@@ -177,7 +180,7 @@ public class MSICredentials extends AzureTokenCredentials {
         }
     }
 
-    private String getTokenFromIMDSEndpoint() {
+    private String getTokenFromIMDSEndpoint(String resource) {
         MSIToken token = cache.get(resource);
         if (token != null && !token.isExpired()) {
             return token.accessToken();
@@ -189,7 +192,7 @@ public class MSICredentials extends AzureTokenCredentials {
                 return token.accessToken();
             }
             try {
-                token = retrieveTokenFromIDMSWithRetry();
+                token = retrieveTokenFromIDMSWithRetry(resource);
                 if (token != null) {
                     cache.put(resource, token);
                 }
@@ -202,7 +205,7 @@ public class MSICredentials extends AzureTokenCredentials {
         }
     }
 
-    private MSIToken retrieveTokenFromIDMSWithRetry() throws IOException {
+    private MSIToken retrieveTokenFromIDMSWithRetry(String resource) throws IOException {
         StringBuilder payload = new StringBuilder();
         final int imdsUpgradeTimeInMs = 70 * 1000;
 
@@ -214,7 +217,7 @@ public class MSICredentials extends AzureTokenCredentials {
             payload.append("&");
             payload.append("resource");
             payload.append("=");
-            payload.append(URLEncoder.encode(this.resource, "UTF-8"));
+            payload.append(URLEncoder.encode(resource, "UTF-8"));
             if (this.objectId != null) {
                 payload.append("&");
                 payload.append("object_id");

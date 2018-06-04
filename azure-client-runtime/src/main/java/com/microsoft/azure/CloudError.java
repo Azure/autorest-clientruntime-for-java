@@ -6,6 +6,8 @@
 
 package com.microsoft.azure;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +34,11 @@ public final class CloudError {
      * Details for the error.
      */
     private List<CloudError> details;
+
+    /**
+     * The inner error.
+     */
+    private ObjectNode innerError;
 
     /**
      * Initializes a new instance of CloudError.
@@ -99,5 +106,12 @@ public final class CloudError {
      */
     public List<CloudError> details() {
         return details;
+    }
+
+    /**
+     * @return the inner error
+     */
+    public ObjectNode innerError() {
+        return innerError;
     }
 }

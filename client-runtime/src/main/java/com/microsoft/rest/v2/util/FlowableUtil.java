@@ -17,6 +17,7 @@ import io.reactivex.FlowableTransformer;
 import io.reactivex.Single;
 import io.reactivex.internal.subscriptions.SubscriptionHelper;
 import io.reactivex.internal.util.BackpressureHelper;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -26,7 +27,7 @@ import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -72,63 +73,6 @@ public final class FlowableUtil {
 
         });
     }
-    private static final class CountingFlowable extends Flowable<ByteBuffer> {
-        final Flowable<ByteBuffer> source;
-        final long bytesExpected;
-        CountingFlowable(Flowable<ByteBuffer> source, long bytesExpected) {
-            if (bytesExpected < 0) {
-                throw new IllegalArgumentException("bytesExpected must be non-negative, but was " + bytesExpected);
-            }
-
-            this.source = Objects.requireNonNull(source, "source is null");
-            this.bytesExpected = bytesExpected;
-        }
-
-        @Override
-        protected void subscribeActual(Subscriber<? super ByteBuffer> observer) {
-            source.subscribe(new Subscriber<ByteBuffer>() {
-                Subscription subscription;
-                long bytesRead = 0;
-
-                @Override
-                public void onSubscribe(Subscription s) {
-                    subscription = s;
-                    observer.onSubscribe(s);
-                }
-
-                @Override
-                public void onNext(ByteBuffer byteBuffer) {
-                    long newBytesRead = bytesRead + byteBuffer.remaining();
-                    bytesRead = newBytesRead;
-                    if (newBytesRead > bytesExpected) {
-                        subscription.cancel();
-                        observer.onError(new IllegalArgumentException("Flowable<ByteBuffer> emitted more bytes than the expected " + bytesExpected));
-                    } else {
-                        observer.onNext(byteBuffer);
-                    }
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    observer.onError(t);
-                }
-
-                @Override
-                public void onComplete() {
-                    long count = bytesRead;
-                    if (count != bytesExpected) {
-                        observer.onError(new IllegalArgumentException(
-                                String.format("Flowable<ByteBuffer> emitted %d bytes instead of the expected %d bytes.",
-                                        count,
-                                        bytesExpected)));
-                    } else {
-                        observer.onComplete();
-                    }
-                }
-            });
-        }
-    }
-
 
     /**
      * Ensures the given Flowable emits the expected number of bytes.
@@ -137,7 +81,26 @@ public final class FlowableUtil {
      * @return a Function which can be applied using {@link Flowable#compose}
      */
     public static FlowableTransformer<ByteBuffer, ByteBuffer> ensureLength(long bytesExpected) {
-        return source -> new CountingFlowable(source, bytesExpected);
+        return source -> Flowable.defer(new Callable<Publisher<? extends ByteBuffer>>() {
+            long bytesRead = 0;
+
+            @Override
+            public Publisher<? extends ByteBuffer> call() throws Exception {
+                return source.doOnNext(bb -> {
+                    bytesRead += bb.remaining();
+                    if (bytesRead > bytesExpected) {
+                        throw new IllegalArgumentException("Flowable<ByteBuffer> emitted more bytes than the expected " + bytesExpected);
+                    }
+                }).doOnComplete(() -> {
+                    if (bytesRead != bytesExpected) {
+                        throw new IllegalArgumentException(
+                                String.format("Flowable<ByteBuffer> emitted %d bytes instead of the expected %d bytes.",
+                                        bytesRead,
+                                        bytesExpected));
+                    }
+                });
+            }
+        });
     }
 
     /**

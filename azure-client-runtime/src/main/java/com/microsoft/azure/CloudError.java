@@ -9,6 +9,9 @@ package com.microsoft.azure;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.microsoft.azure.serializer.TypedErrorInfoDeserializer;
+
 /**
  * An instance of this class provides additional information about an http error response.
  */
@@ -32,6 +35,12 @@ public final class CloudError {
      * Details for the error.
      */
     private List<CloudError> details;
+    
+    /**
+     * Additional error information
+     */
+    @JsonDeserialize(contentUsing = TypedErrorInfoDeserializer.class)
+    private List<TypedErrorInfo> additionalInfo;
 
     /**
      * Initializes a new instance of CloudError.
@@ -99,5 +108,12 @@ public final class CloudError {
      */
     public List<CloudError> details() {
         return details;
+    }
+    
+    /**
+     * @return the additional error information
+     */
+    public List<TypedErrorInfo> additionalInfo() {
+        return additionalInfo;
     }
 }

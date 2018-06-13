@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.microsoft.azure.CloudError;
@@ -30,6 +31,7 @@ final class CloudErrorDeserializer extends JsonDeserializer<CloudError> {
      * @param mapper the object mapper for default deserializations.
      */
     private CloudErrorDeserializer(ObjectMapper mapper) {
+    	mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
         this.mapper = mapper;
     }
 
@@ -55,12 +57,8 @@ final class CloudErrorDeserializer extends JsonDeserializer<CloudError> {
         if (errorNode.get("error") != null) {
             errorNode = errorNode.get("error");
         }
-        String nodeContent = errorNode.toString();
-        nodeContent = nodeContent.replaceFirst("(?i)\"code\"", "\"code\"")
-                .replaceFirst("(?i)\"message\"", "\"message\"")
-                .replaceFirst("(?i)\"target\"", "\"target\"")
-                .replaceFirst("(?i)\"details\"", "\"details\"");
-        JsonParser parser = new JsonFactory().createParser(nodeContent);
+        
+        JsonParser parser = new JsonFactory().createParser(errorNode.toString());
         parser.setCodec(mapper);
         return parser.readValueAs(CloudError.class);
     }

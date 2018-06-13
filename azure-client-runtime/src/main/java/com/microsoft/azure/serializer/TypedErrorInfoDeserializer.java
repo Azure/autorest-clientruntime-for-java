@@ -1,0 +1,69 @@
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
+
+package com.microsoft.azure.serializer;
+
+import java.io.IOException;
+import java.util.Iterator;
+
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.microsoft.azure.CloudError;
+import com.microsoft.azure.PolicyViolation;
+import com.microsoft.azure.TypedErrorInfo;
+
+/**
+ * Custom serializer for serializing {@link TypedErrorInfo} objects.
+ */
+public class TypedErrorInfoDeserializer extends JsonDeserializer<TypedErrorInfo> {
+	private static final String TypeFieldName = "type";
+	
+	private static final String InfoFieldName = "info";
+	
+	@Override
+	public TypedErrorInfo deserialize(JsonParser p, DeserializationContext ctxt)
+			throws IOException, JsonProcessingException {
+		JsonNode errorInfoNode = p.readValueAsTree();
+		if (errorInfoNode == null) {
+			return null;
+	    }
+		
+		JsonNode typeNode = errorInfoNode.get(TypeFieldName);
+		JsonNode infoNode = errorInfoNode.get(InfoFieldName);
+		if (typeNode == null || infoNode == null) {
+			Iterator<String> fieldNames = errorInfoNode.fieldNames();
+			while (fieldNames.hasNext()) {
+				String fieldName = fieldNames.next();
+				if (typeNode == null && TypeFieldName.equalsIgnoreCase(fieldName)) {
+					typeNode = errorInfoNode.get(fieldName);
+					
+				}
+				
+				if (infoNode == null && InfoFieldName.equalsIgnoreCase(fieldName)) {
+					infoNode = errorInfoNode.get(fieldName);
+					
+				}
+			}	
+		}
+		
+		if (typeNode == null || infoNode == null || infoNode instanceof ObjectNode == false) {
+			return null;
+		}
+		
+		// deserialize to any strongly typed error defined
+		switch (typeNode.asText()) {
+			case "PolicyViolation":
+				return new PolicyViolation(typeNode.asText(), (ObjectNode)infoNode);
+				
+			default:
+				return new TypedErrorInfo(typeNode.asText(), (ObjectNode)infoNode);
+		}
+	}
+}

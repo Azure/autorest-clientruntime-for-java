@@ -37,7 +37,7 @@ public final class CloudError {
     private List<CloudError> details;
     
     /**
-     * Additional error information
+     * Additional error information.
      */
     @JsonDeserialize(contentUsing = TypedErrorInfoDeserializer.class)
     private List<TypedErrorInfo> additionalInfo;

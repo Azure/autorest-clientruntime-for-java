@@ -27,9 +27,9 @@ public class PolicyViolation extends TypedErrorInfo {
      * Initializes a new instance of PolicyViolation.
      * @param type the error type
      * @param policyErrorInfo the error details
-     * @throws JsonParseException
-     * @throws JsonMappingException
-     * @throws IOException
+     * @throws JsonParseException if the policyErrorInfo has invalid content.
+     * @throws JsonMappingException if the policyErrorInfo's JSON does not match the expected schema. 
+     * @throws IOException if an IO error occurs.
      */
     public PolicyViolation(String type, ObjectNode policyErrorInfo) throws JsonParseException, JsonMappingException, IOException {
         super(type, policyErrorInfo);

@@ -31,7 +31,7 @@ final class CloudErrorDeserializer extends JsonDeserializer<CloudError> {
      * @param mapper the object mapper for default deserializations.
      */
     private CloudErrorDeserializer(ObjectMapper mapper) {
-    	mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+        mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
         this.mapper = mapper;
     }
 

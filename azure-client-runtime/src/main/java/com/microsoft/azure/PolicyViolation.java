@@ -13,33 +13,35 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.microsoft.azure.PolicyViolationErrorInfo;
 
 /**
  * An instance of this class provides Azure policy violation information.
  */
 public class PolicyViolation extends TypedErrorInfo {
-	/**
-	 * Policy violation error details.
-	 */
-	private PolicyViolationErrorInfo policyErrorInfo;
-	
-	/**
-	 * Initializes a new instance of PolicyViolation.
-	 * @param type the error type
-	 * @param policyErrorInfo the error details
-	 */
-	public PolicyViolation(String type, ObjectNode policyErrorInfo) throws JsonParseException, JsonMappingException, IOException {
-		super(type, policyErrorInfo);
-		ObjectMapper objectMapper = new ObjectMapper();
-		objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
-		this.policyErrorInfo = objectMapper.readValue(policyErrorInfo.toString(), PolicyViolationErrorInfo.class);
-	}
-	
-	/**
-	 * @return the policy violation error details.
-	 */
-	public PolicyViolationErrorInfo policyErrorInfo() {
-		return policyErrorInfo;
-	}
+    /**
+     * Policy violation error details.
+     */
+    private PolicyViolationErrorInfo policyErrorInfo;
+    
+    /**
+     * Initializes a new instance of PolicyViolation.
+     * @param type the error type
+     * @param policyErrorInfo the error details
+     * @throws JsonParseException
+     * @throws JsonMappingException
+     * @throws IOException
+     */
+    public PolicyViolation(String type, ObjectNode policyErrorInfo) throws JsonParseException, JsonMappingException, IOException {
+        super(type, policyErrorInfo);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+        this.policyErrorInfo = objectMapper.readValue(policyErrorInfo.toString(), PolicyViolationErrorInfo.class);
+    }
+    
+    /**
+     * @return the policy violation error details.
+     */
+    public PolicyViolationErrorInfo policyErrorInfo() {
+        return policyErrorInfo;
+    }
 }

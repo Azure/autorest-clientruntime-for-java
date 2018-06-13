@@ -14,9 +14,9 @@ import com.fasterxml.jackson.databind.JsonNode;
  * An instance of this class provides Azure policy violation information.
  */
 public class PolicyViolationErrorInfo {
-	/**
-	 * The policy definition id.
-	 */
+    /**
+     * The policy definition id.
+     */
     private String policyDefinitionId;
 
     /**
@@ -78,106 +78,109 @@ public class PolicyViolationErrorInfo {
      * The policy set definition display name.
      */
     private String policySetDefinitionDisplayName;
-	
+    
     /**
      * @return the policy definition id.
      */
     public String getPolicyDefinitionId() {
-    	return policyDefinitionId;
+        return policyDefinitionId;
     }
 
     /**
      * @return the policy set definition id.
      */
     public String getPolicySetDefinitionId() {
-    	return policySetDefinitionId;
+        return policySetDefinitionId;
     }
 
     /**
      * @return the policy definition instance id inside a policy set.
      */
     public String getPolicyDefinitionReferenceId() {
-    	return policyDefinitionReferenceId;
+        return policyDefinitionReferenceId;
     }
 
     /**
      * @return the policy set definition name.
      */
     public String getPolicySetDefinitionName() {
-    	return policySetDefinitionName;
+        return policySetDefinitionName;
     }
 
     /**
      * @return the policy definition name.
      */
     public String getPolicyDefinitionName() {
-    	return policyDefinitionName;
+        return policyDefinitionName;
     }
 
     /**
      * @return the policy definition action.
      */
     public String getPolicyDefinitionEffect() {
-    	return policyDefinitionEffect;
+        return policyDefinitionEffect;
     }
 
     /**
      * @return the policy assignment id.
      */
     public String getPolicyAssignmentId() {
-    	return policyAssignmentId;
+        return policyAssignmentId;
     }
 
     /**
      * @return the policy assignment name.
      */
     public String getPolicyAssignmentName() {
-    	return policyAssignmentName;
+        return policyAssignmentName;
     }
 
     /**
      * @return the policy assignment display name.
      */
     public String getPolicyAssignmentDisplayName() {
-    	return policyAssignmentDisplayName;
+        return policyAssignmentDisplayName;
     }
 
     /**
      * @return the policy assignment scope.
      */
     public String getPolicyAssignmentScope() {
-    	return policyAssignmentScope;
+        return policyAssignmentScope;
     }
 
     /**
      * @return the policy assignment parameters.
      */
     public HashMap<String, PolicyParameter> getPolicyAssignmentParameters() {
-    	return policyAssignmentParameters;
+        return policyAssignmentParameters;
     }
 
     /**
      * @return the policy definition display name.
      */
     public String getPolicyDefinitionDisplayName() {
-    	return policyDefinitionDisplayName;
+        return policyDefinitionDisplayName;
     }
 
     /**
      * @return the policy set definition display name.
      */
     public String getPolicySetDefinitionDisplayName() {
-    	return policySetDefinitionDisplayName;
+        return policySetDefinitionDisplayName;
     }
 
     /**
      * An instance of this class provides policy parameter value.
      */
     public static class PolicyParameter {
-    	private JsonNode value;
-    	
-    	public JsonNode getValue() {
-    		return value;
-    	}
+        private JsonNode value;
+        
+        /**
+         * @return the parameter value.
+         */
+        public JsonNode getValue() {
+            return value;
+        }
     }
 }

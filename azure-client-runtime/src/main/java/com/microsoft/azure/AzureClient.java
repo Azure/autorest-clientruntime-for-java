@@ -162,7 +162,7 @@ public final class AzureClient extends AzureServiceClient {
                     throw  exception;
                 }
                 try {
-                    final PollingState<T> pollingState = PollingState.create(response, longRunningOperationRetryTimeout(), resourceType, restClient().serializerAdapter());
+                    final PollingState<T> pollingState = PollingState.create(response, LongRunningOperationOptions.DEFAULT, longRunningOperationRetryTimeout(), resourceType, restClient().serializerAdapter());
                     pollingState.withPollingUrlFromResponse(response);
                     pollingState.withPollingRetryTimeoutFromResponse(response);
                     pollingState.withPutOrPatchResourceUri(response.raw().request().url().toString());
@@ -337,7 +337,22 @@ public final class AzureClient extends AzureServiceClient {
      * @return          the task describing the asynchronous polling.
      */
     public <T> Observable<ServiceResponse<T>> getPostOrDeleteResultAsync(Observable<Response<ResponseBody>> observable, final Type resourceType) {
-        return this.<T>beginPostOrDeleteAsync(observable, resourceType)
+        return this.<T>getPostOrDeleteResultAsync(observable, LongRunningOperationOptions.DEFAULT, resourceType);
+    }
+
+    /**
+     * Handles an initial response from a POST or DELETE operation response by polling
+     * the status of the operation asynchronously, calling the user provided callback
+     * when the operation terminates.
+     *
+     * @param observable  the initial response from the POST or DELETE operation.
+     * @param lroOptions long running operation options.
+     * @param <T>       the return type of the caller.
+     * @param resourceType the java.lang.reflect.Type of the resource.
+     * @return          the task describing the asynchronous polling.
+     */
+    public <T> Observable<ServiceResponse<T>> getPostOrDeleteResultAsync(Observable<Response<ResponseBody>> observable, final LongRunningOperationOptions lroOptions, final Type resourceType) {
+        return this.<T>beginPostOrDeleteAsync(observable, lroOptions, resourceType)
                 .toObservable()
                 .flatMap(new Func1<PollingState<T>, Observable<PollingState<T>>>() {
                     @Override
@@ -359,12 +374,13 @@ public final class AzureClient extends AzureServiceClient {
      * when subscribed to it, the deferred action will be performed and emits the polling state containing information
      * to track the progress of the action.
      *
-     * @param observable an observable representing a deferred PUT or PATCH operation.
+     * @param observable an observable representing a deferred POST or DELETE operation.
+     * @param lroOptions long running operation options.
      * @param resourceType the java.lang.reflect.Type of the resource.
      * @param <T> the type of the resource
      * @return the observable of which a subscription will lead POST or DELETE action.
      */
-    public <T> Single<PollingState<T>> beginPostOrDeleteAsync(Observable<Response<ResponseBody>> observable, final Type resourceType) {
+    public <T> Single<PollingState<T>> beginPostOrDeleteAsync(Observable<Response<ResponseBody>> observable, final LongRunningOperationOptions lroOptions, final Type resourceType) {
         return observable.map(new Func1<Response<ResponseBody>, PollingState<T>>() {
             @Override
             public PollingState<T> call(Response<ResponseBody> response) {
@@ -373,7 +389,7 @@ public final class AzureClient extends AzureServiceClient {
                     throw  exception;
                 }
                 try {
-                    final PollingState<T> pollingState = PollingState.create(response, longRunningOperationRetryTimeout(), resourceType, restClient().serializerAdapter());
+                    final PollingState<T> pollingState = PollingState.create(response, lroOptions, longRunningOperationRetryTimeout(), resourceType, restClient().serializerAdapter());
                     pollingState.withPollingUrlFromResponse(response);
                     pollingState.withPollingRetryTimeoutFromResponse(response);
                     return pollingState;

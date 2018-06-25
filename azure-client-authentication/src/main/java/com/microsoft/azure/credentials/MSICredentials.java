@@ -60,7 +60,7 @@ public class MSICredentials extends AzureTokenCredentials {
      */
     public MSICredentials(AzureEnvironment environment) {
         super(environment, null /** retrieving MSI token does not require tenant **/);
-        this.resource = environment.resourceManagerEndpoint();
+        this.resource = environment.managementEndpoint();
         this.tokenSource = MSITokenSource.IMDS_ENDPOINT;
     }
 
@@ -74,7 +74,7 @@ public class MSICredentials extends AzureTokenCredentials {
     @Deprecated()
     public MSICredentials(AzureEnvironment environment, int msiPort) {
         super(environment, null /** retrieving MSI token does not require tenant **/);
-        this.resource = environment.resourceManagerEndpoint();
+        this.resource = environment.managementEndpoint();
         this.msiPort = msiPort;
         this.tokenSource = MSITokenSource.MSI_EXTENSION;
     }
@@ -126,17 +126,17 @@ public class MSICredentials extends AzureTokenCredentials {
 
 
     @Override
-    public String getToken(String resource) throws IOException {
+    public String getToken(String tokenAudience) throws IOException {
         if (this.tokenSource == MSITokenSource.MSI_EXTENSION) {
-            return this.getTokenFromMSIExtension();
+            return this.getTokenFromMSIExtension(tokenAudience == null ? this.resource : tokenAudience);
         } else {
-            return this.getTokenFromIMDSEndpoint();
+            return this.getTokenFromIMDSEndpoint(tokenAudience == null ? this.resource : tokenAudience);
         }
     }
 
-    private String getTokenFromMSIExtension() throws IOException {
+    private String getTokenFromMSIExtension(String tokenAudience) throws IOException {
         URL url = new URL(String.format("http://localhost:%d/oauth2/token", this.msiPort));
-        String postData = String.format("resource=%s", this.resource);
+        String postData = String.format("resource=%s", tokenAudience);
         if (this.objectId != null) {
             postData += String.format("&object_id=%s", this.objectId);
         } else if (this.clientId != null) {
@@ -177,21 +177,21 @@ public class MSICredentials extends AzureTokenCredentials {
         }
     }
 
-    private String getTokenFromIMDSEndpoint() {
-        MSIToken token = cache.get(resource);
+    private String getTokenFromIMDSEndpoint(String tokenAudience) {
+        MSIToken token = cache.get(tokenAudience);
         if (token != null && !token.isExpired()) {
             return token.accessToken();
         }
         lock.lock();
         try {
-            token = cache.get(resource);
+            token = cache.get(tokenAudience);
             if (token != null && !token.isExpired()) {
                 return token.accessToken();
             }
             try {
-                token = retrieveTokenFromIDMSWithRetry();
+                token = retrieveTokenFromIDMSWithRetry(tokenAudience);
                 if (token != null) {
-                    cache.put(resource, token);
+                    cache.put(tokenAudience, token);
                 }
             } catch (IOException exception) {
                 throw new RuntimeException(exception);
@@ -202,7 +202,7 @@ public class MSICredentials extends AzureTokenCredentials {
         }
     }
 
-    private MSIToken retrieveTokenFromIDMSWithRetry() throws IOException {
+    private MSIToken retrieveTokenFromIDMSWithRetry(String tokenAudience) throws IOException {
         StringBuilder payload = new StringBuilder();
         final int imdsUpgradeTimeInMs = 70 * 1000;
 
@@ -214,7 +214,7 @@ public class MSICredentials extends AzureTokenCredentials {
             payload.append("&");
             payload.append("resource");
             payload.append("=");
-            payload.append(URLEncoder.encode(this.resource, "UTF-8"));
+            payload.append(URLEncoder.encode(tokenAudience, "UTF-8"));
             if (this.objectId != null) {
                 payload.append("&");
                 payload.append("object_id");

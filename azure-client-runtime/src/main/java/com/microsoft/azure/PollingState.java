@@ -51,7 +51,8 @@ public class PollingState<T> {
     private String putOrPatchResourceUri;
     /** The logging context. **/
     private String loggingContext;
-
+    /** indicate how to retrieve the final state of LRO. **/
+    private LongRunningFinalState finalStateVia;
 
     // Non-serializable properties
     //
@@ -87,6 +88,7 @@ public class PollingState<T> {
      * Creates a polling state.
      *
      * @param response the response from Retrofit REST call that initiate the long running operation.
+     * @param lroOptions long running operation options.
      * @param defaultRetryTimeout the long running operation retry timeout.
      * @param resourceType the type of the resource the long running operation returns
      * @param serializerAdapter the adapter for the Jackson object mapper
@@ -94,7 +96,7 @@ public class PollingState<T> {
      * @return the polling state
      * @throws IOException thrown by deserialization
      */
-    public static <T> PollingState<T> create(Response<ResponseBody> response, int defaultRetryTimeout, Type resourceType, SerializerAdapter<?> serializerAdapter) throws IOException {
+    public static <T> PollingState<T> create(Response<ResponseBody> response, LongRunningOperationOptions lroOptions, int defaultRetryTimeout, Type resourceType, SerializerAdapter<?> serializerAdapter) throws IOException {
         PollingState<T> pollingState = new PollingState<>();
         pollingState.initialHttpMethod = response.raw().request().method();
         pollingState.defaultRetryTimeout = defaultRetryTimeout;
@@ -102,6 +104,7 @@ public class PollingState<T> {
         pollingState.resourceType = resourceType;
         pollingState.serializerAdapter = serializerAdapter;
         pollingState.loggingContext = response.raw().request().header(LOGGING_HEADER);
+        pollingState.finalStateVia = lroOptions.finalStateVia();
 
         String responseContent = null;
         PollingResource resource = null;
@@ -172,6 +175,7 @@ public class PollingState<T> {
         pollingState.defaultRetryTimeout = other.defaultRetryTimeout;
         pollingState.retryTimeout = other.retryTimeout;
         pollingState.loggingContext = other.loggingContext;
+        pollingState.finalStateVia = other.finalStateVia;
         return pollingState;
     }
 
@@ -353,11 +357,17 @@ public class PollingState<T> {
     }
 
     boolean resourcePending() {
-        return statusCode() != 204
+        boolean resourcePending = statusCode() != 204
                 && isStatusSucceeded()
                 && resource() == null
                 && resourceType() != Void.class
                 && locationHeaderLink() != null;
+        if (resourcePending) {
+            // Keep current behaviour for backward-compact
+            return true;
+        } else {
+            return this.finalStateVia() == LongRunningFinalState.LOCATION;
+        }
     }
 
     /**
@@ -450,6 +460,30 @@ public class PollingState<T> {
      */
     Type resourceType() {
         return resourceType;
+    }
+
+    /**
+     * @return describes how to retrieve the final result of long running operation.
+     */
+    LongRunningFinalState finalStateVia() {
+        if (this.initialHttpMethod().equalsIgnoreCase("POST") && resourceType() != Void.class) {
+            // FinalStateVia is supported only for POST LRO at the moment.
+            //
+            if (this.locationHeaderLink() != null && this.azureAsyncOperationHeaderLink() != null) {
+                // Consider final-state-via option only if both headers are provided on the wire otherwise
+                // there is nothing to disambiguate.
+                //
+                if (this.finalStateVia == LongRunningFinalState.LOCATION) {
+                    // A POST LRO can be tracked only using Location or AsyncOperation Header.
+                    // If AsyncOperationHeader is present then anyway polling will be performed using
+                    // it and there is no point in making one additional call to retrieve state using
+                    // async operation uri anyway. Hence we consider only LongRunningFinalState.LOCATION.
+                    //
+                    return LongRunningFinalState.LOCATION;
+                }
+            }
+        }
+        return LongRunningFinalState.DEFAULT;
     }
 
     /**

@@ -133,7 +133,7 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
         if (value instanceof Map<?, ?>) {
             for (String key : Sets.newHashSet(((Map<String, Object>) value).keySet())) {
                 if (key.contains(".")) {
-                    String newKey = key.replaceAll("((?<!\\\\))\\.", "\\.");
+                    String newKey = key.replaceAll("((?<!\\\\))\\.", "\\\\.");
                     Object val = ((Map<String, Object>) value).remove(key);
                     ((Map<String, Object>) value).put(newKey, val);
                 }
@@ -177,8 +177,16 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
                 ObjectNode node = resCurrent;
                 String key = field.getKey();
                 JsonNode outNode = resCurrent.get(key);
-                if (field.getKey().matches(".+[^\\\\]\\..+")) {
-                    String[] values = field.getKey().split("((?<!\\\\))\\.");
+                if (key.matches(".*[^\\\\]\\\\..+")) {
+                    // Handle escaped map key
+                    //
+                    String originalKey = key.replaceAll("\\\\.", ".");
+                    resCurrent.remove(key);
+                    resCurrent.put(originalKey, outNode);
+                } else if (key.matches(".+[^\\\\]\\..+")) {
+                    // Handle flattening properties
+                    //
+                    String[] values = key.split("((?<!\\\\))\\.");
                     for (int i = 0; i < values.length; ++i) {
                         values[i] = values[i].replace("\\.", ".");
                         if (i == values.length - 1) {
@@ -193,8 +201,8 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
                             node = child;
                         }
                     }
-                    node.set(values[values.length - 1], resCurrent.get(field.getKey()));
-                    resCurrent.remove(field.getKey());
+                    node.set(values[values.length - 1], resCurrent.get(key));
+                    resCurrent.remove(key);
                     outNode = node.get(values[values.length - 1]);
                 }
                 if (field.getValue() instanceof ObjectNode) {

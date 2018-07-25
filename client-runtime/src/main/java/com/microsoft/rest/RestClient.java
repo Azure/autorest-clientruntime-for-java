@@ -21,6 +21,7 @@ import com.microsoft.rest.retry.RetryHandler;
 import com.microsoft.rest.retry.RetryStrategy;
 import okhttp3.Authenticator;
 import okhttp3.ConnectionPool;
+import okhttp3.Dispatcher;
 import okhttp3.Interceptor;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
@@ -174,6 +175,12 @@ public final class RestClient {
         private LoggingInterceptor loggingInterceptor;
         /** The strategy used for retry failed requests. */
         private RetryStrategy retryStrategy;
+        /** The dispatcher for OkHttp to handle requests. */
+        private Dispatcher dispatcher;
+        /** If set to true, the dispatcher thread pool rather than RxJava schedulers will be used to schedule requests. */
+        private boolean useHttpClientThreadPool;
+        /** The connection pool in use for OkHttp. */
+        private ConnectionPool connectionPool;
 
         /**
          * Creates an instance of the builder with a base URL to the service.
@@ -189,6 +196,7 @@ public final class RestClient {
             this.baseUrl = restClient.retrofit.baseUrl().toString();
             this.responseBuilderFactory = restClient.builder.responseBuilderFactory;
             this.serializerAdapter = restClient.builder.serializerAdapter;
+            this.useHttpClientThreadPool = restClient.builder.useHttpClientThreadPool;
             if (restClient.builder.credentials != null) {
                 this.credentials = restClient.builder.credentials;
             }
@@ -241,6 +249,7 @@ public final class RestClient {
                     .addInterceptor(new BaseUrlHandler());
             this.retrofitBuilder = retrofitBuilder;
             this.loggingInterceptor = new LoggingInterceptor(LogLevel.NONE);
+            this.useHttpClientThreadPool = false;
         }
 
         /**
@@ -384,9 +393,43 @@ public final class RestClient {
          *
          * @param maxIdleConnections the maximum idle connections
          * @return the builder itself for chaining
+         * @deprecated use {@link #withConnectionPool(ConnectionPool)} instead
          */
+        @Deprecated
         public Builder withMaxIdleConnections(int maxIdleConnections) {
-            httpClientBuilder.connectionPool(new ConnectionPool(maxIdleConnections, 5, TimeUnit.MINUTES));
+            this.connectionPool = new ConnectionPool(maxIdleConnections, 5, TimeUnit.MINUTES);
+            return this;
+        }
+
+        /**
+         * Sets the connection pool for the Http client.
+         * @param connectionPool the OkHttp 3 connection pool to use
+         * @return the builder itself for chaining
+         */
+        public Builder withConnectionPool(ConnectionPool connectionPool) {
+            this.connectionPool = connectionPool;
+            return this;
+        }
+
+        /**
+         * Sets whether to use the thread pool in OkHttp client or RxJava schedulers.
+         * If set to true, the thread pool in OkHttp client will be used. Default is false.
+         * @param useHttpClientThreadPool whether to use the thread pool in Okhttp client. Default is false.
+         * @return the builder itself for chaining
+         */
+        public Builder useHttpClientThreadPool(boolean useHttpClientThreadPool) {
+            this.useHttpClientThreadPool = useHttpClientThreadPool;
+            return this;
+        }
+
+        /**
+         * Sets the dispatcher used in OkHttp client. This is also where to set
+         * the thread pool for executing HTTP requests.
+         * @param dispatcher the dispatcher to use
+         * @return the builder itself for chaining
+         */
+        public Builder withDispatcher(Dispatcher dispatcher) {
+            this.dispatcher = dispatcher;
             return this;
         }
 
@@ -468,6 +511,14 @@ public final class RestClient {
             } else {
                 retryHandler = new RetryHandler(retryStrategy);
             }
+
+            if (connectionPool != null) {
+                httpClientBuilder = httpClientBuilder.connectionPool(connectionPool);
+            }
+            if (dispatcher != null) {
+                httpClientBuilder = httpClientBuilder.dispatcher(dispatcher);
+            }
+
             OkHttpClient httpClient = httpClientBuilder
                     .addInterceptor(userAgentInterceptor)
                     .addInterceptor(customHeadersInterceptor)
@@ -475,12 +526,19 @@ public final class RestClient {
                     .addNetworkInterceptor(loggingInterceptor)
                     .build();
 
+            RxJavaCallAdapterFactory callAdapterFactory;
+            if (useHttpClientThreadPool) {
+                callAdapterFactory = RxJavaCallAdapterFactory.createAsync();
+            } else {
+                callAdapterFactory = RxJavaCallAdapterFactory.create();
+            }
+
             return new RestClient(httpClient,
                     retrofitBuilder
                             .baseUrl(baseUrl)
                             .client(httpClient)
                             .addConverterFactory(serializerAdapter.converterFactory())
-                            .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
+                            .addCallAdapterFactory(callAdapterFactory)
                             .build(),
                     this);
         }

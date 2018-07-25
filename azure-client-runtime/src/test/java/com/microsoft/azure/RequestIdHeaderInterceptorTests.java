@@ -7,13 +7,15 @@
 package com.microsoft.azure;
 
 import com.microsoft.azure.serializer.AzureJacksonAdapter;
-import com.microsoft.rest.interceptors.RequestIdHeaderInterceptor;
 import com.microsoft.rest.RestClient;
+import com.microsoft.rest.interceptors.RequestIdHeaderInterceptor;
 import com.microsoft.rest.retry.RetryHandler;
 import okhttp3.Interceptor;
+import okhttp3.MediaType;
 import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,11 +39,21 @@ public class RequestIdHeaderInterceptorTests {
                         if (request.header(REQUEST_ID_HEADER) != null) {
                             if (firstRequestId == null) {
                                 firstRequestId = request.header(REQUEST_ID_HEADER);
-                                return new Response.Builder().code(200).request(request)
-                                        .protocol(Protocol.HTTP_1_1).build();
+                                return new Response.Builder()
+                                        .code(200)
+                                        .request(request)
+                                        .message("OK")
+                                        .protocol(Protocol.HTTP_1_1)
+                                        .body(ResponseBody.create(MediaType.parse("text/plain"), "azure rocks"))
+                                        .build();
                             } else if (!request.header(REQUEST_ID_HEADER).equals(firstRequestId)) {
-                                return new Response.Builder().code(200).request(request)
-                                        .protocol(Protocol.HTTP_1_1).build();
+                                return new Response.Builder()
+                                        .code(200)
+                                        .request(request)
+                                        .message("OK")
+                                        .protocol(Protocol.HTTP_1_1)
+                                        .body(ResponseBody.create(MediaType.parse("text/plain"), "azure rocks"))
+                                        .build();
                             }
                         }
                         return new Response.Builder().code(400).request(request)
@@ -75,11 +87,21 @@ public class RequestIdHeaderInterceptorTests {
                         if (request.header(REQUEST_ID_HEADER) != null) {
                             if (firstRequestId == null) {
                                 firstRequestId = request.header(REQUEST_ID_HEADER);
-                                return new Response.Builder().code(500).request(request)
-                                        .protocol(Protocol.HTTP_1_1).build();
+                                return new Response.Builder()
+                                        .code(500)
+                                        .request(request)
+                                        .message("Error")
+                                        .protocol(Protocol.HTTP_1_1)
+                                        .body(ResponseBody.create(MediaType.parse("text/plain"), "azure rocks"))
+                                        .build();
                             } else if (request.header(REQUEST_ID_HEADER).equals(firstRequestId)) {
-                                return new Response.Builder().code(200).request(request)
-                                        .protocol(Protocol.HTTP_1_1).build();
+                                return new Response.Builder()
+                                        .code(200)
+                                        .request(request)
+                                        .message("OK")
+                                        .protocol(Protocol.HTTP_1_1)
+                                        .body(ResponseBody.create(MediaType.parse("text/plain"), "azure rocks"))
+                                        .build();
                             }
                         }
                         return new Response.Builder().code(400).request(request)

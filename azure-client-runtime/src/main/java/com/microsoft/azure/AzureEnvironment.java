@@ -86,7 +86,7 @@ public final class AzureEnvironment implements Environment {
         put("sqlManagementEndpointUrl", "https://management.core.usgovcloudapi.net:8443/");
         put("sqlServerHostnameSuffix", ".database.usgovcloudapi.net");
         put("galleryEndpointUrl", "https://gallery.usgovcloudapi.net/");
-        put("activeDirectoryEndpointUrl", "https://login-us.microsoftonline.com/");
+        put("activeDirectoryEndpointUrl", "https://login.microsoftonline.us/");
         put("activeDirectoryResourceId", "https://management.core.usgovcloudapi.net/");
         put("activeDirectoryGraphResourceId", "https://graph.windows.net/");
         // TODO: add resource id for the US government for datalake once it is defined.

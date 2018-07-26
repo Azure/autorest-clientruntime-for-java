@@ -6,17 +6,18 @@
 
 package com.microsoft.rest;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import java.io.IOException;
-
 import okhttp3.Interceptor;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
+import org.junit.Assert;
+import org.junit.Test;
 import retrofit2.Retrofit;
+
+import java.io.IOException;
 
 public class ServiceClientTests {
     @Test
@@ -33,7 +34,9 @@ public class ServiceClientTests {
                 return new Response.Builder()
                         .request(chain.request())
                         .code(200)
+                        .message("OK")
                         .protocol(Protocol.HTTP_1_1)
+                        .body(ResponseBody.create(MediaType.parse("text/plain"), "azure rocks"))
                         .build();
             }
         });

@@ -68,7 +68,7 @@ import static com.microsoft.rest.v2.util.FlowableUtil.ensureLength;
  */
 public final class NettyClient extends HttpClient {
     private final NettyAdapter adapter;
-    private final Proxy proxy;
+    private final HttpClientConfiguration configuration;
 
     /**
      * Creates NettyClient.
@@ -80,12 +80,12 @@ public final class NettyClient extends HttpClient {
      */
     private NettyClient(HttpClientConfiguration configuration, NettyAdapter adapter) {
         this.adapter = adapter;
-        this.proxy = configuration == null ? null : configuration.proxy();
+        this.configuration = configuration != null ? configuration : new HttpClientConfiguration(null, false);
     }
 
     @Override
     public Single<HttpResponse> sendRequestAsync(final HttpRequest request) {
-        return adapter.sendRequestInternalAsync(request, proxy);
+        return adapter.sendRequestInternalAsync(request, configuration);
     }
 
     private static final class NettyAdapter {
@@ -187,10 +187,10 @@ public final class NettyClient extends HttpClient {
             this.channelPool = createChannelPool(baseBootstrap, config, channelPoolSize);
         }
 
-        private Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request, final Proxy proxy) {
+        private Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request, final HttpClientConfiguration configuration) {
             final URI channelAddress;
             try {
-                channelAddress = getChannelAddress(request, proxy);
+                channelAddress = getChannelAddress(request, configuration);
             } catch (URISyntaxException e) {
                 return Single.error(e);
             }
@@ -211,13 +211,13 @@ public final class NettyClient extends HttpClient {
                         io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE.toString());
     }
 
-    private static URI getChannelAddress(final HttpRequest request, final Proxy proxy) throws URISyntaxException {
+    private static URI getChannelAddress(final HttpRequest request, final HttpClientConfiguration configuration) throws URISyntaxException {
+        final Proxy proxy = configuration.proxy();
         if (proxy == null) {
             return request.url().toURI();
         } else if (proxy.address() instanceof InetSocketAddress) {
             InetSocketAddress address = (InetSocketAddress) proxy.address();
-            String scheme = address.getPort() == 443 ? "https" : "http";
-
+            String scheme = configuration.isProxyHTTPS() ? "https" : "http";
             String channelAddressString = scheme + "://" + address.getHostString() + ":" + address.getPort();
             return new URI(channelAddressString);
         } else {

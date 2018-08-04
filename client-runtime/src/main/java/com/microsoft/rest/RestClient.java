@@ -191,6 +191,8 @@ public final class RestClient {
 
         private Builder(final RestClient restClient) {
             this(restClient.httpClient.newBuilder(), new Retrofit.Builder());
+            this.httpClientBuilder.readTimeout(restClient.httpClient.readTimeoutMillis(), TimeUnit.MILLISECONDS);
+            this.httpClientBuilder.connectTimeout(restClient.httpClient.connectTimeoutMillis(), TimeUnit.MILLISECONDS);
             this.httpClientBuilder.interceptors().clear();
             this.httpClientBuilder.networkInterceptors().clear();
             this.baseUrl = restClient.retrofit.baseUrl().toString();
@@ -489,6 +491,9 @@ public final class RestClient {
             }
             if (baseUrl == null) {
                 throw new IllegalArgumentException("Please set base URL.");
+            }
+            if (!baseUrl.endsWith("/")) {
+                baseUrl += "/";
             }
             if (responseBuilderFactory == null) {
                 throw new IllegalArgumentException("Please set response builder factory.");

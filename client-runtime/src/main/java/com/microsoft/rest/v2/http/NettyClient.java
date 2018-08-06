@@ -302,9 +302,10 @@ public final class NettyClient extends HttpClient {
                     requestSubscriber = new RequestSubscriber(inboundHandler);
                     String contentLengthHeader = request.headers().value("content-length");
                     try {
+                        final int MAX_SEND_BUF_SIZE = 1024 * 64;
                         long contentLength = Long.parseLong(contentLengthHeader);
                         request.body()
-                                .flatMap(bb -> bb.remaining() > 8192 ? FlowableUtil.split(bb, 8192) : Flowable.just(bb))
+                                .flatMap(bb -> bb.remaining() > MAX_SEND_BUF_SIZE ? FlowableUtil.split(bb, MAX_SEND_BUF_SIZE) : Flowable.just(bb))
                                 .compose(ensureLength(contentLength))
                                 .subscribe(requestSubscriber);
                     } catch (NumberFormatException e) {

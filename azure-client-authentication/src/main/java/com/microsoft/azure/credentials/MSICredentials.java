@@ -33,7 +33,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class MSICredentials extends AzureTokenCredentials {
     //
     private final List<Integer> retrySlots = new ArrayList<>(Arrays.asList(new Integer[] {1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765}));
-    private final int maxRetry = retrySlots.size();
+    private int maxRetry = retrySlots.size();
     private final Lock lock = new ReentrantLock();
     private final ConcurrentHashMap<String, MSIToken> cache = new ConcurrentHashMap<>();
     //
@@ -285,6 +285,22 @@ public class MSICredentials extends AzureTokenCredentials {
         } catch (InterruptedException ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    /**
+     * @return the maximum retries allowed
+     */
+    public int maxRetry() {
+        return maxRetry;
+    }
+
+    /**
+     * Sets the maximum retries allowed. Retry timeouts grow
+     * exponentially up to ~2 hours as the client keeps retrying.
+     * @param maxRetry the max retries allowed
+     */
+    public void setMaxRetry(int maxRetry) {
+        this.maxRetry = maxRetry;
     }
 
     /**

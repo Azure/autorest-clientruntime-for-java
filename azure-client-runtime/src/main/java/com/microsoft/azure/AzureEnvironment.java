@@ -101,7 +101,7 @@ public final class AzureEnvironment implements Environment {
         // TODO: add dns suffixes for the US government for datalake store and datalake analytics once they are defined.
         put("azureDataLakeStoreFileSystemEndpointSuffix", "N/A");
         put("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix", "N/A");
-        put("azureLogAnalyticsResourceId", "N/A");
+        put("azureLogAnalyticsResourceId", "https://api.loganalytics.us/");
         put("azureApplicationInsightsResourceId", "N/A");
     }});
 

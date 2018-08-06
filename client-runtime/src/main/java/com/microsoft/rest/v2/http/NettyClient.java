@@ -237,6 +237,8 @@ public final class NettyClient extends HttpClient {
         // disposal, cancel, and request are properly handled via a serialized state machine.
         private final AtomicInteger state = new AtomicInteger(ACQUIRING_NOT_DISPOSED);
 
+        private static final int MAX_SEND_BUF_SIZE = 1024 * 64;
+
         private static final int ACQUIRING_NOT_DISPOSED = 0;
         private static final int ACQUIRING_DISPOSED = 1;
         private static final int ACQUIRED_CONTENT_NOT_SUBSCRIBED = 2;
@@ -302,7 +304,6 @@ public final class NettyClient extends HttpClient {
                     requestSubscriber = new RequestSubscriber(inboundHandler);
                     String contentLengthHeader = request.headers().value("content-length");
                     try {
-                        final int MAX_SEND_BUF_SIZE = 1024 * 64;
                         long contentLength = Long.parseLong(contentLengthHeader);
                         request.body()
                                 .flatMap(bb -> bb.remaining() > MAX_SEND_BUF_SIZE ? FlowableUtil.split(bb, MAX_SEND_BUF_SIZE) : Flowable.just(bb))

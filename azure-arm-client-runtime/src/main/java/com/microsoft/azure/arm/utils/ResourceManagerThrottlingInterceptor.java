@@ -7,11 +7,14 @@
 package com.microsoft.azure.arm.utils;
 
 import com.microsoft.azure.arm.resources.ResourceUtilsCore;
+import com.microsoft.rest.DateTimeRfc1123;
 import okhttp3.Interceptor;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okio.Buffer;
 import okio.BufferedSource;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -71,13 +74,27 @@ public class ResourceManagerThrottlingInterceptor implements Interceptor {
             String retryAfterHeader = response.header("Retry-After");
             int retryAfter = 0;
             if (retryAfterHeader != null) {
-                retryAfter = Integer.parseInt(retryAfterHeader);
+                DateTime retryWhen = null;
+                try {
+                    retryWhen = new DateTimeRfc1123(retryAfterHeader).dateTime();
+                } catch (Exception e) { }
+                if (retryWhen == null) {
+                    retryAfter = Integer.parseInt(retryAfterHeader);
+                } else {
+                    retryAfter = new Duration(null, retryWhen).toStandardSeconds().getSeconds();
+                }
             }
             if (retryAfter <= 0) {
                 Pattern pattern = Pattern.compile("try again after '([0-9]*)' minutes", Pattern.CASE_INSENSITIVE);
                 Matcher matcher = pattern.matcher(content(response.body()));
                 if (matcher.find()) {
                     retryAfter = (int) TimeUnit.MINUTES.toSeconds(Integer.parseInt(matcher.group(1)));
+                } else {
+                    pattern = Pattern.compile("try again after '([0-9]*)' seconds", Pattern.CASE_INSENSITIVE);
+                    matcher = pattern.matcher(content(response.body()));
+                    if (matcher.find()) {
+                        retryAfter = Integer.parseInt(matcher.group(1));
+                    }
                 }
             }
             if (retryAfter > 0) {
@@ -86,7 +103,7 @@ public class ResourceManagerThrottlingInterceptor implements Interceptor {
                     context = "";
                 }
                 LoggerFactory.getLogger(context)
-                    .info("Azure Resource Manager read/write per hour limit reached. Will retry in: " + retryAfter + " seconds");
+                        .info("Azure Resource Manager read/write per hour limit reached. Will retry in: " + retryAfter + " seconds");
                 SdkContext.sleep((int) (TimeUnit.SECONDS.toMillis(retryAfter) + 100));
             }
             return chain.proceed(chain.request());

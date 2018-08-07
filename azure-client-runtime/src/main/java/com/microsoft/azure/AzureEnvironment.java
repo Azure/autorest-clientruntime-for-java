@@ -49,6 +49,8 @@ public final class AzureEnvironment implements Environment {
         put("keyVaultDnsSuffix", ".vault.azure.net");
         put("azureDataLakeStoreFileSystemEndpointSuffix", "azuredatalakestore.net");
         put("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix", "azuredatalakeanalytics.net");
+        put("azureLogAnalyticsResourceId", "https://api.loganalytics.io/");
+        put("azureApplicationInsightsResourceId", "https://api.applicationinsights.io/");
     }});
 
     /**
@@ -73,6 +75,8 @@ public final class AzureEnvironment implements Environment {
         // TODO: add dns suffixes for the china cloud for datalake store and datalake analytics once they are defined.
         put("azureDataLakeStoreFileSystemEndpointSuffix", "N/A");
         put("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix", "N/A");
+        put("azureLogAnalyticsResourceId", "N/A");
+        put("azureApplicationInsightsResourceId", "N/A");
     }});
 
     /**
@@ -97,6 +101,8 @@ public final class AzureEnvironment implements Environment {
         // TODO: add dns suffixes for the US government for datalake store and datalake analytics once they are defined.
         put("azureDataLakeStoreFileSystemEndpointSuffix", "N/A");
         put("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix", "N/A");
+        put("azureLogAnalyticsResourceId", "https://api.loganalytics.us/");
+        put("azureApplicationInsightsResourceId", "N/A");
     }});
 
     /**
@@ -121,6 +127,8 @@ public final class AzureEnvironment implements Environment {
         // TODO: add dns suffixes for the germany cloud for datalake store and datalake analytics once they are defined.
         put("azureDataLakeStoreFileSystemEndpointSuffix", "N/A");
         put("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix", "N/A");
+        put("azureLogAnalyticsResourceId", "N/A");
+        put("azureApplicationInsightsResourceId", "N/A");
     }});
 
     /**
@@ -250,6 +258,20 @@ public final class AzureEnvironment implements Environment {
         return endpoints.get("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix");
     }
 
+    /**
+     * @return the log analytics endpoint.
+     */
+    public String logAnalyticsEndpoint() {
+        return endpoints.get("azureLogAnalyticsResourceId");
+    }
+
+    /**
+     * @return the log analytics endpoint.
+     */
+    public String applicationInsightsEndpoint() {
+        return endpoints.get("azureApplicationInsightsResourceId");
+    }
+
 
     /**
      * The enum representing available endpoints in an environment.
@@ -272,7 +294,11 @@ public final class AzureEnvironment implements Environment {
         /** Azure Data Lake Store DNS suffix. */
         DATA_LAKE_STORE("azureDataLakeStoreFileSystemEndpointSuffix"),
         /** Azure Data Lake Analytics DNS suffix. */
-        DATA_LAKE_ANALYTICS("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix");
+        DATA_LAKE_ANALYTICS("azureDataLakeAnalyticsCatalogAndJobEndpointSuffix"),
+        /** Azure Log Analytics endpoint. */
+        LOG_ANALYTICS("azureLogAnalyticsResourceId"),
+        /** Azure Application Insights. */
+        APPLICATION_INSIGHTS("azureApplicationInsightsResourceId");
 
         private String field;
 

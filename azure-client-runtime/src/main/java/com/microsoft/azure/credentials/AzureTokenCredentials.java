@@ -15,12 +15,12 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.Route;
 
+import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.net.Proxy;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.net.ssl.SSLSocketFactory;
 
 /**
  * AzureTokenCredentials represents a credentials object with access to Azure
@@ -57,9 +57,17 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
                     break;
                 } else if (endpoint.getKey().equals(Endpoint.GRAPH.identifier())) {
                     resource = environment().graphEndpoint();
+                    break;
+                } else if (endpoint.getKey().equals(Endpoint.LOG_ANALYTICS.identifier())) {
+                    resource = environment().logAnalyticsEndpoint();
+                    break;
+                } else if (endpoint.getKey().equals(Endpoint.APPLICATION_INSIGHTS.identifier())) {
+                    resource = environment().applicationInsightsEndpoint();
+                    break;
                 } else if (endpoint.getKey().equals(Endpoint.DATA_LAKE_STORE.identifier())
                                || endpoint.getKey().equals(Endpoint.DATA_LAKE_ANALYTICS.identifier())) {
                     resource = environment().dataLakeEndpointResourceId();
+                    break;
                 }
             }
         }

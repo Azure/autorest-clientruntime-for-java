@@ -15,8 +15,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.google.common.base.CharMatcher;
-import com.google.common.base.Joiner;
 import com.microsoft.rest.v2.CollectionFormat;
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
 import com.microsoft.rest.v2.protocol.SerializerEncoding;
@@ -96,7 +94,7 @@ public class JacksonAdapter implements SerializerAdapter<ObjectMapper> {
             return null;
         }
         try {
-            return CharMatcher.is('"').trimFrom(serialize(object));
+            return serialize(object).replaceAll("^\"*", "").replaceAll("\"*$", "");
         } catch (IOException ex) {
             return null;
         }
@@ -112,7 +110,7 @@ public class JacksonAdapter implements SerializerAdapter<ObjectMapper> {
             String raw = serializeRaw(element);
             serialized.add(raw != null ? raw : "");
         }
-        return Joiner.on(format.getDelimiter()).join(serialized);
+        return String.join(format.getDelimiter(), serialized);
     }
 
     @Override

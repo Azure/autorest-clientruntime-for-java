@@ -35,4 +35,10 @@ public interface TypeFactory {
      * @return The SerializerAdapter-specific parametric Type.
      */
     Type create(ParameterizedType baseType, Type[] genericTypes);
+
+    boolean isAssignableFrom(Type subType, Type superType);
+
+    Type getSuperType(Type subType, Class<?> rawSuperType);
+
+    Class<?> getRawType(Type type);
 }

@@ -62,4 +62,23 @@ public class JacksonTypeFactory implements TypeFactory {
 
         return typeFactory.constructParametricType(rawType, genericJavaTypes);
     }
+
+    @Override
+    public boolean isAssignableFrom(Type subType, Type superType) {
+        JavaType sub = create(subType);
+        JavaType sup = typeFactory.constructType(superType);
+
+        return sub.getRawClass().isAssignableFrom(sup.getRawClass());
+    }
+
+    @Override
+    public JavaType getSuperType(Type subType, Class<?> rawSuperType) {
+        JavaType sub = create(subType);
+        return typeFactory.constructGeneralizedType(sub, rawSuperType);
+    }
+
+    @Override
+    public Class<?> getRawType(Type type) {
+        return create(type).getRawClass();
+    }
 }

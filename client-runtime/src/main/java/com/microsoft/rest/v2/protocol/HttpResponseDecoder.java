@@ -167,13 +167,13 @@ public final class HttpResponseDecoder {
         }
         else {
             if (TypeUtil.isTypeOrSubTypeOf(resultType, List.class)) {
-                final Type resultElementType = TypeUtil.getTypeArgument(resultType, List.class);
+                final Type resultElementType = TypeUtil.getTypeArgument(resultType);
                 final Type wireResponseElementType = constructWireResponseType(resultElementType, wireType);
 
                 wireResponseType = typeFactory.create((ParameterizedType) resultType, wireResponseElementType);
             }
             else if (TypeUtil.isTypeOrSubTypeOf(resultType, Map.class) || TypeUtil.isTypeOrSubTypeOf(resultType, RestResponse.class)) {
-                Type[] typeArguments = TypeUtil.getTypeArguments(resultType, Map.class);
+                Type[] typeArguments = TypeUtil.getTypeArguments(resultType);
                 final Type resultValueType = typeArguments[1];
                 final Type wireResponseValueType = constructWireResponseType(resultValueType, wireType);
 
@@ -199,7 +199,7 @@ public final class HttpResponseDecoder {
                 }
             } else {
                 if (TypeUtil.isTypeOrSubTypeOf(resultType, List.class)) {
-                    final Type resultElementType = TypeUtil.getTypeArgument(resultType, List.class);
+                    final Type resultElementType = TypeUtil.getTypeArgument(resultType);
 
                     final List<Object> wireResponseList = (List<Object>) wireResponse;
 
@@ -215,7 +215,7 @@ public final class HttpResponseDecoder {
                     result = wireResponseList;
                 }
                 else if (TypeUtil.isTypeOrSubTypeOf(resultType, Map.class)) {
-                    final Type resultValueType = TypeUtil.getTypeArguments(resultType, Map.class)[1];
+                    final Type resultValueType = TypeUtil.getTypeArguments(resultType)[1];
 
                     final Map<String, Object> wireResponseMap = (Map<String, Object>) wireResponse;
 
@@ -232,7 +232,7 @@ public final class HttpResponseDecoder {
                     Object wireResponseBody = restResponse.body();
 
                     // FIXME: RestProxy is always in charge of creating RestResponse--so this doesn't seem right
-                    Object resultBody = convertToResultType(wireResponseBody, TypeUtil.getTypeArguments(resultType, RestResponse.class)[1], wireType);
+                    Object resultBody = convertToResultType(wireResponseBody, TypeUtil.getTypeArguments(resultType)[1], wireType);
                     if (wireResponseBody != resultBody) {
                         result = new RestResponse<>(restResponse.request(), restResponse.statusCode(), restResponse.headers(), restResponse.rawHeaders(), resultBody);
                     } else {
@@ -248,27 +248,19 @@ public final class HttpResponseDecoder {
     private Type getEntityType() {
         Type token = methodParser.returnType();
 
-        if (TypeUtil.isTypeOrSubTypeOf(token, Single.class)) {
-            token = TypeUtil.getTypeArgument(token, Single.class);
-        }
-
-        if (TypeUtil.isTypeOrSubTypeOf(token, Maybe.class)) {
-            token = TypeUtil.getTypeArgument(token, Maybe.class);
-        }
-
-        if (TypeUtil.isTypeOrSubTypeOf(token, Observable.class)) {
-            token = TypeUtil.getTypeArgument(token, Observable.class);
+        if (TypeUtil.isTypeOrSubTypeOf(token, Single.class) || TypeUtil.isTypeOrSubTypeOf(token, Maybe.class) || TypeUtil.isTypeOrSubTypeOf(token, Observable.class)) {
+            token = TypeUtil.getTypeArgument(token);
         }
 
         if (TypeUtil.isTypeOrSubTypeOf(token, RestResponse.class)) {
             token = typeFactory.getSuperType(token, RestResponse.class);
-            token = TypeUtil.getTypeArguments(token, RestResponse.class)[1];
+            token = TypeUtil.getTypeArguments(token)[1];
         }
 
         // TODO: unwrap OperationStatus a different way?
         try {
             if (TypeUtil.isTypeOrSubTypeOf(token, Class.forName("com.microsoft.azure.v2.OperationStatus"))) {
-                token = TypeUtil.getTypeArgument(token, Class.forName("com.microsoft.azure.v2.OperationStatus"));
+                token = TypeUtil.getTypeArgument(token);
             }
         } catch (Exception ignored) {
         }
@@ -281,11 +273,11 @@ public final class HttpResponseDecoder {
         Type headersType = null;
 
         if (TypeUtil.isTypeOrSubTypeOf(token, Single.class)) {
-            token = TypeUtil.getTypeArgument(token, Single.class);
+            token = TypeUtil.getTypeArgument(token);
         }
 
         if (TypeUtil.isTypeOrSubTypeOf(token, RestResponse.class)) {
-            headersType = TypeUtil.getTypeArguments(typeFactory.getSuperType(token, RestResponse.class), RestResponse.class)[0];
+            headersType = TypeUtil.getTypeArguments(typeFactory.getSuperType(token, RestResponse.class))[0];
         }
 
         return headersType;
@@ -305,7 +297,7 @@ public final class HttpResponseDecoder {
                 if (declaredField.isAnnotationPresent(HeaderCollection.class)) {
                     final Type declaredFieldType = declaredField.getGenericType();
                     if (TypeUtil.isTypeOrSubTypeOf(declaredField.getType(), Map.class)) {
-                        final Type[] mapTypeArguments = TypeUtil.getTypeArguments(declaredFieldType, Map.class);
+                        final Type[] mapTypeArguments = TypeUtil.getTypeArguments(declaredFieldType);
                         if (mapTypeArguments.length == 2 && mapTypeArguments[0] == String.class && mapTypeArguments[1] == String.class) {
                             final HeaderCollection headerCollectionAnnotation = declaredField.getAnnotation(HeaderCollection.class);
                             final String headerCollectionPrefix = headerCollectionAnnotation.value().toLowerCase();

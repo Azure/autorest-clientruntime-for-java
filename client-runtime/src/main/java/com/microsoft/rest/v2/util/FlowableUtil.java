@@ -41,7 +41,7 @@ public final class FlowableUtil {
      */
     public static boolean isFlowableByteBuffer(Type entityType) {
         if (TypeUtil.isTypeOrSubTypeOf(entityType, Flowable.class)) {
-            final Type innerType = TypeUtil.getTypeArguments(entityType, Flowable.class)[0];
+            final Type innerType = TypeUtil.getTypeArguments(entityType)[0];
             if (TypeUtil.isTypeOrSubTypeOf(innerType, ByteBuffer.class)) {
                 return true;
             }

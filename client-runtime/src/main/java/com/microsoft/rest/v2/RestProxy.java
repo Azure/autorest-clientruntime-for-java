@@ -410,7 +410,7 @@ public class RestProxy implements InvocationHandler {
             if (TypeUtil.isTypeOrSubTypeOf(entityType, RestResponse.class)) {
                 Constructor<? extends RestResponse<?, ?>> responseConstructor = getRestResponseConstructor(entityType);
 
-                Type[] deserializedTypes = TypeUtil.getTypeArguments(serializer.getTypeFactory().getSuperType(entityType, RestResponse.class), RestResponse.class);
+                Type[] deserializedTypes = TypeUtil.getTypeArguments(serializer.getTypeFactory().getSuperType(entityType, RestResponse.class));
 
                 HttpHeaders responseHeaders = response.headers();
                 Object deserializedHeaders = response.deserializedHeaders();
@@ -506,7 +506,7 @@ public class RestProxy implements InvocationHandler {
             result = Completable.fromSingle(asyncExpectedResponse);
         }
         else if (TypeUtil.isTypeOrSubTypeOf(returnType, Single.class)) {
-            final Type singleTypeParam = TypeUtil.getTypeArgument(returnType, Single.class);
+            final Type singleTypeParam = TypeUtil.getTypeArgument(returnType);
             result = asyncExpectedResponse.flatMap(response ->
                     handleRestResponseReturnTypeAsync(response, methodParser, singleTypeParam));
         }

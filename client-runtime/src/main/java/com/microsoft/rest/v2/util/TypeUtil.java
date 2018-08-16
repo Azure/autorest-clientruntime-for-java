@@ -19,16 +19,20 @@ public class TypeUtil {
         return types;
     }
 
-    public static Type[] getTypeArguments(Type type, Class<?> rawType) {
+    public static Type[] getTypeArguments(Type type) {
         if (type instanceof JavaType) {
-            return ((JavaType) type).findTypeParameters(rawType);
+            Type[] types = new Type[((JavaType) type).containedTypeCount()];
+            for (int i = 0; i != ((JavaType) type).containedTypeCount(); i++) {
+                types[i] = ((JavaType) type).containedType(i);
+            }
+            return types;
         }
         return ((ParameterizedType) type).getActualTypeArguments();
     }
 
-    public static Type getTypeArgument(Type type, Class<?> rawType) {
+    public static Type getTypeArgument(Type type) {
         if (type instanceof JavaType) {
-            return ((JavaType) type).findTypeParameters(rawType)[0];
+            return ((JavaType) type).containedType(0);
         }
         return ((ParameterizedType) type).getActualTypeArguments()[0];
     }

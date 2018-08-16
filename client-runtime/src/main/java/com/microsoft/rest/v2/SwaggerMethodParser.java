@@ -27,6 +27,7 @@ import com.microsoft.rest.v2.http.HttpHeader;
 import com.microsoft.rest.v2.http.HttpHeaders;
 import com.microsoft.rest.v2.http.HttpMethod;
 import com.microsoft.rest.v2.protocol.SerializerAdapter;
+import com.microsoft.rest.v2.util.TypeUtil;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 
@@ -115,7 +116,7 @@ public class SwaggerMethodParser {
                 this.returnValueWireType = returnValueWireType;
             }
             else {
-                if (serializer.getTypeFactory().isTypeOrSubTypeOf(returnValueWireType, List.class)) {
+                if (TypeUtil.isTypeOrSubTypeOf(returnValueWireType, List.class)) {
                     this.returnValueWireType = returnValueWireType.getGenericInterfaces()[0];
                 }
             }
@@ -439,18 +440,18 @@ public class SwaggerMethodParser {
     public boolean expectsResponseBody() {
         boolean result = true;
 
-        if (serializer.getTypeFactory().isTypeOrSubTypeOf(returnType, Void.class)) {
+        if (TypeUtil.isTypeOrSubTypeOf(returnType, Void.class)) {
             result = false;
         }
-        else if (serializer.getTypeFactory().isTypeOrSubTypeOf(returnType, Single.class) || serializer.getTypeFactory().isTypeOrSubTypeOf(returnType, Observable.class)) {
+        else if (TypeUtil.isTypeOrSubTypeOf(returnType, Single.class) || TypeUtil.isTypeOrSubTypeOf(returnType, Observable.class)) {
             final ParameterizedType asyncReturnType = (ParameterizedType) returnType;
             final Type syncReturnType = asyncReturnType.getActualTypeArguments()[0];
-            if (serializer.getTypeFactory().isTypeOrSubTypeOf(syncReturnType, Void.class)) {
+            if (TypeUtil.isTypeOrSubTypeOf(syncReturnType, Void.class)) {
                 result = false;
-            } else if (serializer.getTypeFactory().isTypeOrSubTypeOf(syncReturnType, RestResponse.class)) {
+            } else if (TypeUtil.isTypeOrSubTypeOf(syncReturnType, RestResponse.class)) {
                 result = restResponseTypeExpectsBody((ParameterizedType) serializer.getTypeFactory().getSuperType(syncReturnType, RestResponse.class));
             }
-        } else if (serializer.getTypeFactory().isTypeOrSubTypeOf(returnType, RestResponse.class)) {
+        } else if (TypeUtil.isTypeOrSubTypeOf(returnType, RestResponse.class)) {
             result = restResponseTypeExpectsBody((ParameterizedType) serializer.getTypeFactory().getSuperType(returnType, RestResponse.class));
         }
 

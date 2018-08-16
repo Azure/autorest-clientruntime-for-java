@@ -6,7 +6,6 @@
 
 package com.microsoft.rest.v2.protocol;
 
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 /**
@@ -23,18 +22,10 @@ public interface TypeFactory {
     /**
      * Create a SerializerAdapter-specific parametric Type for the provided Types.
      * @param baseType The base type of the resulting parametric type.
-     * @param genericType The type argument for the resulting parametric type.
-     * @return The SerializerAdapter-specific parametric Type.
-     */
-    Type create(ParameterizedType baseType, Type genericType);
-
-    /**
-     * Create a SerializerAdapter-specific parametric Type for the provided Types.
-     * @param baseType The base type of the resulting parametric type.
      * @param genericTypes The type arguments for the resulting parametric type.
      * @return The SerializerAdapter-specific parametric Type.
      */
-    Type create(ParameterizedType baseType, Type[] genericTypes);
+    Type create(Class<?> baseType, Type... genericTypes);
 
     Type getSuperType(Type subType, Class<?> rawSuperType);
 }

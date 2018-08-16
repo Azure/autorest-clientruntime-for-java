@@ -48,6 +48,12 @@ public class TypeUtil {
     }
 
     public static Type getSuperType(Type subType, Class<?> rawSuperType, TypeFactory typeFactory) {
+//        JavaType subJavaType = create(subType);
+//        if (subJavaType.getRawClass(). == rawSuperType) {
+//            return subJavaType;
+//        } else {
+//            return subJavaType.findSuperType(rawSuperType);
+//        }
         return null;
     }
 

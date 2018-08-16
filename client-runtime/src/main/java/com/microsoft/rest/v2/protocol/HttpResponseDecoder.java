@@ -170,14 +170,14 @@ public final class HttpResponseDecoder {
                 final Type resultElementType = TypeUtil.getTypeArgument(resultType);
                 final Type wireResponseElementType = constructWireResponseType(resultElementType, wireType);
 
-                wireResponseType = typeFactory.create((ParameterizedType) resultType, wireResponseElementType);
+                wireResponseType = typeFactory.create((Class<?>) ((ParameterizedType) resultType).getRawType(), wireResponseElementType);
             }
             else if (TypeUtil.isTypeOrSubTypeOf(resultType, Map.class) || TypeUtil.isTypeOrSubTypeOf(resultType, RestResponse.class)) {
                 Type[] typeArguments = TypeUtil.getTypeArguments(resultType);
                 final Type resultValueType = typeArguments[1];
                 final Type wireResponseValueType = constructWireResponseType(resultValueType, wireType);
 
-                wireResponseType = typeFactory.create((ParameterizedType) resultType, new Type[] {typeArguments[0], wireResponseValueType});
+                wireResponseType = typeFactory.create((Class<?>) ((ParameterizedType) resultType).getRawType(), new Type[] {typeArguments[0], wireResponseValueType});
             }
         }
         return wireResponseType;

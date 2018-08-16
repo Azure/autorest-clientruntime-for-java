@@ -39,7 +39,7 @@ public class JacksonTypeFactory implements TypeFactory {
         else if (type instanceof ParameterizedType) {
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-            result = create(parameterizedType, actualTypeArguments);
+            result = create((Class<?>) parameterizedType.getRawType(), actualTypeArguments);
         }
         else {
             result = typeFactory.constructType(type);
@@ -48,14 +48,7 @@ public class JacksonTypeFactory implements TypeFactory {
     }
 
     @Override
-    public JavaType create(ParameterizedType baseType, Type genericType) {
-        return create(baseType, new Type[]{genericType});
-    }
-
-    @Override
-    public JavaType create(ParameterizedType baseType, Type[] genericTypes) {
-        final Class<?> rawType = (Class<?>) baseType.getRawType();
-
+    public JavaType create(Class<?> rawType, Type... genericTypes) {
         final JavaType[] genericJavaTypes = new JavaType[genericTypes.length];
         for (int i = 0; i < genericJavaTypes.length; ++i) {
             genericJavaTypes[i] = create(genericTypes[i]);
@@ -66,7 +59,11 @@ public class JacksonTypeFactory implements TypeFactory {
 
     @Override
     public JavaType getSuperType(Type subType, Class<?> rawSuperType) {
-        JavaType sub = create(subType);
-        return typeFactory.constructGeneralizedType(sub, rawSuperType);
+        JavaType subJavaType = create(subType);
+        if (subJavaType.getRawClass() == rawSuperType) {
+            return subJavaType;
+        } else {
+            return subJavaType.findSuperType(rawSuperType);
+        }
     }
 }

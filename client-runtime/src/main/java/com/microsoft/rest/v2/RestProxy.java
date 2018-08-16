@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -408,7 +407,7 @@ public class RestProxy implements InvocationHandler {
 
         try {
             Single<?> asyncResult;
-            if (serializer.getTypeFactory().isAssignableFrom(entityType, RestResponse.class)) {
+            if (serializer.getTypeFactory().isTypeOrSubTypeOf(entityType, RestResponse.class)) {
                 Constructor<? extends RestResponse<?, ?>> responseConstructor = getRestResponseConstructor(entityType);
 
                 Type[] deserializedTypes = TypeUtil.getTypeArguments(serializer.getTypeFactory().getSuperType(entityType, RestResponse.class), RestResponse.class);
@@ -417,7 +416,7 @@ public class RestProxy implements InvocationHandler {
                 Object deserializedHeaders = response.deserializedHeaders();
 
                 Type bodyType = deserializedTypes[1];
-                if (serializer.getTypeFactory().isAssignableFrom(bodyType, Void.class)) {
+                if (serializer.getTypeFactory().isTypeOrSubTypeOf(bodyType, Void.class)) {
                     asyncResult = response.body().lastElement().ignoreElement()
                             .andThen(Single.just(responseConstructor.newInstance(response.request(), responseStatusCode, deserializedHeaders, responseHeaders.toMap(), null)));
                 } else {
@@ -429,7 +428,7 @@ public class RestProxy implements InvocationHandler {
                 }
 
                 Type headersType = deserializedTypes[0];
-                if (!response.isDecoded() && !serializer.getTypeFactory().isAssignableFrom(headersType, Void.class)) {
+                if (!response.isDecoded() && !serializer.getTypeFactory().isTypeOrSubTypeOf(headersType, Void.class)) {
                     asyncResult = asyncResult.toCompletable().andThen(Single.error(new RestException(
                             "No deserialized headers were found. Please add a DecodingPolicyFactory to the HttpPipeline.",
                             response,
@@ -453,10 +452,10 @@ public class RestProxy implements InvocationHandler {
 
         final Maybe<?> asyncResult;
         if (httpMethod == HttpMethod.HEAD
-                && (serializer.getTypeFactory().isAssignableFrom(entityType, Boolean.TYPE) || serializer.getTypeFactory().isAssignableFrom(entityType, Boolean.class))) {
+                && (serializer.getTypeFactory().isTypeOrSubTypeOf(entityType, Boolean.TYPE) || serializer.getTypeFactory().isTypeOrSubTypeOf(entityType, Boolean.class))) {
             boolean isSuccess = (responseStatusCode / 100) == 2;
             asyncResult = Maybe.just(isSuccess);
-        } else if (serializer.getTypeFactory().isAssignableFrom(entityType, byte[].class)) {
+        } else if (serializer.getTypeFactory().isTypeOrSubTypeOf(entityType, byte[].class)) {
             Maybe<byte[]> responseBodyBytesAsync = response.bodyAsByteArray().toMaybe();
             if (returnValueWireType == Base64Url.class) {
                 responseBodyBytesAsync = responseBodyBytesAsync.map(base64UrlBytes -> new Base64Url(base64UrlBytes).decodedBytes());
@@ -503,21 +502,21 @@ public class RestProxy implements InvocationHandler {
 
         final Single<HttpResponse> asyncExpectedResponse = ensureExpectedStatus(asyncHttpResponse, methodParser);
 
-        if (serializer.getTypeFactory().isAssignableFrom(returnType, Completable.class)) {
+        if (serializer.getTypeFactory().isTypeOrSubTypeOf(returnType, Completable.class)) {
             result = Completable.fromSingle(asyncExpectedResponse);
         }
-        else if (serializer.getTypeFactory().isAssignableFrom(returnType, Single.class)) {
+        else if (serializer.getTypeFactory().isTypeOrSubTypeOf(returnType, Single.class)) {
             final Type singleTypeParam = TypeUtil.getTypeArgument(returnType, Single.class);
             result = asyncExpectedResponse.flatMap(response ->
                     handleRestResponseReturnTypeAsync(response, methodParser, singleTypeParam));
         }
-        else if (serializer.getTypeFactory().isAssignableFrom(returnType, Observable.class)) {
+        else if (serializer.getTypeFactory().isTypeOrSubTypeOf(returnType, Observable.class)) {
             throw new InvalidReturnTypeException("RestProxy does not support swagger interface methods (such as " + methodParser.fullyQualifiedMethodName() + "()) with a return type of " + returnType.toString());
         }
         else if (FlowableUtil.isFlowableByteBuffer(returnType, serializer.getTypeFactory())) {
             result = asyncExpectedResponse.flatMapPublisher(HttpResponse::body);
         }
-        else if (serializer.getTypeFactory().isAssignableFrom(returnType, void.class) || serializer.getTypeFactory().isAssignableFrom(returnType, Void.class)) {
+        else if (serializer.getTypeFactory().isTypeOrSubTypeOf(returnType, void.class) || serializer.getTypeFactory().isTypeOrSubTypeOf(returnType, Void.class)) {
             asyncExpectedResponse.blockingGet();
             result = null;
         } else {

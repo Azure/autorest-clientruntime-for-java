@@ -92,7 +92,7 @@ public final class Validator {
                                 Validator.validate(item);
                             }
                         }
-                        else if (propertyType.isAssignableFrom(Map.class)) {
+                        else if (Map.class.isAssignableFrom(propertyType)) {
                             Map<?, ?> entries = (Map<?, ?>) property;
                             for (Map.Entry<?, ?> entry : entries.entrySet()) {
                                 Validator.validate(entry.getKey());

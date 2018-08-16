@@ -8,6 +8,7 @@ package com.microsoft.rest.v2.serializer;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.microsoft.rest.v2.protocol.TypeFactory;
+import com.microsoft.rest.v2.util.TypeUtil;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -64,21 +65,8 @@ public class JacksonTypeFactory implements TypeFactory {
     }
 
     @Override
-    public boolean isAssignableFrom(Type subType, Type superType) {
-        JavaType sub = create(subType);
-        JavaType sup = typeFactory.constructType(superType);
-
-        return sub.getRawClass().isAssignableFrom(sup.getRawClass());
-    }
-
-    @Override
     public JavaType getSuperType(Type subType, Class<?> rawSuperType) {
         JavaType sub = create(subType);
         return typeFactory.constructGeneralizedType(sub, rawSuperType);
-    }
-
-    @Override
-    public Class<?> getRawType(Type type) {
-        return create(type).getRawClass();
     }
 }

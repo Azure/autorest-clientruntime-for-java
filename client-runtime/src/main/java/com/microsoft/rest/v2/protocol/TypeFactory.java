@@ -36,9 +36,5 @@ public interface TypeFactory {
      */
     Type create(ParameterizedType baseType, Type[] genericTypes);
 
-    boolean isAssignableFrom(Type subType, Type superType);
-
     Type getSuperType(Type subType, Class<?> rawSuperType);
-
-    Class<?> getRawType(Type type);
 }

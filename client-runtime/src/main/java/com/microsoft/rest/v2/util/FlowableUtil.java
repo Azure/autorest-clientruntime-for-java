@@ -21,7 +21,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.io.IOException;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
@@ -41,9 +40,9 @@ public final class FlowableUtil {
      * @return whether the type represents a Flowable that emits byte arrays
      */
     public static boolean isFlowableByteBuffer(Type entityType, TypeFactory typeFactory) {
-        if (typeFactory.isAssignableFrom(entityType, Flowable.class)) {
-            final Type innerType = ((ParameterizedType) entityType).getActualTypeArguments()[0];
-            if (typeFactory.isAssignableFrom(innerType, ByteBuffer.class)) {
+        if (typeFactory.isTypeOrSubTypeOf(entityType, Flowable.class)) {
+            final Type innerType = TypeUtil.getTypeArguments(entityType, Flowable.class)[0];
+            if (typeFactory.isTypeOrSubTypeOf(innerType, ByteBuffer.class)) {
                 return true;
             }
         }

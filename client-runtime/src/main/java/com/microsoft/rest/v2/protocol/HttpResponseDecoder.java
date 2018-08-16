@@ -76,9 +76,9 @@ public final class HttpResponseDecoder {
 
         boolean isSerializableBody = methodParser.httpMethod() != HttpMethod.HEAD
             && !FlowableUtil.isFlowableByteBuffer(entityType, typeFactory)
-            && !typeFactory.isAssignableFrom(entityType, Completable.class)
-            && !typeFactory.isAssignableFrom(entityType, byte[].class)
-            && !typeFactory.isAssignableFrom(entityType, Void.TYPE) && !typeFactory.isAssignableFrom(entityType, Void.class);
+            && !typeFactory.isTypeOrSubTypeOf(entityType, Completable.class)
+            && !typeFactory.isTypeOrSubTypeOf(entityType, byte[].class)
+            && !typeFactory.isTypeOrSubTypeOf(entityType, Void.TYPE) && !typeFactory.isTypeOrSubTypeOf(entityType, Void.class);
 
         int[] expectedStatuses = methodParser.expectedStatusCodes();
         boolean isErrorStatus = true;
@@ -166,13 +166,13 @@ public final class HttpResponseDecoder {
             }
         }
         else {
-            if (typeFactory.isAssignableFrom(resultType, List.class)) {
+            if (typeFactory.isTypeOrSubTypeOf(resultType, List.class)) {
                 final Type resultElementType = TypeUtil.getTypeArgument(resultType, List.class);
                 final Type wireResponseElementType = constructWireResponseType(resultElementType, wireType);
 
                 wireResponseType = typeFactory.create((ParameterizedType) resultType, wireResponseElementType);
             }
-            else if (typeFactory.isAssignableFrom(resultType, Map.class) || typeFactory.isAssignableFrom(resultType, RestResponse.class)) {
+            else if (typeFactory.isTypeOrSubTypeOf(resultType, Map.class) || typeFactory.isTypeOrSubTypeOf(resultType, RestResponse.class)) {
                 Type[] typeArguments = TypeUtil.getTypeArguments(resultType, Map.class);
                 final Type resultValueType = typeArguments[1];
                 final Type wireResponseValueType = constructWireResponseType(resultValueType, wireType);
@@ -198,7 +198,7 @@ public final class HttpResponseDecoder {
                     result = ((UnixTime) wireResponse).dateTime();
                 }
             } else {
-                if (typeFactory.isAssignableFrom(resultType, List.class)) {
+                if (typeFactory.isTypeOrSubTypeOf(resultType, List.class)) {
                     final Type resultElementType = TypeUtil.getTypeArgument(resultType, List.class);
 
                     final List<Object> wireResponseList = (List<Object>) wireResponse;
@@ -214,7 +214,7 @@ public final class HttpResponseDecoder {
 
                     result = wireResponseList;
                 }
-                else if (typeFactory.isAssignableFrom(resultType, Map.class)) {
+                else if (typeFactory.isTypeOrSubTypeOf(resultType, Map.class)) {
                     final Type resultValueType = TypeUtil.getTypeArguments(resultType, Map.class)[1];
 
                     final Map<String, Object> wireResponseMap = (Map<String, Object>) wireResponse;
@@ -227,7 +227,7 @@ public final class HttpResponseDecoder {
                             wireResponseMap.put(wireResponseKey, resultValue);
                         }
                     }
-                } else if (typeFactory.isAssignableFrom(resultType, RestResponse.class)) {
+                } else if (typeFactory.isTypeOrSubTypeOf(resultType, RestResponse.class)) {
                     RestResponse<?, ?> restResponse = (RestResponse<?, ?>) wireResponse;
                     Object wireResponseBody = restResponse.body();
 
@@ -245,29 +245,29 @@ public final class HttpResponseDecoder {
         return result;
     }
 
-        private Type getEntityType() {
-            Type token = methodParser.returnType();
+    private Type getEntityType() {
+        Type token = methodParser.returnType();
 
-        if (typeFactory.isAssignableFrom(token, Single.class)) {
+        if (typeFactory.isTypeOrSubTypeOf(token, Single.class)) {
             token = TypeUtil.getTypeArgument(token, Single.class);
         }
 
-        if (typeFactory.isAssignableFrom(token, Maybe.class)) {
-            token = TypeUtil.getTypeArgument(token, Single.class);
+        if (typeFactory.isTypeOrSubTypeOf(token, Maybe.class)) {
+            token = TypeUtil.getTypeArgument(token, Maybe.class);
         }
 
-        if (typeFactory.isAssignableFrom(token, Observable.class)) {
-            token = TypeUtil.getTypeArgument(token, Single.class);
+        if (typeFactory.isTypeOrSubTypeOf(token, Observable.class)) {
+            token = TypeUtil.getTypeArgument(token, Observable.class);
         }
 
-        if (typeFactory.isAssignableFrom(token, RestResponse.class)) {
+        if (typeFactory.isTypeOrSubTypeOf(token, RestResponse.class)) {
             token = typeFactory.getSuperType(token, RestResponse.class);
             token = TypeUtil.getTypeArguments(token, RestResponse.class)[1];
         }
 
         // TODO: unwrap OperationStatus a different way?
         try {
-            if (typeFactory.isAssignableFrom(token, Class.forName("com.microsoft.azure.v2.OperationStatus"))) {
+            if (typeFactory.isTypeOrSubTypeOf(token, Class.forName("com.microsoft.azure.v2.OperationStatus"))) {
                 token = TypeUtil.getTypeArgument(token, Class.forName("com.microsoft.azure.v2.OperationStatus"));
             }
         } catch (Exception ignored) {
@@ -280,12 +280,12 @@ public final class HttpResponseDecoder {
         Type token = methodParser.returnType();
         Type headersType = null;
 
-        if (typeFactory.isAssignableFrom(token, Single.class)) {
+        if (typeFactory.isTypeOrSubTypeOf(token, Single.class)) {
             token = TypeUtil.getTypeArgument(token, Single.class);
         }
 
-        if (typeFactory.isAssignableFrom(token, RestResponse.class)) {
-            headersType = TypeUtil.getTypeArguments(token, RestResponse.class)[0];
+        if (typeFactory.isTypeOrSubTypeOf(token, RestResponse.class)) {
+            headersType = TypeUtil.getTypeArguments(typeFactory.getSuperType(token, RestResponse.class), RestResponse.class)[0];
         }
 
         return headersType;
@@ -304,7 +304,7 @@ public final class HttpResponseDecoder {
             for (final Field declaredField : declaredFields) {
                 if (declaredField.isAnnotationPresent(HeaderCollection.class)) {
                     final Type declaredFieldType = declaredField.getGenericType();
-                    if (typeFactory.isAssignableFrom(declaredField.getType(), Map.class)) {
+                    if (typeFactory.isTypeOrSubTypeOf(declaredField.getType(), Map.class)) {
                         final Type[] mapTypeArguments = TypeUtil.getTypeArguments(declaredFieldType, Map.class);
                         if (mapTypeArguments.length == 2 && mapTypeArguments[0] == String.class && mapTypeArguments[1] == String.class) {
                             final HeaderCollection headerCollectionAnnotation = declaredField.getAnnotation(HeaderCollection.class);

@@ -1,6 +1,7 @@
 package com.microsoft.rest.v2.util;
 
 import com.fasterxml.jackson.databind.JavaType;
+import com.microsoft.rest.v2.protocol.TypeFactory;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -30,5 +31,26 @@ public class TypeUtil {
             return ((JavaType) type).findTypeParameters(rawType)[0];
         }
         return ((ParameterizedType) type).getActualTypeArguments()[0];
+    }
+
+    public static Class<?> getRawClass(Type type) {
+        if (type instanceof JavaType) {
+            return ((JavaType) type).getRawClass();
+        } else if (type instanceof ParameterizedType) {
+            return (Class<?>) ((ParameterizedType) type).getRawType();
+        } else {
+            return (Class<?>) type;
+        }
+    }
+
+    public static Type getSuperType(Type subType, Class<?> rawSuperType, TypeFactory typeFactory) {
+        return null;
+    }
+
+    public static boolean isTypeOrSubTypeOf(Type subType, Type superType) {
+        Class<?> sub = getRawClass(subType);
+        Class<?> sup = getRawClass(superType);
+
+        return sup.isAssignableFrom(sub);
     }
 }

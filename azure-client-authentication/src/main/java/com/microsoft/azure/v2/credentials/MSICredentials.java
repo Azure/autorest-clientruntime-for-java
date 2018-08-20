@@ -18,7 +18,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,7 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @Beta
 public final class MSICredentials extends AzureTokenCredentials {
     //
-    private final List<Integer> retrySlots = new ArrayList<>(Arrays.asList(new Integer[] {1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765}));
+    private final List<Integer> retrySlots = new ArrayList<>();
     private final Lock lock = new ReentrantLock();
     private final ConcurrentHashMap<String, MSIToken> cache = new ConcurrentHashMap<>();
     //
@@ -40,7 +39,7 @@ public final class MSICredentials extends AzureTokenCredentials {
     private final MSIConfigurationForAppService configForAppService;
     private final HostType hostType;
     private final int maxRetry;
-
+    private static final int MAX_RETRY_DEFAULT_LIMIT = 20;
     /**
      * Creates MSICredentials for application running on MSI enabled virtual machine.
      *
@@ -84,10 +83,10 @@ public final class MSICredentials extends AzureTokenCredentials {
         this.configForVM = config;
         this.configForAppService = null;
         this.hostType = HostType.VIRTUAL_MACHINE;
-        if (config.maxRetry() >= 0 && config.maxRetry() <= retrySlots.size()) {
-            this.maxRetry = config.maxRetry();
-        } else {
-            this.maxRetry = retrySlots.size();
+        this.maxRetry = config.maxRetry() < 0 ? MAX_RETRY_DEFAULT_LIMIT : config.maxRetry();
+        // Simplified variant of https://en.wikipedia.org/wiki/Exponential_backoff
+        for (int x = 0; x < this.maxRetry; x++) {
+            this.retrySlots.add(500 * ((2 << 1) - 1) / 1000);
         }
     }
 
@@ -96,7 +95,7 @@ public final class MSICredentials extends AzureTokenCredentials {
         this.configForAppService = config;
         this.configForVM = null;
         this.hostType = HostType.APP_SERVICE;
-        this.maxRetry = retrySlots.size();
+        this.maxRetry = -1;
     }
 
     @Override
@@ -264,7 +263,7 @@ public final class MSICredentials extends AzureTokenCredentials {
             } catch (Exception exception) {
                 int responseCode = connection.getResponseCode();
                 if (responseCode == 410 || responseCode == 429 || responseCode == 404 || (responseCode >= 500 && responseCode <= 599)) {
-                    int retryTimeoutInMs = retrySlots.get(new Random().nextInt(retry)) * 1000;
+                    int retryTimeoutInMs = retrySlots.get(new Random().nextInt(retry));
                     // Error code 410 indicates IMDS upgrade is in progress, which can take up to 70s
                     //
                     retryTimeoutInMs = (responseCode == 410 && retryTimeoutInMs < imdsUpgradeTimeInMs) ? imdsUpgradeTimeInMs : retryTimeoutInMs;

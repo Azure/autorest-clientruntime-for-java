@@ -7,7 +7,6 @@
 
 package com.microsoft.rest.v2;
 
-import com.google.common.reflect.TypeToken;
 import com.microsoft.rest.v2.annotations.BodyParam;
 import com.microsoft.rest.v2.annotations.GET;
 import com.microsoft.rest.v2.annotations.Host;
@@ -27,9 +26,10 @@ import com.microsoft.rest.v2.policy.DecodingPolicyFactory;
 import com.microsoft.rest.v2.protocol.SerializerEncoding;
 import com.microsoft.rest.v2.serializer.JacksonAdapter;
 import com.microsoft.rest.v2.util.FlowableUtil;
+import io.reactivex.Single;
 import io.reactivex.functions.Function;
 import org.junit.Test;
-import io.reactivex.Single;
+import wiremock.com.google.common.reflect.TypeToken;
 
 import java.io.IOException;
 import java.net.URISyntaxException;

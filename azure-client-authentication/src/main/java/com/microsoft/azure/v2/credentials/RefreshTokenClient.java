@@ -8,7 +8,6 @@ package com.microsoft.azure.v2.credentials;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.escape.Escaper;
-import com.google.common.net.UrlEscapers;
 import com.microsoft.aad.adal4j.AuthenticationResult;
 import com.microsoft.rest.v2.RestProxy;
 import com.microsoft.rest.v2.annotations.Beta;
@@ -23,6 +22,7 @@ import com.microsoft.rest.v2.http.HttpClient;
 import com.microsoft.rest.v2.http.HttpClientConfiguration;
 import com.microsoft.rest.v2.http.HttpPipeline;
 import com.microsoft.rest.v2.http.NettyClient;
+import com.microsoft.rest.v2.util.escapers.UrlEscapers;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
 

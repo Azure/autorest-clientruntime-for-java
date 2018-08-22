@@ -39,8 +39,6 @@ import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -164,8 +162,7 @@ public final class NettyClient extends HttpClient {
                 public synchronized void channelCreated(Channel ch) throws Exception {
                     // Why is it necessary to have "synchronized" to prevent NRE in pipeline().get(Class<T>)?
                     // Is channelCreated not run on the eventLoop assigned to the channel?
-                    ch.pipeline().addLast("HttpResponseDecoder", new HttpResponseDecoder());
-                    ch.pipeline().addLast("HttpRequestEncoder", new HttpRequestEncoder());
+                    ch.pipeline().addLast("HttpClientCodec", new HttpClientCodec());
                     ch.pipeline().addLast("HttpClientInboundHandler", new HttpClientInboundHandler());
                 }
             }, poolSize);
@@ -269,7 +266,6 @@ public final class NettyClient extends HttpClient {
             //TODO do we need a memory barrier here to ensure vis of responseEmitter in other threads?
 
             try {
-                configurePipeline(channel, request);
 
                 final DefaultHttpRequest raw = createDefaultHttpRequest(request);
 
@@ -624,22 +620,6 @@ public final class NettyClient extends HttpClient {
             }
         }
 
-    }
-
-    private static void configurePipeline(Channel channel, HttpRequest request) {
-        if (request.httpMethod() == com.microsoft.rest.v2.http.HttpMethod.HEAD) {
-            // Use HttpClientCodec for HEAD operations
-            if (channel.pipeline().get("HttpClientCodec") == null) {
-                channel.pipeline().remove(HttpRequestEncoder.class);
-                channel.pipeline().replace(HttpResponseDecoder.class, "HttpClientCodec", new HttpClientCodec());
-            }
-        } else {
-            // Use HttpResponseDecoder for other operations
-            if (channel.pipeline().get("HttpResponseDecoder") == null) {
-                channel.pipeline().replace(HttpClientCodec.class, "HttpResponseDecoder", new HttpResponseDecoder());
-                channel.pipeline().addAfter("HttpResponseDecoder", "HttpRequestEncoder", new HttpRequestEncoder());
-            }
-        }
     }
 
     private static DefaultHttpRequest createDefaultHttpRequest(HttpRequest request) {

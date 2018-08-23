@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.escape.Escaper;
 import com.google.common.net.UrlEscapers;
 import com.microsoft.aad.adal4j.AuthenticationResult;
-import com.microsoft.azure.management.apigeneration.Beta;
+import com.microsoft.azure.v2.annotations.Beta;
 import com.microsoft.rest.v2.RestProxy;
 import com.microsoft.rest.v2.annotations.BodyParam;
 import com.microsoft.rest.v2.annotations.ExpectedResponses;

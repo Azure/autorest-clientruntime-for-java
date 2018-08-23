@@ -8,7 +8,6 @@ package com.microsoft.azure.v2.credentials;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.microsoft.azure.v2.AzureEnvironment;
-import com.microsoft.azure.management.apigeneration.Beta;
 import com.microsoft.azure.v2.serializer.AzureJacksonAdapter;
 
 import java.io.BufferedReader;
@@ -22,7 +21,6 @@ import java.net.URL;
 /**
  * Managed Service Identity token based credentials for use with a REST Service Client.
  */
-@Beta
 public class MSICredentials extends AzureTokenCredentials {
     private final String resource;
     private final int msiPort;

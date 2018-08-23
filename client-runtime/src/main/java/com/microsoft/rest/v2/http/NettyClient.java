@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static com.microsoft.rest.v2.util.FlowableUtil.ensureLength;
 
+
 /**
  * An HttpClient that is implemented using Netty.
  */

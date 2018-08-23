@@ -449,10 +449,10 @@ public class SwaggerMethodParser {
             if (TypeUtil.isTypeOrSubTypeOf(syncReturnType, Void.class)) {
                 result = false;
             } else if (TypeUtil.isTypeOrSubTypeOf(syncReturnType, RestResponse.class)) {
-                result = restResponseTypeExpectsBody((ParameterizedType) serializer.getTypeFactory().getSuperType(syncReturnType, RestResponse.class));
+                result = restResponseTypeExpectsBody((ParameterizedType) TypeUtil.getSuperType(syncReturnType, RestResponse.class));
             }
         } else if (TypeUtil.isTypeOrSubTypeOf(returnType, RestResponse.class)) {
-            result = restResponseTypeExpectsBody((ParameterizedType) serializer.getTypeFactory().getSuperType(returnType, RestResponse.class));
+            result = restResponseTypeExpectsBody((ParameterizedType) TypeUtil.getSuperType(returnType, RestResponse.class));
         }
 
         return result;

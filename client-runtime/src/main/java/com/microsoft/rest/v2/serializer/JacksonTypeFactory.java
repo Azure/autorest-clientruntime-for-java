@@ -8,7 +8,6 @@ package com.microsoft.rest.v2.serializer;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.microsoft.rest.v2.protocol.TypeFactory;
-import com.microsoft.rest.v2.util.TypeUtil;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -39,31 +38,15 @@ public class JacksonTypeFactory implements TypeFactory {
         else if (type instanceof ParameterizedType) {
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-            result = create((Class<?>) parameterizedType.getRawType(), actualTypeArguments);
+            JavaType[] javaTypeArguments = new JavaType[actualTypeArguments.length];
+            for (int i = 0; i != actualTypeArguments.length; i++) {
+                javaTypeArguments[i] = create(actualTypeArguments[i]);
+            }
+            result = typeFactory.constructParametricType((Class<?>) parameterizedType.getRawType(), javaTypeArguments);
         }
         else {
             result = typeFactory.constructType(type);
         }
         return result;
-    }
-
-    @Override
-    public JavaType create(Class<?> rawType, Type... genericTypes) {
-        final JavaType[] genericJavaTypes = new JavaType[genericTypes.length];
-        for (int i = 0; i < genericJavaTypes.length; ++i) {
-            genericJavaTypes[i] = create(genericTypes[i]);
-        }
-
-        return typeFactory.constructParametricType(rawType, genericJavaTypes);
-    }
-
-    @Override
-    public JavaType getSuperType(Type subType, Class<?> rawSuperType) {
-        JavaType subJavaType = create(subType);
-        if (subJavaType.getRawClass() == rawSuperType) {
-            return subJavaType;
-        } else {
-            return subJavaType.findSuperType(rawSuperType);
-        }
     }
 }

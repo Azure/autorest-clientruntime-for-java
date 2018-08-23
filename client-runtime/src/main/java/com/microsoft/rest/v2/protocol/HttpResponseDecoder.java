@@ -42,7 +42,6 @@ import java.util.Set;
 public final class HttpResponseDecoder {
     private final SwaggerMethodParser methodParser;
     private final SerializerAdapter<?> serializer;
-    private final TypeFactory typeFactory;
 
     /**
      * Creates an HttpResponseDecoder.
@@ -52,7 +51,6 @@ public final class HttpResponseDecoder {
     public HttpResponseDecoder(SwaggerMethodParser methodParser, SerializerAdapter<?> serializer) {
         this.methodParser = methodParser;
         this.serializer = serializer;
-        this.typeFactory = serializer.getTypeFactory();
     }
 
     /**
@@ -170,14 +168,16 @@ public final class HttpResponseDecoder {
                 final Type resultElementType = TypeUtil.getTypeArgument(resultType);
                 final Type wireResponseElementType = constructWireResponseType(resultElementType, wireType);
 
-                wireResponseType = typeFactory.create((Class<?>) ((ParameterizedType) resultType).getRawType(), wireResponseElementType);
+                wireResponseType = TypeUtil.createParameterizedType(
+                        (Class<?>) ((ParameterizedType) resultType).getRawType(), wireResponseElementType);
             }
             else if (TypeUtil.isTypeOrSubTypeOf(resultType, Map.class) || TypeUtil.isTypeOrSubTypeOf(resultType, RestResponse.class)) {
                 Type[] typeArguments = TypeUtil.getTypeArguments(resultType);
                 final Type resultValueType = typeArguments[1];
                 final Type wireResponseValueType = constructWireResponseType(resultValueType, wireType);
 
-                wireResponseType = typeFactory.create((Class<?>) ((ParameterizedType) resultType).getRawType(), new Type[] {typeArguments[0], wireResponseValueType});
+                wireResponseType = TypeUtil.createParameterizedType(
+                        (Class<?>) ((ParameterizedType) resultType).getRawType(), typeArguments[0], wireResponseValueType);
             }
         }
         return wireResponseType;
@@ -253,7 +253,7 @@ public final class HttpResponseDecoder {
         }
 
         if (TypeUtil.isTypeOrSubTypeOf(token, RestResponse.class)) {
-            token = typeFactory.getSuperType(token, RestResponse.class);
+            token = TypeUtil.getSuperType(token, RestResponse.class);
             token = TypeUtil.getTypeArguments(token)[1];
         }
 
@@ -277,7 +277,7 @@ public final class HttpResponseDecoder {
         }
 
         if (TypeUtil.isTypeOrSubTypeOf(token, RestResponse.class)) {
-            headersType = TypeUtil.getTypeArguments(typeFactory.getSuperType(token, RestResponse.class))[0];
+            headersType = TypeUtil.getTypeArguments(TypeUtil.getSuperType(token, RestResponse.class))[0];
         }
 
         return headersType;

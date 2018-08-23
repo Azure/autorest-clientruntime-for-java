@@ -21,6 +21,7 @@ import com.microsoft.rest.v2.protocol.SerializerEncoding;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
@@ -114,19 +115,13 @@ public class JacksonAdapter implements SerializerAdapter<ObjectMapper> {
     }
 
     @Override
-    public JacksonTypeFactory getTypeFactory() {
-        return new JacksonTypeFactory(mapper.getTypeFactory());
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
     public <T> T deserialize(String value, final Type type, SerializerEncoding encoding) throws IOException {
         if (value == null || value.isEmpty()) {
             return null;
         }
 
-        final JacksonTypeFactory typeFactory = getTypeFactory();
-        final JavaType javaType = typeFactory.create(type);
+        final JavaType javaType = createJavaType(type);
         if (encoding == SerializerEncoding.XML) {
             return (T) xmlMapper.readValue(value, javaType);
         } else {
@@ -166,4 +161,28 @@ public class JacksonAdapter implements SerializerAdapter<ObjectMapper> {
                 .withIsGetterVisibility(JsonAutoDetect.Visibility.NONE));
         return mapper;
     }
+
+    private JavaType createJavaType(Type type) {
+        JavaType result;
+        if (type == null) {
+            result = null;
+        }
+        else if (type instanceof JavaType) {
+            result = (JavaType) type;
+        }
+        else if (type instanceof ParameterizedType) {
+            final ParameterizedType parameterizedType = (ParameterizedType) type;
+            final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
+            JavaType[] javaTypeArguments = new JavaType[actualTypeArguments.length];
+            for (int i = 0; i != actualTypeArguments.length; i++) {
+                javaTypeArguments[i] = createJavaType(actualTypeArguments[i]);
+            }
+            result = mapper.getTypeFactory().constructParametricType((Class<?>) parameterizedType.getRawType(), javaTypeArguments);
+        }
+        else {
+            result = mapper.getTypeFactory().constructType(type);
+        }
+        return result;
+    }
+
 }

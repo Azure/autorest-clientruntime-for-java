@@ -56,7 +56,7 @@ public final class Validator {
             return;
         }
 
-        for (Class<?> c : TypeUtil.getAllTypes(type)) {
+        for (Class<?> c : TypeUtil.getAllClasses(type)) {
             // Ignore checks for Object type.
             if (c.isAssignableFrom(Object.class)) {
                 continue;

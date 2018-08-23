@@ -410,7 +410,7 @@ public class RestProxy implements InvocationHandler {
             if (TypeUtil.isTypeOrSubTypeOf(entityType, RestResponse.class)) {
                 Constructor<? extends RestResponse<?, ?>> responseConstructor = getRestResponseConstructor(entityType);
 
-                Type[] deserializedTypes = TypeUtil.getTypeArguments(serializer.getTypeFactory().getSuperType(entityType, RestResponse.class));
+                Type[] deserializedTypes = TypeUtil.getTypeArguments(TypeUtil.getSuperType(entityType, RestResponse.class));
 
                 HttpHeaders responseHeaders = response.headers();
                 Object deserializedHeaders = response.deserializedHeaders();

@@ -18,14 +18,4 @@ public interface TypeFactory {
      * @return The SerializerAdapter-specific Type.
      */
     Type create(Type type);
-
-    /**
-     * Create a SerializerAdapter-specific parametric Type for the provided Types.
-     * @param baseType The base type of the resulting parametric type.
-     * @param genericTypes The type arguments for the resulting parametric type.
-     * @return The SerializerAdapter-specific parametric Type.
-     */
-    Type create(Class<?> baseType, Type... genericTypes);
-
-    Type getSuperType(Type subType, Class<?> rawSuperType);
 }

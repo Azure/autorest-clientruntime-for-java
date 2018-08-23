@@ -12,7 +12,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.DeserializationConfig;
 import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -26,8 +25,6 @@ import com.microsoft.rest.v2.util.TypeUtil;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Custom serializer for deserializing complex types with wrapped properties.
@@ -83,7 +80,7 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
     public Object deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
         JsonNode root = mapper.readTree(jp);
         final Class<?> tClass = this.defaultDeserializer.handledType();
-        for (Class<?> c : TypeUtil.getAllTypes(tClass)) {
+        for (Class<?> c : TypeUtil.getAllClasses(tClass)) {
             // Ignore checks for Object type.
             if (c.isAssignableFrom(Object.class)) {
                 continue;

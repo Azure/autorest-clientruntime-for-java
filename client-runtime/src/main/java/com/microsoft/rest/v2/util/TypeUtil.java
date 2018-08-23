@@ -6,8 +6,6 @@
 
 package com.microsoft.rest.v2.util;
 
-import com.fasterxml.jackson.databind.JavaType;
-
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -62,9 +60,7 @@ public class TypeUtil {
      * @return the raw class
      */
     public static Class<?> getRawClass(Type type) {
-        if (type instanceof JavaType) {
-            return ((JavaType) type).getRawClass();
-        } else if (type instanceof ParameterizedType) {
+        if (type instanceof ParameterizedType) {
             return (Class<?>) ((ParameterizedType) type).getRawType();
         } else {
             return (Class<?>) type;
@@ -77,9 +73,7 @@ public class TypeUtil {
      * @return the direct super type
      */
     public static Type getSuperType(Type type) {
-        if (type instanceof JavaType) {
-            return ((JavaType) type).getSuperClass();
-        } else if (type instanceof ParameterizedType) {
+        if (type instanceof ParameterizedType) {
             ParameterizedType parameterizedType = (ParameterizedType) type;
             Type genericSuperClass = ((Class<?>) parameterizedType.getRawType()).getGenericSuperclass();
             if (genericSuperClass instanceof ParameterizedType) {

@@ -40,9 +40,14 @@ public final class Validator {
         }
 
         Class<?> type = parameter.getClass();
-        if (type == Double.class || type == Float.class || type == Long.class ||
-                type == Integer.class || type == Short.class || type == Character.class ||
-                type == Byte.class || type == Boolean.class) {
+        if (type == Double.class
+                || type == Float.class
+                || type == Long.class
+                || type == Integer.class
+                || type == Short.class
+                || type == Character.class
+                || type == Byte.class
+                || type == Boolean.class) {
             type = wrapperToPrimitive(type);
         }
         if (type.isPrimitive()
@@ -116,27 +121,29 @@ public final class Validator {
     }
 
     private static Class<?> wrapperToPrimitive(Class<?> clazz) {
-        if (!clazz.isPrimitive())
+        if (!clazz.isPrimitive()) {
             return clazz;
+        }
 
-        if (clazz == Integer.class)
+        if (clazz == Integer.class) {
             return Integer.TYPE;
-        if (clazz == Long.class)
+        } else if (clazz == Long.class) {
             return Long.TYPE;
-        if (clazz == Boolean.class)
+        } else if (clazz == Boolean.class) {
             return Boolean.TYPE;
-        if (clazz == Byte.class)
+        } else if (clazz == Byte.class) {
             return Byte.TYPE;
-        if (clazz == Character.class)
+        } else if (clazz == Character.class) {
             return Character.TYPE;
-        if (clazz == Float.class)
+        } else if (clazz == Float.class) {
             return Float.TYPE;
-        if (clazz == Double.class)
+        } else if (clazz == Double.class) {
             return Double.TYPE;
-        if (clazz == Short.class)
+        } else if (clazz == Short.class) {
             return Short.TYPE;
-        if (clazz == Void.class)
+        } else if (clazz == Void.class) {
             return Void.TYPE;
+        }
 
         return clazz;
     }

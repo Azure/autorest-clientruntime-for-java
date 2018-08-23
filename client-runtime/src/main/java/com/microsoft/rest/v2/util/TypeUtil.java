@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
+
 package com.microsoft.rest.v2.util;
 
 import com.fasterxml.jackson.databind.JavaType;
@@ -8,6 +14,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Contains utilities for dealing with types.
+ */
 public class TypeUtil {
     /**
      * Find all super classes including this class itself.
@@ -118,7 +127,7 @@ public class TypeUtil {
      * @return the super type that matches the requirement
      */
     public static Type getSuperType(Type subType, Class<?> rawSuperType) {
-        while(subType != null && getRawClass(subType) != rawSuperType) {
+        while (subType != null && getRawClass(subType) != rawSuperType) {
             subType = getSuperType(subType);
         }
         return subType;

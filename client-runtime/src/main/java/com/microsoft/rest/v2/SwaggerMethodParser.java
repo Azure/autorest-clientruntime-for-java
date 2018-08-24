@@ -318,7 +318,7 @@ public class SwaggerMethodParser {
      * @return the Context, or null if no Context was provided
      */
     public Context context(Object[] swaggerMethodArguments) {
-        Object firstArg = swaggerMethodArguments[0];
+        Object firstArg = swaggerMethodArguments != null && swaggerMethodArguments.length > 0 ? swaggerMethodArguments[0] : null;
         if (firstArg instanceof Context) {
             return (Context) firstArg;
         } else {

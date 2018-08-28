@@ -11,9 +11,12 @@ import io.reactivex.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * An escaper that escapes URL data through percent encoding.
+ */
 public final class PercentEscaper {
 
-    private final static String[] hex = {
+    private static final String[] HEX = {
             "%00", "%01", "%02", "%03", "%04", "%05", "%06", "%07",
             "%08", "%09", "%0a", "%0b", "%0c", "%0d", "%0e", "%0f",
             "%10", "%11", "%12", "%13", "%14", "%15", "%16", "%17",
@@ -52,6 +55,11 @@ public final class PercentEscaper {
 
     private final List<Character> safeChars = new ArrayList<>();
 
+    /**
+     * Creates a percent escaper.
+     * @param safeChars a collection of characters that will not be escaped
+     * @param usePlusForSpace escape ' ' as '+' if true, "%20" otherwise
+     */
     public PercentEscaper(@NonNull String safeChars, boolean usePlusForSpace) {
         for (int i = 0; i != safeChars.length(); i++) {
             this.safeChars.add(safeChars.charAt(i));
@@ -59,16 +67,24 @@ public final class PercentEscaper {
         this.usePlusForSpace = usePlusForSpace;
     }
 
+    /**
+     * Creates a percent escaper with default settings and encode ' ' as "%20".
+     */
     public PercentEscaper() {
         this("-._~", false);
     }
 
+    /**
+     * Escapes a string with the current settings on the escaper.
+     * @param original the origin string to escape
+     * @return the escaped string
+     */
     public String escape(String original) {
         StringBuilder output = new StringBuilder();
         for (int i = 0; i != utf16ToAscii(original).length(); i++) {
             char c = original.charAt(i);
             if (c == ' ') {
-                output.append(usePlusForSpace ? "+" : hex[' ']);
+                output.append(usePlusForSpace ? "+" : HEX[' ']);
             } else if (c >= 'a' && c <= 'z') {
                 output.append(c);
             } else if (c >= 'A' && c <= 'Z') {
@@ -78,7 +94,7 @@ public final class PercentEscaper {
             } else if (safeChars.contains(c)) {
                 output.append(c);
             } else {
-                output.append(hex[c]);
+                output.append(HEX[c]);
             }
         }
         return output.toString();

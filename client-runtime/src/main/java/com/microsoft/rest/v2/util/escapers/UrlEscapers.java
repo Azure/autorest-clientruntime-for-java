@@ -17,7 +17,7 @@ public final class UrlEscapers {
     /** An escaper for escaping path parameters. */
     public static final PercentEscaper PATH_ESCAPER = new PercentEscaper(UNRESERVED_SYMBOLS + SUB_DELIMS + ":@", false);
     /** An escaper for escaping query parameters. */
-    public static final PercentEscaper QUERY_ESCAPER = new PercentEscaper(UNRESERVED_SYMBOLS + "g/?", false);
+    public static final PercentEscaper QUERY_ESCAPER = new PercentEscaper(UNRESERVED_SYMBOLS + "/?", false);
     /** An escaper for escaping form parameters. */
     public static final PercentEscaper FORM_ESCAPER = new PercentEscaper(UNRESERVED_SYMBOLS, true);
 

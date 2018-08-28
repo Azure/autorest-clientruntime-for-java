@@ -29,7 +29,6 @@ import com.microsoft.rest.v2.util.FlowableUtil;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
 import org.junit.Test;
-import wiremock.com.google.common.reflect.TypeToken;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -134,7 +133,7 @@ public class RestProxyXMLTests {
 
         SignedIdentifiersWrapper actualAclsWrapped = serializer.deserialize(
                 new String(httpClient.receivedBytes, StandardCharsets.UTF_8),
-                new TypeToken<SignedIdentifiersWrapper>() {}.getType(),
+                SignedIdentifiersWrapper.class,
                 SerializerEncoding.XML);
 
         List<SignedIdentifierInner> actualAcls = actualAclsWrapped.signedIdentifiers();

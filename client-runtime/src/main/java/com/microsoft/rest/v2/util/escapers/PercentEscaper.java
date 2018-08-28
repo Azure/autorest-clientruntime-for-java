@@ -22,28 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class PercentEscaper {
-//    private static final Map<Character, String> CONVERT_MAP = new HashMap<Character, String>() {{
-//        put('#', "%23");
-//        put('$', "%24");
-//        put('%', "%25");
-//        put('&', "%26");
-//        put('+', "%2B");
-//        put(',', "%2C");
-//        put('/', "%2F");
-//        put(':', "%3A");
-//        put(';', "%3B");
-//        put('=', "%3D");
-//        put('?', "%3F");
-//        put('@', "%40");
-//        put('[', "%5B");
-//        put('\\', "%5C");
-//        put(']', "%5D");
-//        put('^', "%5E");
-//        put('`', "%60");
-//        put('{', "%7B");
-//        put('|', "%7C");
-//        put('}', "%7D");
-//    }};
 
     private final static String[] hex = {
             "%00", "%01", "%02", "%03", "%04", "%05", "%06", "%07",

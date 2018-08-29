@@ -324,15 +324,15 @@ public final class NettyClient extends HttpClient {
                     // it seems fine to do it here.
                     channel.eventLoop().execute(() -> {
                         try {
-                            channel
-                                    .write(Unpooled.wrappedBuffer(buf))
-                                    .addListener(this);
+                            channel.write(Unpooled.wrappedBuffer(buf)).addListener(this);
+                            if (channel.isWritable()) {
+                                subscription.request(1);
+                            } else {
+                                channel.flush();
+                            }
                         } catch (Exception e) {
                             subscription.cancel();
                             onError(e);
-                        }
-                        if (!channel.isWritable()) {
-                            channel.flush();
                         }
                     });
                 } catch (Exception e) {

@@ -7,7 +7,6 @@
 package com.microsoft.rest.v2.util;
 
 import com.microsoft.rest.v2.http.UnexpectedLengthException;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.reactivex.Completable;
 import io.reactivex.Flowable;

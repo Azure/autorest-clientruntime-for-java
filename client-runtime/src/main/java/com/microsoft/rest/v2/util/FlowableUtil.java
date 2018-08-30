@@ -55,7 +55,7 @@ public final class FlowableUtil {
      * @return A Single which emits the concatenation of all the byte buffers given by the source Flowable.
      */
     public static Single<byte[]> collectBytesInArray(Flowable<ByteBuffer> content) {
-        return content.collectInto(Unpooled.buffer(), ByteBuf::writeBytes).map(out -> {
+        return content.collectInto(Unpooled.buffer(), (buf, bb) -> buf.writeBytes(bb.slice())).map(out -> {
             try {
                 if (out.array().length == out.readableBytes()) {
                     return out.array();

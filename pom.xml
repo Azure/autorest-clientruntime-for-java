@@ -101,7 +101,7 @@
       <dependency>
         <groupId>com.microsoft.azure</groupId>
         <artifactId>adal4j</artifactId>
-        <version>1.6.2gi</version>
+        <version>1.6.2</version>
       </dependency>
       <dependency>
         <groupId>io.reactivex</groupId>

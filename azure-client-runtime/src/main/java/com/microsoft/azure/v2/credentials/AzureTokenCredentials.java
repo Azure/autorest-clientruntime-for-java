@@ -7,6 +7,7 @@
 package com.microsoft.azure.v2.credentials;
 
 import com.microsoft.azure.v2.AzureEnvironment;
+import com.microsoft.azure.v2.AzureEnvironment.Endpoint;
 import com.microsoft.rest.v2.credentials.TokenCredentials;
 
 import java.io.IOException;
@@ -46,18 +47,26 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
      */
     public final String getTokenFromUri(String uri) throws IOException {
         URL url = new URL(uri);
-        String host = url.getHost();
-        String resource = environment().activeDirectoryResourceId();
+        String host = String.format("%s://%s%s/", url.getProtocol(), url.getHost(), url.getPort() > 0 ? ":" + url.getPort() : "");
+        String resource = environment().managementEndpoint();
         for (Map.Entry<String, String> endpoint : environment().endpoints().entrySet()) {
             if (host.contains(endpoint.getValue())) {
-                if (endpoint.getKey().equals(AzureEnvironment.Endpoint.KEYVAULT.identifier())) {
+                if (endpoint.getKey().equals(Endpoint.KEYVAULT.identifier())) {
                     resource = String.format("https://%s/", endpoint.getValue().replaceAll("^\\.*", ""));
                     break;
-                } else if (endpoint.getKey().equals(AzureEnvironment.Endpoint.GRAPH.identifier())) {
+                } else if (endpoint.getKey().equals(Endpoint.GRAPH.identifier())) {
                     resource = environment().graphEndpoint();
-                } else if (endpoint.getKey().equals(AzureEnvironment.Endpoint.DATA_LAKE_STORE.identifier())
-                               || endpoint.getKey().equals(AzureEnvironment.Endpoint.DATA_LAKE_ANALYTICS.identifier())) {
+                    break;
+                } else if (endpoint.getKey().equals(Endpoint.LOG_ANALYTICS.identifier())) {
+                    resource = environment().logAnalyticsEndpoint();
+                    break;
+                } else if (endpoint.getKey().equals(Endpoint.APPLICATION_INSIGHTS.identifier())) {
+                    resource = environment().applicationInsightsEndpoint();
+                    break;
+                } else if (endpoint.getKey().equals(Endpoint.DATA_LAKE_STORE.identifier())
+                        || endpoint.getKey().equals(Endpoint.DATA_LAKE_ANALYTICS.identifier())) {
                     resource = environment().dataLakeEndpointResourceId();
+                    break;
                 }
             }
         }

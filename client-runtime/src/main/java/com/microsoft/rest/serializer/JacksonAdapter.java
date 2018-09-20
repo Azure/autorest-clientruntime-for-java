@@ -50,9 +50,14 @@ public class JacksonAdapter implements SerializerAdapter<ObjectMapper> {
      */
     public JacksonAdapter() {
         simpleMapper = initializeObjectMapper(new ObjectMapper());
-        mapper = initializeObjectMapper(new ObjectMapper())
+        ObjectMapper flatteningMapper = initializeObjectMapper(new ObjectMapper())
                 .registerModule(FlatteningSerializer.getModule(simpleMapper()))
                 .registerModule(FlatteningDeserializer.getModule(simpleMapper()));
+        mapper = initializeObjectMapper(new ObjectMapper())
+                .registerModule(FlatteningSerializer.getModule(simpleMapper()))
+                .registerModule(FlatteningDeserializer.getModule(simpleMapper()))
+                .registerModule(AdditionalPropertiesSerializer.getModule(flatteningMapper))
+                .registerModule(AdditionalPropertiesDeserializer.getModule(flatteningMapper));
     }
 
     /**

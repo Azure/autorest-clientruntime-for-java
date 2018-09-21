@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.DeserializationConfig;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
@@ -27,8 +26,6 @@ import com.microsoft.azure.management.apigeneration.Beta.SinceVersion;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Iterator;
-import java.util.Map.Entry;
 
 /**
  * Custom serializer for deserializing complex types with additional properties.
@@ -93,25 +90,27 @@ public final class AdditionalPropertiesDeserializer extends StdDeserializer<Obje
     @Override
     public Object deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
         ObjectNode root = mapper.readTree(jp);
-
-        // deserialize normally
-        JsonParser parser = new JsonFactory().createParser(root.toString());
-        parser.nextToken();
-        Object normally = defaultDeserializer.deserialize(parser, ctxt);
-
-        // serialize the deserialize object
-        ObjectNode partial = mapper.valueToTree(normally);
+        ObjectNode copy = root.deepCopy();
 
         // compare top level fields and keep only missing fields
-        Iterator<Entry<String, JsonNode>> fields = partial.fields();
-        while (fields.hasNext()) {
-            root.remove(fields.next().getKey());
+        final Class<?> tClass = this.defaultDeserializer.handledType();
+        for (Class<?> c : TypeToken.of(tClass).getTypes().classes().rawTypes()) {
+            Field[] fields = c.getDeclaredFields();
+            for (Field field : fields) {
+                JsonProperty property = field.getAnnotation(JsonProperty.class);
+                String key = property.value().split("((?<!\\\\))\\.")[0];
+                if (!key.isEmpty()) {
+                    if (copy.has(key)) {
+                        copy.remove(key);
+                    }
+                }
+            }
         }
 
         // put into additional properties
-        partial.put("additionalProperties", root);
+        root.put("additionalProperties", copy);
 
-        parser = new JsonFactory().createParser(partial.toString());
+        JsonParser parser = new JsonFactory().createParser(root.toString());
         parser.nextToken();
         return defaultDeserializer.deserialize(parser, ctxt);
     }

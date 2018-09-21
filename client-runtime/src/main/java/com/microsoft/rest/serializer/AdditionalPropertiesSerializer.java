@@ -106,13 +106,15 @@ public class AdditionalPropertiesSerializer extends StdSerializer<Object> implem
                 break;
             }
         }
-        root.remove(additionalPropertiesField.getKey());
-        // put each item back in
-        ObjectNode extraProperties = (ObjectNode) additionalPropertiesField.getValue();
-        fields = extraProperties.fields();
-        while (fields.hasNext()) {
-            Entry<String, JsonNode> field = fields.next();
-            root.put(field.getKey(), field.getValue());
+        if (additionalPropertiesField != null) {
+            root.remove(additionalPropertiesField.getKey());
+            // put each item back in
+            ObjectNode extraProperties = (ObjectNode) additionalPropertiesField.getValue();
+            fields = extraProperties.fields();
+            while (fields.hasNext()) {
+                Entry<String, JsonNode> field = fields.next();
+                root.put(field.getKey(), field.getValue());
+            }
         }
 
         jgen.writeTree(root);

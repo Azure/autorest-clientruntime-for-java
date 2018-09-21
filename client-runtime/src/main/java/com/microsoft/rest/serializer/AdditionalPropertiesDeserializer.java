@@ -92,12 +92,16 @@ public final class AdditionalPropertiesDeserializer extends StdDeserializer<Obje
     @SuppressWarnings("unchecked")
     @Override
     public Object deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
+
+
         ObjectNode root = mapper.readTree(jp);
 
         // deserialize normally
         final Class<?> tClass = this.defaultDeserializer.handledType();
 
-        Object normally = mapper.treeToValue(root, tClass);
+        JsonParser parser = new JsonFactory().createParser(root.toString());
+        parser.nextToken();
+        Object normally = defaultDeserializer.deserialize(parser, ctxt);
 
         // serialize the deserialize object
         ObjectNode partial = mapper.valueToTree(normally);
@@ -111,7 +115,7 @@ public final class AdditionalPropertiesDeserializer extends StdDeserializer<Obje
         // put into additional properties
         partial.put("additionalProperties", root);
 
-        JsonParser parser = new JsonFactory().createParser(partial.toString());
+        parser = new JsonFactory().createParser(partial.toString());
         parser.nextToken();
         return defaultDeserializer.deserialize(parser, ctxt);
     }

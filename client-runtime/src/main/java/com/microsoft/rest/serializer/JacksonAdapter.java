@@ -50,7 +50,13 @@ public class JacksonAdapter implements SerializerAdapter<ObjectMapper> {
      */
     public JacksonAdapter() {
         simpleMapper = initializeObjectMapper(new ObjectMapper());
+        ObjectMapper flatteningMapper = initializeObjectMapper(new ObjectMapper())
+                .registerModule(FlatteningSerializer.getModule(simpleMapper()))
+                .registerModule(FlatteningDeserializer.getModule(simpleMapper()));
         mapper = initializeObjectMapper(new ObjectMapper())
+                // Order matters: must register in reverse order of hierarchy
+                .registerModule(AdditionalPropertiesSerializer.getModule(flatteningMapper))
+                .registerModule(AdditionalPropertiesDeserializer.getModule(flatteningMapper))
                 .registerModule(FlatteningSerializer.getModule(simpleMapper()))
                 .registerModule(FlatteningDeserializer.getModule(simpleMapper()));
     }

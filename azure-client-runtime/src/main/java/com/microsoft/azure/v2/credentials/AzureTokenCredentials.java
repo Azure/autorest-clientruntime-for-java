@@ -8,9 +8,9 @@ package com.microsoft.azure.v2.credentials;
 
 import com.microsoft.azure.v2.AzureEnvironment;
 import com.microsoft.azure.v2.AzureEnvironment.Endpoint;
-import com.microsoft.rest.v2.credentials.TokenCredentials;
+import io.reactivex.Single;
 
-import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
 import java.util.Map;
@@ -19,7 +19,8 @@ import java.util.Map;
  * AzureTokenCredentials represents a credentials object with access to Azure
  * Resource management.
  */
-public abstract class AzureTokenCredentials extends TokenCredentials {
+public abstract class AzureTokenCredentials implements AsyncServiceClientCredentials {
+    private static final String SCHEME = "Beareer";
     private final AzureEnvironment environment;
     private final String domain;
     private String defaultSubscription;
@@ -33,7 +34,6 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
      * @param domain the tenant or domain the credential is authorized to
      */
     public AzureTokenCredentials(AzureEnvironment environment, String domain) {
-        super("Bearer", null);
         this.environment = (environment == null) ? AzureEnvironment.AZURE : environment;
         this.domain = domain;
     }
@@ -43,10 +43,14 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
      *
      * @param uri the url
      * @return the token
-     * @throws IOException IOException
      */
-    public final String getTokenFromUri(String uri) throws IOException {
-        URL url = new URL(uri);
+    private Single<String> getTokenFromUri(String uri) {
+        URL url = null;
+        try {
+            url = new URL(uri);
+        } catch (MalformedURLException e) {
+            return Single.error(e);
+        }
         String host = String.format("%s://%s%s/", url.getProtocol(), url.getHost(), url.getPort() > 0 ? ":" + url.getPort() : "");
         String resource = environment().managementEndpoint();
         for (Map.Entry<String, String> endpoint : environment().endpoints().entrySet()) {
@@ -78,13 +82,12 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
      *
      * @param resource the resource the access token is for
      * @return the token to access the resource
-     * @throws IOException exceptions from IO
      */
-    public abstract String getToken(String resource) throws IOException;
+    public abstract Single<String> getToken(String resource);
 
     @Override
-    public String authorizationHeaderValue(String uri) throws IOException {
-        return "Bearer " + getTokenFromUri(uri);
+    public Single<String> authorizationHeaderValueAsync(String uri) {
+        return getTokenFromUri(uri).map(token -> "Bearer " + token);
     }
 
     /**

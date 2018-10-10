@@ -13,6 +13,7 @@ import com.microsoft.aad.adal4j.AuthenticationResult;
 import com.microsoft.aad.adal4j.ClientCredential;
 import com.microsoft.azure.v2.AzureEnvironment;
 import com.microsoft.rest.v2.util.Base64Util;
+import io.reactivex.Single;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -121,49 +122,61 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
         return clientId;
     }
 
-    @Override
-    public synchronized String getToken(String resource) throws IOException {
-        AuthenticationResult authenticationResult = tokens.get(resource);
-        if (authenticationResult == null || authenticationResult.getExpiresOnDate().before(new Date())) {
-            authenticationResult = acquireAccessToken(resource);
-        }
-        tokens.put(resource, authenticationResult);
-        return authenticationResult.getAccessToken();
+    String clientSecret() {
+        return clientSecret;
     }
 
-    private AuthenticationResult acquireAccessToken(String resource) throws IOException {
+    byte[] clientCertificate() {
+        return clientCertificate;
+    }
+
+    String clientCertificatePassword() {
+        return clientCertificatePassword;
+    }
+
+    @Override
+    public synchronized Single<String> getToken(String resource) {
+        AuthenticationResult authenticationResult = tokens.get(resource);
+        if (authenticationResult != null && authenticationResult.getExpiresOnDate().after(new Date())) {
+            return Single.just(authenticationResult.getAccessToken());
+        } else {
+            return acquireAccessToken(resource)
+                    .map(ar -> {
+                        tokens.put(resource, ar);
+                        return ar.getAccessToken();
+                    });
+        }
+    }
+
+    private Single<AuthenticationResult> acquireAccessToken(String resource) {
         String authorityUrl = this.environment().activeDirectoryEndpoint() + this.domain();
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        AuthenticationContext context = new AuthenticationContext(authorityUrl, false, executor);
-        if (proxy() != null) {
-            context.setProxy(proxy());
-        }
-        try {
+        return Single.defer(() -> {
+            AuthenticationContext context = new AuthenticationContext(authorityUrl, false, executor);
+            if (proxy() != null) {
+                context.setProxy(proxy());
+            }
             if (clientSecret != null) {
-                return context.acquireToken(
+                return Single.fromFuture(context.acquireToken(
                         resource,
                         new ClientCredential(this.clientId(), clientSecret),
-                        null).get();
+                        null));
             } else if (clientCertificate != null && clientCertificatePassword != null) {
-                return context.acquireToken(
+                return Single.fromFuture(context.acquireToken(
                         resource,
                         AsymmetricKeyCredential.create(clientId, new ByteArrayInputStream(clientCertificate), clientCertificatePassword),
-                        null).get();
+                        null));
             } else if (clientCertificate != null) {
-                return context.acquireToken(
+                return Single.fromFuture(context.acquireToken(
                         resource,
                         AsymmetricKeyCredential.create(clientId(), privateKeyFromPem(new String(clientCertificate)), publicKeyFromPem(new String(clientCertificate))),
-                        null).get();
+                        null));
             }
             throw new AuthenticationException("Please provide either a non-null secret or a non-null certificate.");
-        } catch (Exception e) {
-            throw new IOException(e.getMessage(), e);
-        } finally {
-            executor.shutdown();
-        }
+        }).doFinally(executor::shutdown);
     }
 
-    private PrivateKey privateKeyFromPem(String pem) {
+    static PrivateKey privateKeyFromPem(String pem) {
         Pattern pattern = Pattern.compile("(?s)-----BEGIN PRIVATE KEY-----.*-----END PRIVATE KEY-----");
         Matcher matcher = pattern.matcher(pem);
         matcher.find();
@@ -182,7 +195,7 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
         }
     }
 
-    private X509Certificate publicKeyFromPem(String pem) {
+    static X509Certificate publicKeyFromPem(String pem) {
         Pattern pattern = Pattern.compile("(?s)-----BEGIN CERTIFICATE-----.*-----END CERTIFICATE-----");
         Matcher matcher = pattern.matcher(pem);
         matcher.find();

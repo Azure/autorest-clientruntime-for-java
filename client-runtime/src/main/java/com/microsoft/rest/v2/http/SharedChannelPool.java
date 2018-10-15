@@ -26,6 +26,8 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Queue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -46,12 +48,14 @@ class SharedChannelPool implements ChannelPool {
     private final ChannelPoolHandler handler;
     private final int poolSize;
     private final Queue<ChannelRequest> requests;
-    private final ConcurrentMultiHashMap<URI, Channel> available;
-    private final ConcurrentMultiHashMap<URI, Channel> leased;
+    private final ChannelDescriptions available;
+    private final ChannelDescriptions leased;
     private final Object sync = new Object();
     private final SslContext sslContext;
     private final ExecutorService executor;
     private volatile boolean closed = false;
+    // Time in sec to keep the connection alive in available pool before closing it.
+    private final long maxTtlInSecOfAvailableChannel = 5 * 60;
 
     private static boolean isChannelHealthy(Channel channel) {
         if (!channel.isActive()) {
@@ -77,8 +81,8 @@ class SharedChannelPool implements ChannelPool {
         this.handler = handler;
         this.poolSize = size;
         this.requests = new ConcurrentLinkedDeque<>();
-        this.available = new ConcurrentMultiHashMap<>();
-        this.leased = new ConcurrentMultiHashMap<>();
+        this.available = new ChannelDescriptions();
+        this.leased = new ChannelDescriptions();
         try {
             sslContext = SslContextBuilder.forClient().build();
         } catch (SSLException e) {
@@ -112,19 +116,34 @@ class SharedChannelPool implements ChannelPool {
                         if (closed) {
                             break;
                         }
-
-                        if (available.containsKey(request.channelURI)) {
-                            Channel channel = available.poll(request.channelURI);
+                        boolean foundHealthyChannel = false;
+                        while (available.containsKey(request.channelURI)) {
+                            ChannelDescription channelDescription = available.poll(request.channelURI);
+                            Channel channel = channelDescription.channel;
                             if (isChannelHealthy(channel)) {
-                                handler.channelAcquired(channel);
-                                request.promise.setSuccess(channel);
-                                leased.put(request.channelURI, channel);
-                                continue;
+                                System.out.println("HEALTHY Channel From Pool:" + channelDescription.toString() + "\n");
+                                if (channelDescription.idleDurationInSec() < maxTtlInSecOfAvailableChannel) {
+                                    handler.channelAcquired(channel);
+                                    request.promise.setSuccess(channel);
+                                    leased.put(request.channelURI, channelDescription);
+                                    foundHealthyChannel = true;
+                                    break;
+                                } else {
+                                    System.out.println(String.format("HEALTHY Channel From Pool %s Maxed out AvailableMaxTtl", channelDescription.id()));
+                                    channelDescription.channel.close();
+                                }
+                            } else {
+                                System.out.println("UNHEALTHY Channel From Pool:" + channelDescription.toString() + "\n");
                             }
                         }
+                        if (foundHealthyChannel) {
+                            continue;
+                        }
+
                         // Create a new channel - remove an available one if size overflows
                         if (available.size() > 0 && available.size() + leased.size() >= poolSize) {
-                            available.poll().close();
+                            ChannelDescription channelDescription = available.poll(request.channelURI);
+                            channelDescription.channel.close();
                         }
                         int port;
                         if (request.destinationURI.getPort() < 0) {
@@ -145,14 +164,14 @@ class SharedChannelPool implements ChannelPool {
                                 channelFuture.channel().pipeline().addFirst("HttpProxyHandler", new HttpProxyHandler(request.proxy.address()));
                             }
 
-                            leased.put(request.channelURI, channelFuture.channel());
+                            leased.put(request.channelURI, new ChannelDescription(channelFuture.channel()));
                             channelFuture.addListener((ChannelFuture future) -> {
                                 if (future.isSuccess()) {
                                     handler.channelAcquired(future.channel());
                                     request.promise.setSuccess(future.channel());
                                 } else {
-                                    leased.remove(request.channelURI, future.channel());
-
+                                    final String channelDescriptionId = future.channel().id().asLongText();
+                                    leased.removeAndGet(request.channelURI, channelDescriptionId);
                                     request.promise.setFailure(future.cause());
                                 }
                             });
@@ -248,8 +267,14 @@ class SharedChannelPool implements ChannelPool {
         }
         promise.setSuccess(null);
         synchronized (sync) {
-            leased.remove(channel.attr(CHANNEL_URI).get(), channel);
-            available.put(channel.attr(CHANNEL_URI).get(), channel);
+            final String channelDescriptionId = channel.id().asLongText();
+            ChannelDescription channelDescription = leased.removeAndGet(channel.attr(CHANNEL_URI).get(), channelDescriptionId);
+            if (channelDescription == null) {
+               throw new IllegalArgumentException(String.format("ChannelDescription with id %s not found in leased.", channelDescriptionId));
+            }
+            System.out.println(String.format("Releasing Channel %s to Pool", channelDescriptionId));
+            channelDescription.availableSince = ZonedDateTime.now(ZoneOffset.UTC);
+            available.put(channel.attr(CHANNEL_URI).get(), channelDescription);
             sync.notify();
         }
         return promise;

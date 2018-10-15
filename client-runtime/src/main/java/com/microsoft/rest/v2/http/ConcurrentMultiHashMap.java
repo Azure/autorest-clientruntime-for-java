@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 /**
  * A thread-safe multi map where the values for a certain key are FIFO organized.
@@ -167,5 +168,28 @@ public class ConcurrentMultiHashMap<K, V> {
             data.remove(key);
         }
         return removed;
+    }
+
+    V removeAndGet(K key, Function<V, Boolean> predicate) {
+        if (!data.containsKey(key)) {
+            return null;
+        }
+        ConcurrentLinkedQueue<V> queue = data.get(key);
+        Object[] foundItem = new Object[] {null};
+        synchronized (size) {
+            queue.iterator().forEachRemaining(item -> {
+                if (predicate.apply(item)) {
+                    foundItem[0] = item;
+                }
+            });
+            if (foundItem[0] != null) {
+                size.decrementAndGet();
+                queue.remove(foundItem[0]);
+            }
+        }
+        if (queue.isEmpty()) {
+            data.remove(key);
+        }
+        return foundItem[0] != null ? (V) foundItem[0] : null;
     }
 }

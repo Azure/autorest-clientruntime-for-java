@@ -158,6 +158,8 @@ class SharedChannelPool implements ChannelPool {
                             }
                             channelFuture = SharedChannelPool.this.bootstrap.clone().connect(request.destinationURI.getHost(), port);
                             channelFuture.channel().eventLoop().execute(() -> {
+                                System.out.println(String.format("No Channel From Pool, creating new: %s", channelFuture.channel().id().asLongText()));
+
                                 channelFuture.channel().attr(CHANNEL_URI).set(request.channelURI);
 
                                 // Apply SSL handler for https connections

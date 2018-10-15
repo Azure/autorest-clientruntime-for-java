@@ -50,10 +50,15 @@ public class JacksonAdapter implements SerializerAdapter<ObjectMapper> {
         xmlMapper = initializeObjectMapper(new XmlMapper());
         xmlMapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
         xmlMapper.setDefaultUseWrapper(false);
-        mapper = initializeObjectMapper(new ObjectMapper())
+        ObjectMapper flatteningMapper = initializeObjectMapper(new ObjectMapper())
                 .registerModule(FlatteningSerializer.getModule(simpleMapper()))
                 .registerModule(FlatteningDeserializer.getModule(simpleMapper()));
-    }
+        mapper = initializeObjectMapper(new ObjectMapper())
+                // Order matters: must register in reverse order of hierarchy
+                .registerModule(AdditionalPropertiesSerializer.getModule(flatteningMapper))
+                .registerModule(AdditionalPropertiesDeserializer.getModule(flatteningMapper))
+                .registerModule(FlatteningSerializer.getModule(simpleMapper()))
+                .registerModule(FlatteningDeserializer.getModule(simpleMapper()));    }
 
     /**
      * Gets a static instance of {@link ObjectMapper} that doesn't handle flattening.
@@ -144,6 +149,7 @@ public class JacksonAdapter implements SerializerAdapter<ObjectMapper> {
     private static <T extends ObjectMapper> T initializeObjectMapper(T mapper) {
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 .configure(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS, true)
+                .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
                 .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)

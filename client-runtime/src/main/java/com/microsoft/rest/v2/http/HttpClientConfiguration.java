@@ -39,7 +39,7 @@ public class HttpClientConfiguration {
      * @param duration duration in seconds
      * @return HttpClientConfiguration
      */
-    @Beta
+    @Beta(since = "2.0.0")
     public HttpClientConfiguration withIdleConnectionKeepAliveDurationInSec(long duration) {
         this.poolOptions.withIdleChannelKeepAliveDurationInSec(duration);
         return this;

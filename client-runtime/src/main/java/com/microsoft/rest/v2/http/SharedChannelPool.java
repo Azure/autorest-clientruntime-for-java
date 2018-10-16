@@ -45,7 +45,7 @@ import java.util.concurrent.RejectedExecutionException;
  */
 class SharedChannelPool implements ChannelPool {
     private static final AttributeKey<URI> CHANNEL_URI = AttributeKey.newInstance("channel-uri");
-    private static final AttributeKey<ZonedDateTime> CHANNEL_AVAILABLE_SINCE = AttributeKey.newInstance("v2runtime_reserved_channel-available-since");
+    private static final AttributeKey<ZonedDateTime> CHANNEL_AVAILABLE_SINCE = AttributeKey.newInstance("channel-available-since");
     private final Bootstrap bootstrap;
     private final ChannelPoolHandler handler;
     private final int poolSize;
@@ -60,21 +60,13 @@ class SharedChannelPool implements ChannelPool {
 
     private boolean isChannelHealthy(Channel channel) {
         if (!channel.isActive()) {
-            System.out.println(String.format("UNHEALTHY Channel From Pool: %s ", channel.id().asLongText()));
             return false;
         } else if (channel.pipeline().get("HttpResponseDecoder") == null && channel.pipeline().get("HttpClientCodec") == null) {
-            System.out.println(String.format("UNHEALTHY Channel From Pool: %s ", channel.id().asLongText()));
             return false;
         } else {
             final ZonedDateTime channelAvailableSince = channel.attr(CHANNEL_AVAILABLE_SINCE).get();
             final long channelIdleDurationInSec = ChronoUnit.SECONDS.between(channelAvailableSince, ZonedDateTime.now(ZoneOffset.UTC));
-            if (channelIdleDurationInSec >= this.poolOptions.idleChannelKeepAliveDurationInSec()) {
-                System.out.println(String.format("SKIPPED HEALTHY Timeout Channel From Pool: %s IdleTime: %d", channel.id().asLongText(), channelIdleDurationInSec));
-                return false;
-            } else {
-                System.out.println(String.format("HEALTHY Channel From Pool: %s IdleTime: %d", channel.id().asLongText(), channelIdleDurationInSec));
-                return true;
-            }
+            return channelIdleDurationInSec < this.poolOptions.idleChannelKeepAliveDurationInSec();
         }
     }
 
@@ -143,6 +135,8 @@ class SharedChannelPool implements ChannelPool {
                                 leased.put(request.channelURI, channel);
                                 foundHealthyChannelInPool = true;
                                 break;
+                            } else {
+                                channel.close();
                             }
                         }
                         if (!foundHealthyChannelInPool) {
@@ -158,8 +152,6 @@ class SharedChannelPool implements ChannelPool {
                             }
                             channelFuture = SharedChannelPool.this.bootstrap.clone().connect(request.destinationURI.getHost(), port);
                             channelFuture.channel().eventLoop().execute(() -> {
-                                System.out.println(String.format("No Channel From Pool, creating new: %s", channelFuture.channel().id().asLongText()));
-
                                 channelFuture.channel().attr(CHANNEL_URI).set(request.channelURI);
 
                                 // Apply SSL handler for https connections
@@ -284,7 +276,6 @@ class SharedChannelPool implements ChannelPool {
         }
         promise.setSuccess(null);
         synchronized (sync) {
-            System.out.println(String.format("Releasing Channel %s to Pool", channel.id().asLongText()));
             leased.remove(channel.attr(CHANNEL_URI).get(), channel);
             channel.attr(CHANNEL_AVAILABLE_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
             available.put(channel.attr(CHANNEL_URI).get(), channel);

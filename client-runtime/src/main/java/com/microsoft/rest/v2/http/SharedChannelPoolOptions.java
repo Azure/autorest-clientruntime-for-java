@@ -7,18 +7,18 @@
 package com.microsoft.rest.v2.http;
 
 /**
- * Optional configurations http channel pool.
+ * Optional configurations for http channel pool.
  */
 class SharedChannelPoolOptions {
     // Default duration in sec to keep the connection alive in available pool before closing it.
-    private static final long DEFAULT_MAX_TTL_OF_IDLE_CONNECTION = 5 * 60;
+    private static final long DEFAULT_TTL_OF_IDLE_CHANNEL = 5 * 60;
     private long idleChannelKeepAliveDurationInSec;
 
     /**
      * Creates SharedChannelPoolOptions.
      */
     SharedChannelPoolOptions() {
-        this.idleChannelKeepAliveDurationInSec = DEFAULT_MAX_TTL_OF_IDLE_CONNECTION;
+        this.idleChannelKeepAliveDurationInSec = DEFAULT_TTL_OF_IDLE_CHANNEL;
     }
 
     /**

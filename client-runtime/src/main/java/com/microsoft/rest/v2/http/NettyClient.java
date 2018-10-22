@@ -26,6 +26,8 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -149,7 +151,7 @@ public final class NettyClient extends HttpClient {
         }
 
         private static SharedChannelPool createChannelPool(Bootstrap bootstrap, TransportConfig config,
-                int poolSize) {
+                int poolSize, SslContext sslContext) {
             bootstrap.group(config.eventLoopGroup);
             bootstrap.channel(config.channelClass);
             bootstrap.option(ChannelOption.AUTO_READ, false);
@@ -163,19 +165,19 @@ public final class NettyClient extends HttpClient {
                     ch.pipeline().addLast("HttpClientCodec", new HttpClientCodec());
                     ch.pipeline().addLast("HttpClientInboundHandler", new HttpClientInboundHandler());
                 }
-            }, poolSize);
+            }, poolSize, new SharedChannelPoolOptions(), sslContext);
         }
 
         private NettyAdapter() {
             TransportConfig config = loadTransport(0);
             this.eventLoopGroup = config.eventLoopGroup;
-            this.channelPool = createChannelPool(new Bootstrap(), config, eventLoopGroup.executorCount() * 16);
+            this.channelPool = createChannelPool(new Bootstrap(), config, eventLoopGroup.executorCount() * 16, null);
         }
 
-        private NettyAdapter(Bootstrap baseBootstrap, int eventLoopGroupSize, int channelPoolSize) {
+        private NettyAdapter(Bootstrap baseBootstrap, int eventLoopGroupSize, int channelPoolSize, SslContext sslContext) {
             TransportConfig config = loadTransport(eventLoopGroupSize);
             this.eventLoopGroup = config.eventLoopGroup;
-            this.channelPool = createChannelPool(baseBootstrap, config, channelPoolSize);
+            this.channelPool = createChannelPool(baseBootstrap, config, channelPoolSize, sslContext);
         }
 
         private Single<HttpResponse> sendRequestInternalAsync(final HttpRequest request, final HttpClientConfiguration configuration) {
@@ -892,7 +894,8 @@ public final class NettyClient extends HttpClient {
     public static class Factory implements HttpClientFactory {
         private final NettyAdapter adapter;
 
-        /**
+
+		/**
          * Create a Netty client factory with default settings.
          */
         public Factory() {
@@ -911,14 +914,18 @@ public final class NettyClient extends HttpClient {
          *            the number of pooled channels (connections)
          */
         public Factory(Bootstrap baseBootstrap, int eventLoopGroupSize, int channelPoolSize) {
-            this.adapter = new NettyAdapter(baseBootstrap.clone(), eventLoopGroupSize, channelPoolSize);
+            this(baseBootstrap.clone(), eventLoopGroupSize, channelPoolSize, null);
         }
-
+        
+        public Factory(Bootstrap baseBootstrap, int eventLoopGroupSize, int channelPoolSize, SslContext sslContext) {
+            this.adapter = new NettyAdapter(baseBootstrap.clone(), eventLoopGroupSize, channelPoolSize, sslContext);
+        }
+        
         @Override
         public HttpClient create(final HttpClientConfiguration configuration) {
             return new NettyClient(configuration, adapter);
         }
-
+        
         @Override
         public void close() {
             adapter.shutdownGracefully().awaitUninterruptibly();

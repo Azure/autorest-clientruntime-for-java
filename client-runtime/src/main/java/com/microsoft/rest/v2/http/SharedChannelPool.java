@@ -77,7 +77,7 @@ class SharedChannelPool implements ChannelPool {
      * @param size the upper limit of total number of channels
      * @param options optional settings for the pool
      */
-    SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size, SharedChannelPoolOptions options) {
+    SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size, SharedChannelPoolOptions options, SslContext sslContext) {
         this.poolOptions = options.clone();
         this.bootstrap = bootstrap.clone().handler(new ChannelInitializer<Channel>() {
             @Override
@@ -92,7 +92,11 @@ class SharedChannelPool implements ChannelPool {
         this.available = new ConcurrentMultiHashMap<>();
         this.leased = new ConcurrentMultiHashMap<>();
         try {
-            sslContext = SslContextBuilder.forClient().build();
+        	if(sslContext == null) {
+        		this.sslContext = SslContextBuilder.forClient().build();
+        	} else {
+        		this.sslContext = sslContext;
+        	}
         } catch (SSLException e) {
             throw new RuntimeException(e);
         }
@@ -156,7 +160,7 @@ class SharedChannelPool implements ChannelPool {
 
                                 // Apply SSL handler for https connections
                                 if ("https".equalsIgnoreCase(request.destinationURI.getScheme())) {
-                                    channelFuture.channel().pipeline().addFirst(sslContext.newHandler(channelFuture.channel().alloc(), request.destinationURI.getHost(), port));
+                                    channelFuture.channel().pipeline().addFirst(this.sslContext.newHandler(channelFuture.channel().alloc(), request.destinationURI.getHost(), port));
                                 }
 
                                 if (request.proxy != null) {
@@ -190,8 +194,8 @@ class SharedChannelPool implements ChannelPool {
      * @param size the upper limit of total number of channels
      */
     SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size) {
-        this(bootstrap, handler, size, new SharedChannelPoolOptions());
-    }
+        this(bootstrap, handler, size, new SharedChannelPoolOptions(), null);
+    } 
 
     /**
      * Acquire a channel for a URI.

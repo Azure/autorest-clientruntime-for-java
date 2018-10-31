@@ -92,11 +92,11 @@ class SharedChannelPool implements ChannelPool {
         this.available = new ConcurrentMultiHashMap<>();
         this.leased = new ConcurrentMultiHashMap<>();
         try {
-        	if(sslContext == null) {
-        		this.sslContext = SslContextBuilder.forClient().build();
-        	} else {
-        		this.sslContext = sslContext;
-        	}
+            if (sslContext == null) {
+                this.sslContext = SslContextBuilder.forClient().build();
+            } else {
+                this.sslContext = sslContext;
+            }
         } catch (SSLException e) {
             throw new RuntimeException(e);
         }

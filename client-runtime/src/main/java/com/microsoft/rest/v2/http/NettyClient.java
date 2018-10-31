@@ -27,7 +27,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -895,7 +894,7 @@ public final class NettyClient extends HttpClient {
         private final NettyAdapter adapter;
 
 
-		/**
+        /**
          * Create a Netty client factory with default settings.
          */
         public Factory() {
@@ -917,6 +916,19 @@ public final class NettyClient extends HttpClient {
             this(baseBootstrap.clone(), eventLoopGroupSize, channelPoolSize, null);
         }
         
+        /**
+         * Create a Netty client factory, specifying the event loop group size and the
+         * channel pool size.
+         * 
+         * @param baseBootstrap
+         *          a channel Bootstrap to use as a basis for channel creation
+         * @param eventLoopGroupSize
+         *          the number of event loop executors
+         * @param channelPoolSize
+         *          the number of pooled channels (connections)
+         * @param sslContext
+         *          An SslContext, can be null.
+         */
         public Factory(Bootstrap baseBootstrap, int eventLoopGroupSize, int channelPoolSize, SslContext sslContext) {
             this.adapter = new NettyAdapter(baseBootstrap.clone(), eventLoopGroupSize, channelPoolSize, sslContext);
         }

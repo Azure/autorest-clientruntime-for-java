@@ -53,7 +53,7 @@ public abstract class AzureTokenCredentials extends TokenCredentials {
         for (Map.Entry<String, String> endpoint : environment().endpoints().entrySet()) {
             if (host.contains(endpoint.getValue())) {
                 if (endpoint.getKey().equals(Endpoint.KEYVAULT.identifier())) {
-                    resource = String.format("https://%s/", endpoint.getValue().replaceAll("^\\.*", ""));
+                    resource = String.format("https://%s", endpoint.getValue().replaceAll("^\\.*", ""));
                     break;
                 } else if (endpoint.getKey().equals(Endpoint.GRAPH.identifier())) {
                     resource = environment().graphEndpoint();

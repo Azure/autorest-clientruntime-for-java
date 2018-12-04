@@ -115,7 +115,9 @@ public class LoggingInterceptor implements Interceptor {
         try {
             response = chain.proceed(request);
         } catch (Exception e) {
-            log(logger, "<-- HTTP FAILED: " + e);
+            if (logLevel != LogLevel.NONE) {
+                log(logger, "<-- HTTP FAILED: " + e);
+            }
             throw e;
         }
         long tookMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);

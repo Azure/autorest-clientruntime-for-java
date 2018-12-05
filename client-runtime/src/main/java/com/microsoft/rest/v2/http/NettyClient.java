@@ -64,7 +64,7 @@ public final class NettyClient extends HttpClient {
     private final NettyAdapter adapter;
     private final HttpClientConfiguration configuration;
 
-    private static final Logger logger = LoggerFactory.getLogger(NettyClient.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
 
     /**
      * Creates NettyClient.
@@ -250,7 +250,7 @@ public final class NettyClient extends HttpClient {
                 int s = state.get();
                 if (s == ACQUIRING_DISPOSED) {
                     if (transition(ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
-                        logger.debug("Channel disposed on acquisition");
+                        LOGGER.debug("Channel disposed on acquisition");
                         channelPool.closeAndRelease(channel);
                         return;
                     }
@@ -421,45 +421,45 @@ public final class NettyClient extends HttpClient {
 
         void emitError(Throwable throwable) {
             while (true) {
-                logger.warn("Error emitted on channel {}. Message: {}", channel.id(), throwable.getMessage());
-                logger.debug("Stack trace: ", new Exception());
+                LOGGER.warn("Error emitted on channel {}. Message: {}", channel.id(), throwable.getMessage());
+                LOGGER.debug("Stack trace: ", new Exception());
                 channelPool.dump();
                 int s = state.get();
                 if (s == ACQUIRING_NOT_DISPOSED) {
                     if (transition(ACQUIRING_NOT_DISPOSED, ACQUIRING_DISPOSED)) {
-                        logger.debug("Channel disposed before response is subscribed");
+                        LOGGER.debug("Channel disposed before response is subscribed");
                         responseEmitter.onError(throwable);
                         break;
                     }
                 } else if (s == ACQUIRED_CONTENT_SUBSCRIBED) {
                     if (transition(ACQUIRED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
-                        logger.debug("Channel disposed after content is subscribed");
+                        LOGGER.debug("Channel disposed after content is subscribed");
                         closeAndReleaseChannel();
                         content.onError(throwable);
                         break;
                     }
                 } else if (s == ACQUIRED_CONTENT_NOT_SUBSCRIBED) {
                     if (transition(ACQUIRED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
-                        logger.debug("Channel disposed before content is subscribed");
+                        LOGGER.debug("Channel disposed before content is subscribed");
                         closeAndReleaseChannel();
                         responseEmitter.onError(throwable);
                         break;
                     }
                 } else if (s == ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED) {
                     if (transition(ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
-                        logger.debug("Channel disposed after content is subscribed with response emitter disposed");
+                        LOGGER.debug("Channel disposed after content is subscribed with response emitter disposed");
                         closeAndReleaseChannel();
                         content.onError(throwable);
                         break;
                     }
                 } else if (s == ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED) {
                     if (transition(ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
-                        logger.debug("Channel disposed before content is subscribed with response emitter disposed");
+                        LOGGER.debug("Channel disposed before content is subscribed with response emitter disposed");
                         closeAndReleaseChannel();
                         throw Exceptions.propagate(throwable);
                     }
                 } else {
-                    logger.debug("Channel disposed at state {}", s);
+                    LOGGER.debug("Channel disposed at state {}", s);
                     break;
                 }
             }
@@ -499,7 +499,7 @@ public final class NettyClient extends HttpClient {
                     emitError(release.cause());
                 }
             } else {
-                logger.debug("Channel disposed on cancellation or request body reading interrupted");
+                LOGGER.debug("Channel disposed on cancellation or request body reading interrupted");
                 closeAndReleaseChannel();
             }
         }
@@ -541,7 +541,7 @@ public final class NettyClient extends HttpClient {
                     if (transition(ACQUIRING_DISPOSED, CHANNEL_RELEASED)) {
                         // error emitted during channel acquisition, channel may
                         // or may not be available
-                        logger.debug("Channel disposed on ACQUIRING_DISPOSED");
+                        LOGGER.debug("Channel disposed on ACQUIRING_DISPOSED");
                         closeAndReleaseChannel();
                         return;
                     }
@@ -559,13 +559,13 @@ public final class NettyClient extends HttpClient {
                     }
 //                } else if (s == ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED) {
 //                    if (transition(ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
-//                        logger.debug("Channel disposed on ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED");
+//                        LOGGER.debug("Channel disposed on ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED");
 //                        closeAndReleaseChannel();
 //                        return;
 //                    }
 //                } else if (s == ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED) {
 //                    if (transition(ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
-//                        logger.debug("Channel disposed on ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED");
+//                        LOGGER.debug("Channel disposed on ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED");
 //                        closeAndReleaseChannel();
 //                        return;
 //                    }

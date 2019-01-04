@@ -200,7 +200,7 @@
   <modules>
     <module>build-tools</module>
     <module>client-runtime</module>
-    <module>azure-client-runtime</module>
-    <module>azure-client-authentication</module>
+    <!-- <module>azure-client-runtime</module>
+    <module>azure-client-authentication</module> -->
   </modules>
 </project>

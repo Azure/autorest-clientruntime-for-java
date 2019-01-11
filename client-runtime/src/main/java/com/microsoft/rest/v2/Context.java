@@ -82,7 +82,7 @@ public class Context {
             throw new IllegalArgumentException("key cannot be null");
         }
         for (Context c = this; c != null; c = c.parent) {
-            if (c.key.equals(key)) {
+            if (key.equals(c.key)) {
                 return Optional.of(c.value);
             }
         }

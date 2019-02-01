@@ -57,7 +57,7 @@ public final class NettyClient extends HttpClient {
                 .uri(request.url().toString())
                 .send(bodySendDelegate(request))
                 .responseConnection(responseDelegate(request))
-                .last();
+                .single();
         return response;
     }
 

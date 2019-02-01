@@ -6,6 +6,8 @@
 
 package com.microsoft.rest.v3.http;
 
+import com.microsoft.rest.v3.annotations.Beta;
+
 /**
  * The set of parameters used to create an HTTP client.
  */
@@ -29,6 +31,18 @@ public class HttpClientConfiguration {
 
     public HttpClientConfiguration withProxy(ProxyOptions proxyOptions) {
         this.proxy = proxyOptions;
+        return this;
+    }
+
+    /**
+     * Sets the duration in sec to keep the connection alive in available pool before closing it.
+     *
+     * @param duration duration in seconds
+     * @return HttpClientConfiguration
+     */
+    @Beta(since = "2.0.0")
+    public HttpClientConfiguration withIdleConnectionKeepAliveDurationInSec(long duration) {
+        this.poolOptions.withIdleChannelKeepAliveDurationInSec(duration);
         return this;
     }
 }

@@ -39,18 +39,21 @@ public class ProxyOptions {
         return type;
     }
 
+    /**
+     * The type of the proxy, mapping the types defined in Reactor-Netty.
+     */
     public enum Type {
         HTTP(Proxy.HTTP),
         SOCKS4(Proxy.SOCKS4),
         SOCKS5(Proxy.SOCKS5);
 
-        private Proxy value;
+        private final Proxy value;
 
         Type(Proxy reactorProxyType) {
             this.value = reactorProxyType;
         }
 
-        public Proxy value() {
+        Proxy value() {
             return value;
         }
     }

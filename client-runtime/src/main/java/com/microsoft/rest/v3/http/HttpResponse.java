@@ -11,6 +11,7 @@ import java.io.Closeable;
 import java.nio.ByteBuffer;
 
 import com.microsoft.rest.v3.policy.DecodingPolicyFactory;
+import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -72,7 +73,7 @@ public abstract class HttpResponse implements Closeable {
      *
      * @return The response's body as a stream of {@link ByteBuffer}.
      */
-    public abstract Flux<ByteBuffer> body();
+    public abstract Flux<ByteBuf> body();
 
     /**
      * Get this response object's body as a byte[]. If this response object doesn't have a body,

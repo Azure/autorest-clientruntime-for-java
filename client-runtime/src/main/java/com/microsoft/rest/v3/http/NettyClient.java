@@ -21,7 +21,6 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.HttpClientResponse;
 
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -117,21 +116,14 @@ public final class NettyClient extends HttpClient {
                 }
 
                 @Override
-                public Flux<ByteBuffer> body() {
+                public Flux<ByteBuf> body() {
                     final ByteBufFlux body = bodyIntern();
                     //
-                    Flux<ByteBuffer> javaNioByteBufferFlux = body.map((ByteBuf nettyByteBuf) -> {
-                        ByteBuffer dst = ByteBuffer.allocate(nettyByteBuf.readableBytes());
-                        nettyByteBuf.readBytes(dst);
-                        dst.flip();
-                        return dst;
-                    }).doFinally(s -> {
+                    return body.doFinally(s -> {
                         if (!reactorNettyConnection.isDisposed()) {
                             reactorNettyConnection.channel().eventLoop().execute(reactorNettyConnection::dispose);
                         }
                     });
-                    //
-                    return javaNioByteBufferFlux;
                 }
 
                 @Override

@@ -9,11 +9,12 @@ package com.microsoft.rest.v3.http;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 import com.microsoft.rest.v3.protocol.SerializerEncoding;
 import com.microsoft.rest.v3.serializer.JacksonAdapter;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 public class MockHttpResponse extends HttpResponse {
     private final static SerializerAdapter<?> serializer = new JacksonAdapter();
@@ -90,11 +91,11 @@ public class MockHttpResponse extends HttpResponse {
     }
 
     @Override
-    public Flux<ByteBuffer> body() {
+    public Flux<ByteBuf> body() {
         if (bodyBytes == null) {
             return Flux.empty();
         } else {
-            return Flux.just(ByteBuffer.wrap(bodyBytes));
+            return Flux.just(Unpooled.wrappedBuffer(bodyBytes));
         }
     }
 

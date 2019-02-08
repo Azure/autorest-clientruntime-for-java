@@ -6,10 +6,11 @@
 
 package com.microsoft.rest.v3.http;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -49,8 +50,8 @@ public final class BufferedHttpResponse extends HttpResponse {
     }
 
     @Override
-    public Flux<ByteBuffer> body() {
-        return bodyAsByteArray().flatMapMany(bytes -> Flux.just(ByteBuffer.wrap(bytes)));
+    public Flux<ByteBuf> body() {
+        return bodyAsByteArray().flatMapMany(bytes -> Flux.just(Unpooled.wrappedBuffer(bytes)));
     }
 
     @Override

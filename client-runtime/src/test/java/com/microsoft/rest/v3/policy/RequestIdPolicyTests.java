@@ -13,13 +13,13 @@ import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.MockHttpClient;
+import io.netty.buffer.ByteBuf;
 import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.time.temporal.ChronoUnit;
 
 public class RequestIdPolicyTests {
@@ -45,7 +45,7 @@ public class RequestIdPolicyTests {
         }
 
         @Override
-        public Flux<ByteBuffer> body() {
+        public Flux<ByteBuf> body() {
             return Flux.empty();
         }
 

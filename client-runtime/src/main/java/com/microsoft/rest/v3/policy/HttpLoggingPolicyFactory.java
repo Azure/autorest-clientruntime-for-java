@@ -123,7 +123,7 @@ public class HttpLoggingPolicyFactory implements RequestPolicyFactory {
 
                     if (contentLength < MAX_BODY_LOG_SIZE && isHumanReadableContentType) {
                         try {
-                            Mono<byte[]> collectedBytes = FluxUtil.collectBytesInArray(request.body());
+                            Mono<byte[]> collectedBytes = FluxUtil.collectBytesInByteBufStream(request.body(), true);
                             reqBodyLoggingMono = collectedBytes.flatMap(bytes -> {
                                 String bodyString = new String(bytes, StandardCharsets.UTF_8);
                                 bodyString = prettyPrintIfNeeded(logger, request.headers().value("Content-Type"), bodyString);

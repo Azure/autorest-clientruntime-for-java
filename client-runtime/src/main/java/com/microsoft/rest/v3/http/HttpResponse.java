@@ -8,7 +8,6 @@ package com.microsoft.rest.v3.http;
 
 
 import java.io.Closeable;
-import java.nio.ByteBuffer;
 
 import com.microsoft.rest.v3.policy.DecodingPolicyFactory;
 import io.netty.buffer.ByteBuf;
@@ -71,7 +70,7 @@ public abstract class HttpResponse implements Closeable {
      * the `subscribeOn` and `observeOn` but should be considered a template for
      * more complex situations.
      *
-     * @return The response's body as a stream of {@link ByteBuffer}.
+     * @return The response's body as a stream of {@link ByteBuf}.
      */
     public abstract Flux<ByteBuf> body();
 

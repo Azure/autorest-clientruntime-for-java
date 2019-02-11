@@ -70,7 +70,7 @@ public final class HttpResponseDecoder {
         final Type entityType = getEntityType();
 
         boolean isSerializableBody = methodParser.httpMethod() != HttpMethod.HEAD
-            && !FluxUtil.isFluxByteBuffer(entityType)
+            && !FluxUtil.isFluxByteBuf(entityType)
             && !(TypeUtil.isTypeOrSubTypeOf(entityType, Mono.class) && TypeUtil.isTypeOrSubTypeOf(TypeUtil.getTypeArgument(entityType), Void.class))
             && !TypeUtil.isTypeOrSubTypeOf(entityType, byte[].class)
             && !TypeUtil.isTypeOrSubTypeOf(entityType, Void.TYPE) && !TypeUtil.isTypeOrSubTypeOf(entityType, Void.class);

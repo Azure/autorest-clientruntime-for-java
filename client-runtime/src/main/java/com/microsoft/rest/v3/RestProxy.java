@@ -29,6 +29,7 @@ import com.microsoft.rest.v3.protocol.SerializerEncoding;
 import com.microsoft.rest.v3.serializer.JacksonAdapter;
 import com.microsoft.rest.v3.util.FluxUtil;
 import com.microsoft.rest.v3.util.TypeUtil;
+import io.netty.buffer.ByteBuf;
 import io.reactivex.Single;
 import io.reactivex.exceptions.Exceptions;
 import reactor.core.publisher.Flux;
@@ -42,7 +43,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -203,16 +203,13 @@ public class RestProxy implements InvocationHandler {
             if (isJson) {
                 final String bodyContentString = serializer.serialize(bodyContentObject, SerializerEncoding.JSON);
                 request.withBody(bodyContentString);
-            }
-            else if (FluxUtil.isFluxByteBuffer(methodParser.bodyJavaType())) {
+            } else if (FluxUtil.isFluxByteBuf(methodParser.bodyJavaType())) {
                 // Content-Length or Transfer-Encoding: chunked must be provided by a user-specified header when a Flowable<byte[]> is given for the body.
                 //noinspection ConstantConditions
-                request.withBody((Flux<ByteBuffer>) bodyContentObject);
-            }
-            else if (bodyContentObject instanceof byte[]) {
+                request.withBody((Flux<ByteBuf>) bodyContentObject);
+            } else if (bodyContentObject instanceof byte[]) {
                 request.withBody((byte[]) bodyContentObject);
-            }
-            else if (bodyContentObject instanceof String) {
+            } else if (bodyContentObject instanceof String) {
                 final String bodyContentString = (String) bodyContentObject;
                 if (!bodyContentString.isEmpty()) {
                     request.withBody(bodyContentString);
@@ -276,10 +273,10 @@ public class RestProxy implements InvocationHandler {
                 final String bodyContentString = serializer.serialize(bodyContentObject, SerializerEncoding.JSON);
                 request.withBody(bodyContentString);
             }
-            else if (FluxUtil.isFluxByteBuffer(methodParser.bodyJavaType())) {
+            else if (FluxUtil.isFluxByteBuf(methodParser.bodyJavaType())) {
                 // Content-Length or Transfer-Encoding: chunked must be provided by a user-specified header when a Flowable<byte[]> is given for the body.
                 //noinspection ConstantConditions
-                request.withBody((Flux<ByteBuffer>) bodyContentObject);
+                request.withBody((Flux<ByteBuf>) bodyContentObject);
             }
             else if (bodyContentObject instanceof byte[]) {
                 request.withBody((byte[]) bodyContentObject);
@@ -472,7 +469,7 @@ public class RestProxy implements InvocationHandler {
                 responseBodyBytesAsync = responseBodyBytesAsync.map(base64UrlBytes -> new Base64Url(base64UrlBytes).decodedBytes());
             }
             asyncResult = responseBodyBytesAsync;
-        } else if (FluxUtil.isFluxByteBuffer(entityType)) {
+        } else if (FluxUtil.isFluxByteBuf(entityType)) {
             asyncResult = Mono.just(response.body());
         } else if (!response.isDecoded()) {
             asyncResult = Mono.error(new RestException(
@@ -521,7 +518,7 @@ public class RestProxy implements InvocationHandler {
                 result = asyncExpectedResponse.flatMap(response ->
                         handleRestResponseReturnTypeAsync(response, methodParser, monoTypeParam));
             }
-        } else if (FluxUtil.isFluxByteBuffer(returnType)) {
+        } else if (FluxUtil.isFluxByteBuf(returnType)) {
             result = asyncExpectedResponse.flatMapMany(HttpResponse::body);
         } else if (TypeUtil.isTypeOrSubTypeOf(returnType, void.class) || TypeUtil.isTypeOrSubTypeOf(returnType, Void.class)) {
             asyncExpectedResponse.block();

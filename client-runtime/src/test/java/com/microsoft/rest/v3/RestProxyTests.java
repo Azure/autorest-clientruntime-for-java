@@ -27,12 +27,13 @@ import com.microsoft.rest.v3.policy.HttpLoggingPolicyFactory;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 import com.microsoft.rest.v3.serializer.JacksonAdapter;
 import com.microsoft.rest.v3.util.FluxUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -1280,25 +1281,28 @@ public abstract class RestProxyTests {
         StreamResponse getBytes();
 
         @GET("/bytes/30720")
-        Flux<ByteBuffer> getBytesFlowable();
+        Flux<ByteBuf> getBytesFlowable();
     }
 
     @Test
     public void SimpleDownloadTest() {
-        StreamResponse response = createService(DownloadService.class).getBytes();
-        int count = 0;
-        for (ByteBuffer bytes : response.body().toIterable()) {
-            count += bytes.remaining();
+        try (StreamResponse response = createService(DownloadService.class).getBytes()) {
+            int count = 0;
+            for (ByteBuf byteBuf : response.body().doOnNext(b -> b.retain()).toIterable()) {
+                // assertEquals(1, byteBuf.refCnt());
+                count += byteBuf.readableBytes();
+                ReferenceCountUtil.refCnt(byteBuf);
+            }
+            assertEquals(30720, count);
         }
-        assertEquals(30720, count);
     }
 
     @Test
     public void RawFlowableDownloadTest() {
-        Flux<ByteBuffer> response = createService(DownloadService.class).getBytesFlowable();
+        Flux<ByteBuf> response = createService(DownloadService.class).getBytesFlowable();
         int count = 0;
-        for (ByteBuffer bytes : response.toIterable()) {
-            count += bytes.remaining();
+        for (ByteBuf byteBuf : response.toIterable()) {
+            count += byteBuf.readableBytes();
         }
         assertEquals(30720, count);
     }
@@ -1306,16 +1310,17 @@ public abstract class RestProxyTests {
     @Host("https://httpbin.org")
     interface FlowableUploadService {
         @PUT("/put")
-        BodyResponse<HttpBinJSON> put(@BodyParam("text/plain") Flux<ByteBuffer> content, @HeaderParam("Content-Length") long contentLength);
+        BodyResponse<HttpBinJSON> put(@BodyParam("text/plain") Flux<ByteBuf> content, @HeaderParam("Content-Length") long contentLength);
     }
 
     @Test
     public void FlowableUploadTest() throws Exception {
         Path filePath = Paths.get(getClass().getClassLoader().getResource("upload.txt").toURI());
-        Flux<ByteBuffer> stream = FluxUtil.readFile(AsynchronousFileChannel.open(filePath));
+        Flux<ByteBuf> stream = FluxUtil.byteBufStreamFromFile(AsynchronousFileChannel.open(filePath));
 
         final HttpClient httpClient = createHttpClient();
-        // Log the body so that body buffering/replay behavior is exercised.
+        // Scenario: Log the body so that body buffering/replay behavior is exercised.
+
         final HttpPipeline httpPipeline = HttpPipeline.build(httpClient, new DecodingPolicyFactory(), new HttpLoggingPolicyFactory(HttpLogDetailLevel.BODY_AND_HEADERS, true));
         RestResponse<Void, HttpBinJSON> response = RestProxy.create(FlowableUploadService.class, httpPipeline, serializer).put(stream, Files.size(filePath));
 
@@ -1327,7 +1332,7 @@ public abstract class RestProxyTests {
         Path filePath = Paths.get(getClass().getClassLoader().getResource("upload.txt").toURI());
         AsynchronousFileChannel fileChannel = AsynchronousFileChannel.open(filePath, StandardOpenOption.READ);
         BodyResponse<HttpBinJSON> response = createService(FlowableUploadService.class)
-                .put(FluxUtil.readFile(fileChannel, 4, 15), 15);
+                .put(FluxUtil.byteBufStreamFromFile(fileChannel, 4, 15), 15);
 
         assertEquals("quick brown fox", response.body().data);
     }

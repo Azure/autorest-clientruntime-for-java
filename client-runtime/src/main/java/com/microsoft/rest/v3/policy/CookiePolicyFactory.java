@@ -9,6 +9,7 @@ package com.microsoft.rest.v3.policy;
 import com.microsoft.rest.v3.http.HttpHeader;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -62,8 +63,8 @@ public final class CookiePolicyFactory implements RequestPolicyFactory {
 
                     try {
                         cookies.put(uri, responseHeaders);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e); // TODO: anuchan Review this to ensure propagation
+                    } catch (IOException ioe) {
+                        throw Exceptions.propagate(ioe);
                     }
                     return httpResponse;
                 });

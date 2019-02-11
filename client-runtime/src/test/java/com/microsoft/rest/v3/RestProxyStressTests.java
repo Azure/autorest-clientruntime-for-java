@@ -27,6 +27,8 @@ import com.microsoft.rest.v3.policy.RequestPolicy;
 import com.microsoft.rest.v3.policy.RequestPolicyFactory;
 import com.microsoft.rest.v3.policy.RequestPolicyOptions;
 import com.microsoft.rest.v3.util.FluxUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.util.ResourceLeakDetector;
 import io.reactivex.Completable;
 import io.reactivex.CompletableSource;
@@ -48,7 +50,7 @@ import reactor.core.publisher.Mono;
 import java.io.File;
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
-import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
 import java.nio.file.FileVisitResult;
@@ -186,7 +188,7 @@ public class RestProxyStressTests {
     interface IOService {
         @ExpectedResponses({201})
         @PUT("/javasdktest/upload/100m-{id}.dat?{sas}")
-        Mono<VoidResponse> upload100MB(@PathParam("id") String id, @PathParam(value = "sas", encoded = true) String sas, @HeaderParam("x-ms-blob-type") String blobType, @BodyParam(ContentType.APPLICATION_OCTET_STREAM) Flux<ByteBuffer> stream, @HeaderParam("content-length") long contentLength);
+        Mono<VoidResponse> upload100MB(@PathParam("id") String id, @PathParam(value = "sas", encoded = true) String sas, @HeaderParam("x-ms-blob-type") String blobType, @BodyParam(ContentType.APPLICATION_OCTET_STREAM) Flux<ByteBuf> stream, @HeaderParam("content-length") long contentLength);
 
         @GET("/javasdktest/upload/100m-{id}.dat?{sas}")
         Mono<StreamResponse> download100M(@PathParam("id") String id, @PathParam(value = "sas", encoded = true) String sas);
@@ -230,8 +232,8 @@ public class RestProxyStressTests {
     }
 
     private static void create100MFiles(boolean recreate) throws IOException {
-        final Flowable<ByteBuffer> contentGenerator = Flowable.generate(Random::new, (random, emitter) -> {
-            ByteBuffer buf = ByteBuffer.allocate(CHUNK_SIZE);
+        final Flowable<java.nio.ByteBuffer> contentGenerator = Flowable.generate(Random::new, (random, emitter) -> {
+            java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(CHUNK_SIZE);
             random.nextBytes(buf.array());
             emitter.onNext(buf);
         });
@@ -256,7 +258,7 @@ public class RestProxyStressTests {
                     final AsynchronousFileChannel file = AsynchronousFileChannel.open(filePath, StandardOpenOption.READ, StandardOpenOption.WRITE);
                     final MessageDigest messageDigest = MessageDigest.getInstance("MD5");
 
-                    Flowable<ByteBuffer> fileContent = contentGenerator
+                    Flowable<java.nio.ByteBuffer> fileContent = contentGenerator
                             .take(CHUNKS_PER_FILE)
                             .doOnNext(buf -> messageDigest.update(buf.array()));
 
@@ -286,8 +288,8 @@ public class RestProxyStressTests {
             LoggerFactory.getLogger(RestProxyStressTests.class).info("Generating temp files in directory: " + TEMP_FOLDER_PATH.toAbsolutePath());
             Files.createDirectory(TEMP_FOLDER_PATH);
             //
-            final Flux<ByteBuffer> contentGenerator = Flux.generate(Random::new, (random, synchronousSink) -> {
-                ByteBuffer buf = ByteBuffer.allocate(CHUNK_SIZE);
+            final Flux<java.nio.ByteBuffer> contentGenerator = Flux.generate(Random::new, (random, synchronousSink) -> {
+                java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(CHUNK_SIZE);
                 random.nextBytes(buf.array());
                 synchronousSink.next(buf);
                 return random;
@@ -313,7 +315,7 @@ public class RestProxyStressTests {
                     throw Exceptions.propagate(nsae);
                 }
                 //
-                Flux<ByteBuffer> fileContent = contentGenerator
+                Flux<java.nio.ByteBuffer> fileContent = contentGenerator
                         .take(CHUNKS_PER_FILE)
                         .doOnNext(buf -> messageDigest.update(buf.array()));
                 //
@@ -363,7 +365,7 @@ public class RestProxyStressTests {
                     } catch (IOException ioe) {
                         Exceptions.propagate(ioe);
                     }
-                    return service.upload100MB(String.valueOf(id), sas, "BlockBlob", FluxUtil.readFile(fileStream), FILE_SIZE).map(response -> {
+                    return service.upload100MB(String.valueOf(id), sas, "BlockBlob", FluxUtil.byteBufStreamFromFile(fileStream), FILE_SIZE).map(response -> {
                         String base64MD5 = response.rawHeaders().get("Content-MD5");
                         byte[] receivedMD5 = Base64.getDecoder().decode(base64MD5);
                         Assert.assertArrayEquals(md5, receivedMD5);
@@ -402,10 +404,14 @@ public class RestProxyStressTests {
                         Exceptions.propagate(ioe);
                     }
                     //
-                    Flux<ByteBuffer> stream = null;
+                    ByteBuf mappedByteBufFile = null;
+                    Flux<ByteBuf> stream = null;
                     try {
-                        stream = FluxUtil.split(fileStream.map(FileChannel.MapMode.READ_ONLY, 0, fileStream.size()), CHUNK_SIZE);
+                        MappedByteBuffer mappedByteBufferFile = fileStream.map(FileChannel.MapMode.READ_ONLY, 0, fileStream.size());
+                        mappedByteBufFile = Unpooled.wrappedBuffer(mappedByteBufferFile);
+                        stream = FluxUtil.split(mappedByteBufFile, CHUNK_SIZE);
                     } catch (IOException ioe) {
+                        mappedByteBufFile.release();
                         Exceptions.propagate(ioe);
                     }
                     //
@@ -446,11 +452,11 @@ public class RestProxyStressTests {
         Flux.range(0, NUM_FILES)
                 .zipWith(md5s, (id, md5) -> {
                     return service.download100M(String.valueOf(id), sas).flatMap(response -> {
-                        Flux<ByteBuffer> content;
+                        Flux<ByteBuf> content;
                         try {
                             MessageDigest messageDigest = MessageDigest.getInstance("MD5");
                             content = response.body()
-                                    .doOnNext(buf -> messageDigest.update(buf.slice()));
+                                    .doOnNext(buf -> messageDigest.update(buf.slice().nioBuffer()));
 
                             return content.last().doOnSuccess(b -> {
                                 assertArrayEquals(md5, messageDigest.digest());
@@ -489,10 +495,37 @@ public class RestProxyStressTests {
         Flux.range(0, NUM_FILES)
                 .zipWith(md5s, (integer, md5) -> {
                     final int id = integer;
-                    Flux<ByteBuffer> downloadContent = service.download100M(String.valueOf(id), sas)
+                    Flux<ByteBuf> downloadContent = service.download100M(String.valueOf(id), sas)
                             // Ideally we would intercept this content to load an MD5 to check consistency between download and upload directly,
                             // but it's sufficient to demonstrate that no corruption occurred between preparation->upload->download->upload.
-                            .flatMapMany(StreamResponse::body);
+                            .flatMapMany(StreamResponse::body)
+                            .map(reactorNettybb -> {
+                                //
+                                // This test 'downloadUploadStreamingTest' exercises piping scenario.
+                                //
+                                //   A. Receive ByteBufFlux from reactor-netty from NettyInbound.receive() [via service.download100M].
+                                //   B. Directly pass this ByteBufFlux to Outbound.send() [via service.upload100MB]
+                                //
+                                //   NettyOutbound.send(NettyInbound.receive())
+                                //
+                                // A property of ByteBufFlux publisher is - The chunks in the stream gets released automatically once 'onNext' returns.
+                                //
+                                // The Outbound.send method subscribe to ByteBufFlux
+                                //     1. on each onNext call, the received ByteBuf chunk gets 'scheduled' to write through Netty.write()
+                                //     2. onNext returns.
+                                //     3. repeat 1 & 2 until stream completes or errored.
+                                //
+                                // The scheduling & immediate return from onNext [1 & 2] can result in the a chunk of ByteBufFlux to be released
+                                // before the scheduled Netty.write() completes.
+                                //
+                                // This can cause following issues:
+                                //   a. Write of content of released chunks, which is bad.
+                                //   b. Netty.write() calls release on the ByteBuf after write is done. We have double release problem here.
+                                //
+                                // Solution is to aware of ByteBufFlux auto-release property and retain each chunk before passing to Netty.write().
+                                //
+                                return reactorNettybb.retain();
+                            });
                     //
                     return service.upload100MB("copy-" + integer, sas, "BlockBlob", downloadContent, FILE_SIZE)
                             .flatMap(uploadResponse -> {

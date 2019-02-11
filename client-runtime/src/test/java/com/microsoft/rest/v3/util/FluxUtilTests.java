@@ -6,6 +6,8 @@
 
 package com.microsoft.rest.v3.util;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.Exceptions;
@@ -33,7 +35,7 @@ public class FluxUtilTests {
         FileOutputStream stream = new FileOutputStream(file);
         stream.write("hello there".getBytes(StandardCharsets.UTF_8));
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-            byte[] bytes = FluxUtil.readFile(channel, 1, 3)
+            byte[] bytes = FluxUtil.byteBufferStreamFromFile(channel, 1, 3)
                     .map(bb -> toBytes(bb))
                     .collect(() -> new ByteArrayOutputStream(),
                         (bos, b) -> {
@@ -57,7 +59,7 @@ public class FluxUtilTests {
         File file = new File("target/test2");
         file.createNewFile();
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-            byte[] bytes = FluxUtil.readFile(channel, 1, 3)
+            byte[] bytes = FluxUtil.byteBufferStreamFromFile(channel, 1, 3)
                     .map(bb -> toBytes(bb)) //
                     .collect(() -> new ByteArrayOutputStream(),
                             (bos, b) -> {
@@ -79,7 +81,7 @@ public class FluxUtilTests {
         FileOutputStream stream = new FileOutputStream(file);
         stream.write("hello there".getBytes(StandardCharsets.UTF_8));
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-            byte[] bytes = FluxUtil.readFile(channel)
+            byte[] bytes = FluxUtil.byteBufferStreamFromFile(channel)
                     .map(bb -> toBytes(bb))
                     .limitRequest(1)    // TODO: Check with smaldini - With Rx rebatchRequests(1) was used, what is equivalent in reactor
                     .subscribeOn(reactor.core.scheduler.Schedulers.newElastic("io", 30))
@@ -116,7 +118,7 @@ public class FluxUtilTests {
         byte[] expected = digest.digest();
         digest.reset();
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-            FluxUtil.readFile(channel)
+            FluxUtil.byteBufferStreamFromFile(channel)
                     .subscribeOn(reactor.core.scheduler.Schedulers.newElastic("io", 30))
                     .publishOn(reactor.core.scheduler.Schedulers.newElastic("io", 30))
                     .toIterable().forEach(bb -> digest.update(bb));
@@ -142,7 +144,7 @@ public class FluxUtilTests {
 //        digest.reset();
 //
 //        try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-//            FluxUtil1.readFile(channel)
+//            FluxUtil1.byteBufferStreamFromFile(channel)
 //                    .rebatchRequests(1)
 //                    .subscribeOn(Schedulers.io())
 //                    .observeOn(Schedulers.io())
@@ -166,38 +168,52 @@ public class FluxUtilTests {
     
     @Test
     public void testSplitForMultipleSplitSizesFromOneTo16() throws NoSuchAlgorithmException {
-        ByteBuffer bb = ByteBuffer.allocateDirect(1000);
-        for (int i = 0;i < 1000;i++) {
-            bb.put((byte) i);
-        }
-        bb.flip();
-        MessageDigest digest = MessageDigest.getInstance("MD5");
-        digest.update(bb);
-        byte[] expected = digest.digest();
-        for (int size=1; size<16; size++) {
-            System.out.println("size="+ size);
-            digest.reset();
-            bb.position(0);
-            //
-            FluxUtil.split(bb, 3).doOnNext(b -> digest.update(b))
-                    .subscribe();
+        ByteBuf bb = null;
+        try {
+            bb = Unpooled.directBuffer(1000);
+            byte [] oneByte = new byte[1];
+            for (int i = 0; i < 1000; i++) {
+                oneByte[0] = (byte) i;
+                bb.writeBytes(oneByte);
+            }
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            digest.update(bb.nioBuffer());
+            byte[] expected = digest.digest();
+            for (int size = 1; size < 16; size++) {
+                System.out.println("size=" + size);
+                digest.reset();
+                bb.readerIndex(0);
+                //
+                FluxUtil.split(bb, 3).doOnNext(b -> digest.update(b.nioBuffer()))
+                        .subscribe();
 //
 //            StepVerifier.create(FluxUtil1.split(bb, 3).doOnNext(b -> digest.update(b)))
 //                    .expectNextCount(?) // TODO: ? is Unknown. Check with smaldini - what is the Verifier way to ignore all next calls and simply check stream completes?
 //                    .verifyComplete();
 //
-            assertArrayEquals(expected, digest.digest());
+                assertArrayEquals(expected, digest.digest());
+            }
+        } finally {
+            if (bb != null) {
+                bb.release();
+            }
         }
     }
     
     @Test
     public void testSplitOnEmptyContent() {
-        ByteBuffer bb = ByteBuffer.allocateDirect(16);
-        bb.flip();
-        StepVerifier.create(FluxUtil.split(bb, 3))
-                .expectNextCount(0)
-                .expectComplete()
-                .verify();
+        ByteBuf bb = null;
+        try {
+            bb = Unpooled.directBuffer(16);
+            StepVerifier.create(FluxUtil.split(bb, 3))
+                    .expectNextCount(0)
+                    .expectComplete()
+                    .verify();
+        } finally {
+            if (bb != null) {
+                bb.release();
+            }
+        }
     }
 //
     private static byte[] toBytes(ByteBuffer bb) {

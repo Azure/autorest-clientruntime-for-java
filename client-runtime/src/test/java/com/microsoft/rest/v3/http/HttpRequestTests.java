@@ -1,12 +1,12 @@
 package com.microsoft.rest.v3.http;
 
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.ByteBuffer;
 
 import static org.junit.Assert.*;
 
@@ -30,7 +30,7 @@ public class HttpRequestTests {
                 HttpMethod.fromString("request http method"),
                 new URL("http://request.url"),
                 headers,
-                Flux.just(ByteBuffer.allocate(0)), null);
+                Flux.just(Unpooled.buffer(0, 0)), null);
 
         final HttpRequest bufferedRequest = request.buffer();
 

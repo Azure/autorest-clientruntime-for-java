@@ -7,16 +7,16 @@
 package com.microsoft.rest.v3;
 
 import com.microsoft.rest.v3.http.HttpRequest;
+import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 
 import java.io.Closeable;
-import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**
  * A response to a REST call with a streaming body.
  */
-public final class StreamResponse extends RestResponse<Void, Flux<ByteBuffer>> implements Closeable {
+public final class StreamResponse extends RestResponse<Void, Flux<ByteBuf>> implements Closeable {
     /**
      * Creates a StreamResponse.
      *
@@ -25,13 +25,13 @@ public final class StreamResponse extends RestResponse<Void, Flux<ByteBuffer>> i
      * @param rawHeaders the raw headers of the HTTP response
      * @param body the streaming body
      */
-    public StreamResponse(HttpRequest request, int statusCode, Map<String, String> rawHeaders, Flux<ByteBuffer> body) {
+    public StreamResponse(HttpRequest request, int statusCode, Map<String, String> rawHeaders, Flux<ByteBuf> body) {
         super(request, statusCode, null, rawHeaders, body);
     }
 
     // Used for uniform reflective creation in RestProxy.
     @SuppressWarnings("unused")
-    StreamResponse(HttpRequest request, int statusCode, Void headers, Map<String, String> rawHeaders, Flux<ByteBuffer> body) {
+    StreamResponse(HttpRequest request, int statusCode, Void headers, Map<String, String> rawHeaders, Flux<ByteBuf> body) {
         super(request, statusCode, headers, rawHeaders, body);
     }
 
@@ -50,7 +50,7 @@ public final class StreamResponse extends RestResponse<Void, Flux<ByteBuffer>> i
      * @return the body content stream
      */
     @Override
-    public Flux<ByteBuffer> body() {
+    public Flux<ByteBuf> body() {
         return super.body();
     }
 

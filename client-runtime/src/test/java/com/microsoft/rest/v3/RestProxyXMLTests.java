@@ -19,11 +19,11 @@ import com.microsoft.rest.v3.http.HttpClient;
 import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.MockHttpResponse;
 import com.microsoft.rest.v3.policy.DecodingPolicy;
+import com.microsoft.rest.v3.policy.HttpPipelineOptions;
 import com.microsoft.rest.v3.protocol.SerializerEncoding;
 import com.microsoft.rest.v3.serializer.JacksonAdapter;
 import com.microsoft.rest.v3.util.FluxUtil;
@@ -81,10 +81,10 @@ public class RestProxyXMLTests {
     @Test
     public void canReadXMLResponse() throws Exception {
         //
-        HttpPipeline pipeline = new HttpPipelineBuilder()
-                .withPolicy(new DecodingPolicy())
-                .withHttpClient(new MockXMLHTTPClient())
-                .build();
+        final HttpPipeline pipeline = new HttpPipeline(new MockXMLHTTPClient(),
+                new HttpPipelineOptions(null),
+                new DecodingPolicy());
+
         //
         MyXMLService myXMLService = RestProxy.create(MyXMLService.class,
                 pipeline,
@@ -132,10 +132,9 @@ public class RestProxyXMLTests {
         JacksonAdapter serializer = new JacksonAdapter();
         MockXMLReceiverClient httpClient = new MockXMLReceiverClient();
         //
-        HttpPipeline pipeline = new HttpPipelineBuilder()
-                .withPolicy(new DecodingPolicy())
-                .withHttpClient(httpClient)
-                .build();
+        final HttpPipeline pipeline = new HttpPipeline(httpClient,
+                new HttpPipelineOptions(null),
+                new DecodingPolicy());
         //
         MyXMLService myXMLService = RestProxy.create(MyXMLService.class,
                 pipeline,
@@ -169,10 +168,10 @@ public class RestProxyXMLTests {
     public void canDeserializeXMLWithAttributes() throws Exception {
         JacksonAdapter serializer = new JacksonAdapter();
         //
-        HttpPipeline pipeline = new HttpPipelineBuilder()
-                .withPolicy(new DecodingPolicy())
-                .withHttpClient(new MockXMLHTTPClient())
-                .build();
+        final HttpPipeline pipeline = new HttpPipeline(new MockXMLHTTPClient(),
+                new HttpPipelineOptions(null),
+                new DecodingPolicy());
+
         //
         MyXMLServiceWithAttributes myXMLService = RestProxy.create(
                 MyXMLServiceWithAttributes.class,

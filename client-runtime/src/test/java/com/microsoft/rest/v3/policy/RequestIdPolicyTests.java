@@ -9,7 +9,6 @@ package com.microsoft.rest.v3.policy;
 import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.MockHttpClient;
@@ -59,26 +58,25 @@ public class RequestIdPolicyTests {
 
     @Test
     public void newRequestIdForEachCall() throws Exception {
-        HttpPipeline pipeline = new HttpPipelineBuilder()
-            .withPolicy(new RequestIdPolicy())
-            .withHttpClient(new MockHttpClient() {
-                String firstRequestId = null;
-                @Override
-                public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
-                    if (firstRequestId != null) {
-                        String newRequestId = request.headers().value(REQUEST_ID_HEADER);
-                        Assert.assertNotNull(newRequestId);
-                        Assert.assertNotEquals(newRequestId, firstRequestId);
-                    }
-
-                    firstRequestId = request.headers().value(REQUEST_ID_HEADER);
-                    if (firstRequestId == null) {
-                        Assert.fail();
-                    }
-                    return Mono.just(mockResponse);
+        HttpPipeline pipeline = new HttpPipeline(new MockHttpClient() {
+            String firstRequestId = null;
+            @Override
+            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                if (firstRequestId != null) {
+                    String newRequestId = request.headers().value(REQUEST_ID_HEADER);
+                    Assert.assertNotNull(newRequestId);
+                    Assert.assertNotEquals(newRequestId, firstRequestId);
                 }
-            })
-            .build();
+
+                firstRequestId = request.headers().value(REQUEST_ID_HEADER);
+                if (firstRequestId == null) {
+                    Assert.fail();
+                }
+                return Mono.just(mockResponse);
+            }
+        },
+        new HttpPipelineOptions(null),
+        new RequestIdPolicy());
 
         pipeline.sendRequest(new HttpRequest("newRequestIdForEachCall", HttpMethod.GET, new URL("http://localhost/"), null)).block();
         pipeline.sendRequest(new HttpRequest("newRequestIdForEachCall", HttpMethod.GET, new URL("http://localhost/"), null)).block();
@@ -86,26 +84,26 @@ public class RequestIdPolicyTests {
 
     @Test
     public void sameRequestIdForRetry() throws Exception {
-        HttpPipeline pipeline = new HttpPipelineBuilder()
-                .withPolicy(new RequestIdPolicy())
-                .withPolicy(new RetryPolicy(1, 0, ChronoUnit.SECONDS))
-                .withHttpClient(new MockHttpClient() {
-                    String firstRequestId = null;
+        final HttpPipeline pipeline = new HttpPipeline(new MockHttpClient() {
+            String firstRequestId = null;
 
-                    @Override
-                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
-                        if (firstRequestId != null) {
-                            String newRequestId = request.headers().value(REQUEST_ID_HEADER);
-                            Assert.assertNotNull(newRequestId);
-                            Assert.assertEquals(newRequestId, firstRequestId);
-                        }
-                        firstRequestId = request.headers().value(REQUEST_ID_HEADER);
-                        if (firstRequestId == null) {
-                            Assert.fail();
-                        }
-                        return Mono.just(mockResponse);
-                    }
-                }).build();
+            @Override
+            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                if (firstRequestId != null) {
+                    String newRequestId = request.headers().value(REQUEST_ID_HEADER);
+                    Assert.assertNotNull(newRequestId);
+                    Assert.assertEquals(newRequestId, firstRequestId);
+                }
+                firstRequestId = request.headers().value(REQUEST_ID_HEADER);
+                if (firstRequestId == null) {
+                    Assert.fail();
+                }
+                return Mono.just(mockResponse);
+            }
+        },
+        new HttpPipelineOptions(null),
+        new RequestIdPolicy(),
+        new RetryPolicy(1, 0, ChronoUnit.SECONDS));
 
         pipeline.sendRequest(new HttpRequest("sameRequestIdForRetry", HttpMethod.GET, new URL("http://localhost/"), null)).block();
     }

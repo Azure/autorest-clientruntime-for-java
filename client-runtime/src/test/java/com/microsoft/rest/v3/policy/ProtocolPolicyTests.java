@@ -3,7 +3,6 @@ package com.microsoft.rest.v3.policy;
 import com.microsoft.rest.v3.http.HttpClient;
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import org.junit.Test;
@@ -28,35 +27,33 @@ public class ProtocolPolicyTests {
         pipeline.sendRequest(createHttpRequest("https://www.bing.com"));
     }
     private static HttpPipeline createPipeline(String protocol, String expectedUrl) {
-        return new HttpPipelineBuilder()
-                .withPolicy(new ProtocolPolicy(protocol))
-                .withPolicy((context, next) -> {
-                    assertEquals(expectedUrl, context.httpRequest().url().toString());
-                    return next.process();
-                })
-                .withHttpClient(new HttpClient() {
-                    @Override
-                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
-                        return Mono.empty(); // NOP
-                    }
-                })
-                .build();
+        return new HttpPipeline(new HttpClient() {
+            @Override
+            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                return Mono.empty(); // NOP
+            }
+        },
+        new HttpPipelineOptions(null),
+        new ProtocolPolicy(protocol),
+        (context, next) -> {
+            assertEquals(expectedUrl, context.httpRequest().url().toString());
+            return next.process();
+        });
     }
 
     private static HttpPipeline createPipeline(String protocol, boolean overwrite, String expectedUrl) {
-        return new HttpPipelineBuilder()
-                .withPolicy(new ProtocolPolicy(protocol, overwrite, RequestPolicyOptions.NULL_REQUEST_POLICY_OPTIONS))
-                .withPolicy((context, next) -> {
-                    assertEquals(expectedUrl, context.httpRequest().url().toString());
-                    return next.process();
-                })
-                .withHttpClient(new HttpClient() {
-                    @Override
-                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
-                        return Mono.empty(); // NOP
-                    }
-                })
-            .build();
+        return new HttpPipeline(new HttpClient() {
+            @Override
+            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                return Mono.empty(); // NOP
+            }
+        },
+        new HttpPipelineOptions(null),
+        new ProtocolPolicy(protocol, overwrite, new HttpPipelineOptions(null)),
+        (context, next) -> {
+            assertEquals(expectedUrl, context.httpRequest().url().toString());
+            return next.process();
+        });
     }
 
     private static HttpRequest createHttpRequest(String url) throws MalformedURLException {

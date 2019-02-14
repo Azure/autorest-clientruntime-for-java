@@ -3,7 +3,6 @@ package com.microsoft.rest.v3.policy;
 import com.microsoft.rest.v3.http.HttpClient;
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import org.junit.Test;
@@ -28,19 +27,17 @@ public class HostPolicyTests {
     }
 
     private static HttpPipeline createPipeline(String host, String expectedUrl) {
-        return new HttpPipelineBuilder()
-                .withPolicy(new HostPolicy(host))
-                .withPolicy((context, next) -> {
-                    assertEquals(expectedUrl, context.httpRequest().url().toString());
-                    return next.process();
-                })
-                .withHttpClient(new HttpClient() {
-                    @Override
-                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
-                        return Mono.empty(); // NOP
-                    }
-                })
-            .build();
+        return new HttpPipeline(new HttpClient() {
+            @Override
+            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                return Mono.empty(); // NOP
+            }
+        }, new HttpPipelineOptions(null),
+        new HostPolicy(host),
+        (context, next) -> {
+            assertEquals(expectedUrl, context.httpRequest().url().toString());
+            return next.process();
+        });
     }
 
     private static HttpRequest createHttpRequest(String url) throws MalformedURLException {

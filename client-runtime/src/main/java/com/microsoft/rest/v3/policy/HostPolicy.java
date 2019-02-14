@@ -27,7 +27,7 @@ public class HostPolicy extends AbstractPipelinePolicy {
      * @param host The host to set on every HttpRequest.
      */
     public HostPolicy(String host) {
-        this(host, RequestPolicyOptions.NULL_REQUEST_POLICY_OPTIONS);
+        this(host, new HttpPipelineOptions(null));
     }
 
     /**
@@ -36,7 +36,7 @@ public class HostPolicy extends AbstractPipelinePolicy {
      * @param host The host to set on every HttpRequest.
      * @param options the request options
      */
-    public HostPolicy(String host, RequestPolicyOptions options) {
+    public HostPolicy(String host, HttpPipelineOptions options) {
         super(options);
         this.host = host;
     }

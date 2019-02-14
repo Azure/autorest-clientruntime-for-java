@@ -6,46 +6,46 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class RequestPolicyOptionsTests {
+public class HttpPipelineOptionsTests {
     @Test
     public void shouldLogWithNullLogger() {
-        final RequestPolicyOptions options = new RequestPolicyOptions(null);
+        final HttpPipelineOptions options = new HttpPipelineOptions(null);
         assertFalse(options.shouldLog(HttpPipelineLogLevel.INFO));
     }
 
     @Test
     public void shouldLogWithNullLogLevel() {
-        final RequestPolicyOptions options = new RequestPolicyOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.INFO));
+        final HttpPipelineOptions options = new HttpPipelineOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.INFO));
         assertFalse(options.shouldLog(null));
     }
 
     @Test
     public void shouldLogWithOFFLogLevelAndOFFMinimum() {
-        final RequestPolicyOptions options = new RequestPolicyOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.OFF));
+        final HttpPipelineOptions options = new HttpPipelineOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.OFF));
         assertFalse(options.shouldLog(HttpPipelineLogLevel.OFF));
     }
 
     @Test
     public void shouldLogWithOFFLogLevelAndINFOMinimum() {
-        final RequestPolicyOptions options = new RequestPolicyOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.INFO));
+        final HttpPipelineOptions options = new HttpPipelineOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.INFO));
         assertFalse(options.shouldLog(HttpPipelineLogLevel.OFF));
     }
 
     @Test
     public void shouldLogWithINFOLogLevelAndINFOMinimum() {
-        final RequestPolicyOptions options = new RequestPolicyOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.INFO));
+        final HttpPipelineOptions options = new HttpPipelineOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.INFO));
         assertTrue(options.shouldLog(HttpPipelineLogLevel.INFO));
     }
 
     @Test
     public void shouldLogWithINFOLogLevelAndWARNINGMinimum() {
-        final RequestPolicyOptions options = new RequestPolicyOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.WARNING));
+        final HttpPipelineOptions options = new HttpPipelineOptions(new MockHttpPipelineLogger(HttpPipelineLogLevel.WARNING));
         assertFalse(options.shouldLog(HttpPipelineLogLevel.INFO));
     }
 
     @Test
     public void logWithNullLogger() {
-        final RequestPolicyOptions options = new RequestPolicyOptions(null);
+        final HttpPipelineOptions options = new HttpPipelineOptions(null);
         options.log(HttpPipelineLogLevel.INFO, "Test Log");
     }
 }

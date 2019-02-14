@@ -7,7 +7,7 @@
 package com.microsoft.rest.v3.http;
 
 import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
-import com.microsoft.rest.v3.policy.RequestPolicyOptions;
+import com.microsoft.rest.v3.policy.HttpPipelineOptions;
 import reactor.core.publisher.Mono;
 
 import java.util.Objects;
@@ -16,25 +16,55 @@ import java.util.Objects;
  * The http pipeline.
  */
 public final class HttpPipeline {
-    private final HttpPipelinePolicy[] pipelinePolicies;
     private final HttpClient httpClient;
-    private final RequestPolicyOptions requestPolicyOptions;
+    private final HttpPipelineOptions requestPolicyOptions;
+    private final HttpPipelinePolicy[] pipelinePolicies;
+
+    /**
+     * Creates a HttpPipeline holding array of policies that gets applied to all request initiated through
+     * {@link HttpPipeline#sendRequest(HttpPipelineCallContext)} and it's response.
+     *
+     * @param httpClient the http client to write request to wire and receive response from wire.
+     * @param requestPolicyOptions optional properties that gets available in {@link HttpPipelineCallContext} for policies.
+     * @param pipelinePolicies pipeline policies in the order they need to applied
+     */
+    public HttpPipeline(HttpClient httpClient, HttpPipelineOptions requestPolicyOptions, HttpPipelinePolicy... pipelinePolicies) {
+        Objects.requireNonNull(pipelinePolicies);
+        Objects.requireNonNull(httpClient);
+        this.pipelinePolicies = pipelinePolicies;
+        this.httpClient = httpClient;
+        this.requestPolicyOptions = requestPolicyOptions;
+    }
+
+    /**
+     * Creates a HttpPipeline holding array of policies that gets applied all request initiated through
+     * {@link HttpPipeline#sendRequest(HttpPipelineCallContext)} and it's response.
+     *
+     * The default HttpClient {@link HttpClient#createDefault()} will be used to write request to wire and
+     * receive response from wire.
+     *
+     * @param requestPolicyOptions optional properties that gets available in {@link HttpPipelineCallContext} for policies.
+     * @param pipelinePolicies pipeline policies in the order they need to applied
+     */
+    public HttpPipeline(HttpPipelineOptions requestPolicyOptions, HttpPipelinePolicy... pipelinePolicies) {
+        Objects.requireNonNull(pipelinePolicies);
+        this.pipelinePolicies = pipelinePolicies;
+        this.httpClient = HttpClient.createDefault();
+        this.requestPolicyOptions = requestPolicyOptions;
+    }
 
     /**
      * Creates a HttpPipeline holding array of policies that gets applied
      * to all request initiated through {@link HttpPipeline#sendRequest(HttpPipelineCallContext)}
      * and it's response.
      *
+     * The default HttpClient {@link HttpClient#createDefault()} will be used to write request to wire and
+     * receive response from wire.
+     *
      * @param pipelinePolicies pipeline policies in the order they need to applied
-     * @param httpClient the http client to write request to wire and receive response from wire.
-     * @param requestPolicyOptions optional properties that gets available in {@link HttpPipelineCallContext} for policies.
      */
-    public HttpPipeline(HttpPipelinePolicy[] pipelinePolicies, HttpClient httpClient, RequestPolicyOptions requestPolicyOptions) {
-        Objects.requireNonNull(pipelinePolicies);
-        Objects.requireNonNull(httpClient);
-        this.pipelinePolicies = pipelinePolicies;
-        this.httpClient = httpClient;
-        this.requestPolicyOptions = requestPolicyOptions;
+    public HttpPipeline(HttpPipelinePolicy... pipelinePolicies) {
+        this(new HttpPipelineOptions(null), pipelinePolicies);
     }
 
     /**

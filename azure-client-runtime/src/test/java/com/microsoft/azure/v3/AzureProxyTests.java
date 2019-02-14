@@ -9,10 +9,10 @@ import com.microsoft.azure.v3.http.MockAzureHttpResponse;
 import com.microsoft.rest.v3.OperationDescription;
 import com.microsoft.rest.v3.RestException;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.policy.DecodingPolicy;
+import com.microsoft.rest.v3.policy.HttpPipelineOptions;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 import com.microsoft.rest.v3.serializer.JacksonAdapter;
 import com.microsoft.rest.v3.InvalidReturnTypeException;
@@ -853,10 +853,10 @@ public class AzureProxyTests {
     }
 
     private static <T> T createMockService(Class<T> serviceClass, MockAzureHttpClient httpClient) {
-        HttpPipeline pipeline = new HttpPipelineBuilder()
-                .withPolicy(new DecodingPolicy())
-                .withHttpClient(httpClient)
-                .build();
+        HttpPipeline pipeline = new HttpPipeline(httpClient,
+                new HttpPipelineOptions(null),
+                new DecodingPolicy());
+
         return AzureProxy.create(serviceClass, null, pipeline, serializer);
     }
 

@@ -34,9 +34,9 @@ public class HttpPipelineOptions {
     }
 
     /**
-     * Configure the Logger that will be used for each RequestPolicy within the created
+     * Configure the Logger that will be used for each HttpPipelinePolicy within the created
      * HttpPipeline.
-     * @param logger The Logger to provide to each RequestPolicy.
+     * @param logger The Logger to provide to each HttpPipelinePolicy.
      * @return This HttpPipeline options object.
      */
     public HttpPipelineOptions withLogger(HttpPipelineLogger logger) {

@@ -21,9 +21,10 @@ import com.microsoft.rest.v3.http.ContentType;
 import com.microsoft.rest.v3.http.HttpClient;
 import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.policy.DecodingPolicyFactory;
+import com.microsoft.rest.v3.http.HttpPipelineBuilder;
+import com.microsoft.rest.v3.policy.DecodingPolicy;
 import com.microsoft.rest.v3.policy.HttpLogDetailLevel;
-import com.microsoft.rest.v3.policy.HttpLoggingPolicyFactory;
+import com.microsoft.rest.v3.policy.HttpLoggingPolicy;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 import com.microsoft.rest.v3.serializer.JacksonAdapter;
 import com.microsoft.rest.v3.util.FluxUtil;
@@ -1320,8 +1321,15 @@ public abstract class RestProxyTests {
 
         final HttpClient httpClient = createHttpClient();
         // Scenario: Log the body so that body buffering/replay behavior is exercised.
-
-        final HttpPipeline httpPipeline = HttpPipeline.build(httpClient, new DecodingPolicyFactory(), new HttpLoggingPolicyFactory(HttpLogDetailLevel.BODY_AND_HEADERS, true));
+        //
+        // Order in which policies applied will be the order in which they added to builder
+        //
+        HttpPipeline httpPipeline = new HttpPipelineBuilder()
+                .withPolicy(new DecodingPolicy())
+                .withPolicy(new HttpLoggingPolicy(HttpLogDetailLevel.BODY_AND_HEADERS, true))
+                .withHttpClient(httpClient)
+                .build();
+        //
         RestResponse<Void, HttpBinJSON> response = RestProxy.create(FlowableUploadService.class, httpPipeline, serializer).put(stream, Files.size(filePath));
 
         assertEquals("The quick brown fox jumps over the lazy dog", response.body().data);
@@ -1397,20 +1405,20 @@ public abstract class RestProxyTests {
 
     @Test(expected = RestException.class)
     public void testMissingDecodingPolicyCausesException() {
-        Service25 service = RestProxy.create(Service25.class, HttpPipeline.build());
+        Service25 service = RestProxy.create(Service25.class, new HttpPipelineBuilder().build());
         service.get();
     }
 
     @Test(expected = RestException.class)
     public void testSingleMissingDecodingPolicyCausesException() {
-        Service25 service = RestProxy.create(Service25.class, HttpPipeline.build());
+        Service25 service = RestProxy.create(Service25.class, new HttpPipelineBuilder().build());
         service.getAsync().block();
         service.getBodyResponseAsync().block();
     }
 
     @Test(expected = RestException.class)
     public void testSingleBodyResponseMissingDecodingPolicyCausesException() {
-        Service25 service = RestProxy.create(Service25.class, HttpPipeline.build());
+        Service25 service = RestProxy.create(Service25.class, new HttpPipelineBuilder().build());
         service.getBodyResponseAsync().block();
     }
 
@@ -1421,7 +1429,10 @@ public abstract class RestProxyTests {
     }
 
     protected <T> T createService(Class<T> serviceClass, HttpClient httpClient) {
-        final HttpPipeline httpPipeline = HttpPipeline.build(httpClient, new DecodingPolicyFactory());
+        final HttpPipeline httpPipeline = new HttpPipelineBuilder()
+                .withPolicy(new DecodingPolicy())
+                .withHttpClient(httpClient)
+                .build();
         return RestProxy.create(serviceClass, httpPipeline, serializer);
     }
 

@@ -17,15 +17,14 @@ import com.microsoft.rest.v3.annotations.PathParam;
 import com.microsoft.rest.v3.http.ContentType;
 import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpPipelineBuilder;
-import com.microsoft.rest.v3.http.HttpRequest;
+import com.microsoft.rest.v3.http.HttpPipelineCallContext;
+import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
 import com.microsoft.rest.v3.http.HttpResponse;
-import com.microsoft.rest.v3.policy.AddDatePolicyFactory;
-import com.microsoft.rest.v3.policy.AddHeadersPolicyFactory;
-import com.microsoft.rest.v3.policy.HostPolicyFactory;
+import com.microsoft.rest.v3.http.NextPolicy;
+import com.microsoft.rest.v3.policy.AddDatePolicy;
+import com.microsoft.rest.v3.policy.AddHeadersPolicy;
+import com.microsoft.rest.v3.policy.HostPolicy;
 import com.microsoft.rest.v3.policy.HttpLogDetailLevel;
-import com.microsoft.rest.v3.policy.RequestPolicy;
-import com.microsoft.rest.v3.policy.RequestPolicyFactory;
-import com.microsoft.rest.v3.policy.RequestPolicyOptions;
 import com.microsoft.rest.v3.util.FluxUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -98,15 +97,16 @@ public class RestProxyStressTests {
 
         HttpHeaders headers = new HttpHeaders()
                 .set("x-ms-version", "2017-04-17");
+        // Order in which policies applied will be the order in which they added to builder
         HttpPipelineBuilder builder = new HttpPipelineBuilder()
-                .withRequestPolicy(new AddDatePolicyFactory())
-                .withRequestPolicy(new AddHeadersPolicyFactory(headers))
-                .withRequestPolicy(new ThrottlingRetryPolicyFactory());
+                .withPolicy(new AddDatePolicy())
+                .withPolicy(new AddHeadersPolicy(headers))
+                .withPolicy(new ThrottlingRetryPolicy());
 
         String liveStressTests = System.getenv("JAVA_SDK_TEST_SAS");
         if (liveStressTests == null || liveStressTests.isEmpty()) {
             launchTestServer();
-            builder.withRequestPolicy(new HostPolicyFactory("http://localhost:" + port));
+            builder.withPolicy(new HostPolicy("http://localhost:" + port));
         }
 
         builder.withHttpLoggingPolicy(HttpLogDetailLevel.BASIC);
@@ -143,44 +143,31 @@ public class RestProxyStressTests {
         }
     }
 
-    private static final class ThrottlingRetryPolicyFactory implements RequestPolicyFactory {
+    private static final class ThrottlingRetryPolicy implements HttpPipelinePolicy {
         @Override
-        public RequestPolicy create(RequestPolicy next, RequestPolicyOptions options) {
-            return new ThrottlingRetryPolicy(next);
+        public Mono<HttpResponse> process(HttpPipelineCallContext context, NextPolicy next) {
+            return process(1 + ThreadLocalRandom.current().nextInt(5), context, next);
         }
 
-        private static final class ThrottlingRetryPolicy implements RequestPolicy {
-            private final RequestPolicy next;
-
-            ThrottlingRetryPolicy(RequestPolicy next) {
-                this.next = next;
-            }
-
-            @Override
-            public Mono<HttpResponse> sendAsync(HttpRequest request) {
-                return sendAsync(request, 1 + ThreadLocalRandom.current().nextInt(5));
-            }
-
-            Mono<HttpResponse> sendAsync(final HttpRequest request, final int waitTimeSeconds) {
-                return next.sendAsync(request).flatMap(httpResponse -> {
-                        if (httpResponse.statusCode() != 503 && httpResponse.statusCode() != 500) {
-                            return Mono.just(httpResponse);
-                        } else {
-                            LoggerFactory.getLogger(getClass()).warn("Received " + httpResponse.statusCode() + " for request. Waiting " + waitTimeSeconds + " seconds before retry.");
-                            final int nextWaitTime = 5 + ThreadLocalRandom.current().nextInt(10);
-                            httpResponse.body().subscribe().dispose(); // TODO: Anu re-evaluate this
-                            return Mono.delay(Duration.of(waitTimeSeconds, ChronoUnit.SECONDS))
-                                    .then(sendAsync(request, nextWaitTime));
-                        }
-                }).onErrorResume(throwable -> {
-                        if (throwable instanceof IOException) {
-                            LoggerFactory.getLogger(getClass()).warn("I/O exception occurred: " + throwable.getMessage());
-                            return sendAsync(request).delaySubscription(Duration.of(waitTimeSeconds, ChronoUnit.SECONDS));
-                        }
-                        LoggerFactory.getLogger(getClass()).warn("Unrecoverable exception occurred: " + throwable.getMessage());
-                        return Mono.error(throwable);
-                });
-            }
+        Mono<HttpResponse> process(final int waitTimeSeconds, final HttpPipelineCallContext context, final NextPolicy nextPolicy) {
+            return nextPolicy.clone().process().flatMap(httpResponse -> {
+                if (httpResponse.statusCode() != 503 && httpResponse.statusCode() != 500) {
+                    return Mono.just(httpResponse);
+                } else {
+                    LoggerFactory.getLogger(getClass()).warn("Received " + httpResponse.statusCode() + " for request. Waiting " + waitTimeSeconds + " seconds before retry.");
+                    final int nextWaitTime = 5 + ThreadLocalRandom.current().nextInt(10);
+                    httpResponse.body().subscribe().dispose(); // TODO: Anu re-evaluate this
+                    return Mono.delay(Duration.of(waitTimeSeconds, ChronoUnit.SECONDS))
+                            .then(process(nextWaitTime, context, nextPolicy));
+                }
+            }).onErrorResume(throwable -> {
+                if (throwable instanceof IOException) {
+                    LoggerFactory.getLogger(getClass()).warn("I/O exception occurred: " + throwable.getMessage());
+                    return process(context, nextPolicy).delaySubscription(Duration.of(waitTimeSeconds, ChronoUnit.SECONDS));
+                }
+                LoggerFactory.getLogger(getClass()).warn("Unrecoverable exception occurred: " + throwable.getMessage());
+                return Mono.error(throwable);
+            });
         }
     }
 
@@ -566,13 +553,15 @@ public class RestProxyStressTests {
 
         HttpHeaders headers = new HttpHeaders()
                 .set("x-ms-version", "2017-04-17");
+        // Order in which policies applied will be the order in which they added to builder
+        //
         HttpPipelineBuilder builder = new HttpPipelineBuilder()
-                .withRequestPolicy(new AddDatePolicyFactory())
-                .withRequestPolicy(new AddHeadersPolicyFactory(headers))
-                .withRequestPolicy(new ThrottlingRetryPolicyFactory());
+                .withPolicy(new AddDatePolicy())
+                .withPolicy(new AddHeadersPolicy(headers))
+                .withPolicy(new ThrottlingRetryPolicy());
 
         if (sas == null || sas.isEmpty()) {
-            builder.withRequestPolicy(new HostPolicyFactory("http://localhost:" + port));
+            builder.withPolicy(new HostPolicy("http://localhost:" + port));
         }
 
         final IOService innerService = RestProxy.create(IOService.class, builder.build());

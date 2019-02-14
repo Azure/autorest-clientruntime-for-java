@@ -19,6 +19,16 @@ public abstract class HttpClient {
      */
     public abstract Mono<HttpResponse> sendRequestAsync(HttpRequest request);
 
+    /**
+     * Send the provided context asynchronously, applying any request policies provided to the HttpClient instance.
+     *
+     * @param context the request context, containing request and associated details
+     * @return A {@link Mono} representing the HTTP response that will arrive asynchronously.
+     */
+    public Mono<HttpResponse> sendRequestAsync(HttpPipelineCallContext context) {
+        return sendRequestAsync(context.httpRequest());
+    }
+
     private static final class DefaultHttpClientHolder {
         // Putting this field in an inner class makes it so it is only instantiated when
         // one of the createDefault() methods instead of instantiating when any members are accessed.

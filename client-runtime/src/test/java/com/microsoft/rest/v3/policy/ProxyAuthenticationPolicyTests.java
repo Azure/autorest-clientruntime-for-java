@@ -2,11 +2,10 @@ package com.microsoft.rest.v3.policy;
 
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
+import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
-import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.MockHttpClient;
 import org.junit.Test;
-import reactor.core.publisher.Mono;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -21,25 +20,18 @@ public class ProxyAuthenticationPolicyTests {
         final AtomicBoolean auditorVisited = new AtomicBoolean(false);
         final String username = "testuser";
         final String password = "testpass";
+        //
+        final HttpPipeline pipeline = new HttpPipelineBuilder()
+                .withPolicy(new ProxyAuthenticationPolicy(username, password))
+                .withPolicy((context, next) -> {
+                    assertEquals("Basic dGVzdHVzZXI6dGVzdHBhc3M=", context.httpRequest().headers().value("Proxy-Authentication"));
+                    auditorVisited.set(true);
+                    return next.process();
+                })
+                .withHttpClient(new MockHttpClient())
+                .build();
 
-        final HttpPipeline pipeline = HttpPipeline.build(
-                new MockHttpClient(),
-                new ProxyAuthenticationPolicyFactory(username, password),
-                new RequestPolicyFactory() {
-                    @Override
-                    public RequestPolicy create(final RequestPolicy next, RequestPolicyOptions options) {
-                        return new RequestPolicy() {
-                            @Override
-                            public Mono<HttpResponse> sendAsync(HttpRequest request) {
-                                assertEquals("Basic dGVzdHVzZXI6dGVzdHBhc3M=", request.headers().value("Proxy-Authentication"));
-                                auditorVisited.set(true);
-                                return next.sendAsync(request);
-                            }
-                        };
-                    }
-                });
-
-        pipeline.sendRequestAsync(new HttpRequest("test", HttpMethod.GET, new URL("http://localhost"), null))
+        pipeline.sendRequest(new HttpRequest("test", HttpMethod.GET, new URL("http://localhost"), null))
                 .block();
 
         if (!auditorVisited.get()) {

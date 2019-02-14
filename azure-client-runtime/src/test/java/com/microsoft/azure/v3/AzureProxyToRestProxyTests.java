@@ -2,10 +2,11 @@ package com.microsoft.azure.v3;
 
 import com.microsoft.rest.v3.InvalidReturnTypeException;
 import com.microsoft.rest.v3.http.ContentType;
-import com.microsoft.rest.v3.http.HttpPipeline;
 import com.microsoft.rest.v3.RestException;
 import com.microsoft.rest.v3.RestResponse;
-import com.microsoft.rest.v3.policy.DecodingPolicyFactory;
+import com.microsoft.rest.v3.http.HttpPipeline;
+import com.microsoft.rest.v3.http.HttpPipelineBuilder;
+import com.microsoft.rest.v3.policy.DecodingPolicy;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 import com.microsoft.rest.v3.serializer.JacksonAdapter;
 import com.microsoft.rest.v3.annotations.BodyParam;
@@ -744,7 +745,13 @@ public abstract class AzureProxyToRestProxyTests {
 
     private <T> T createService(Class<T> serviceClass) {
         final HttpClient httpClient = createHttpClient();
-        return AzureProxy.create(serviceClass, null, HttpPipeline.build(httpClient, new DecodingPolicyFactory()), serializer);
+        //
+        HttpPipeline pipeline = new HttpPipelineBuilder()
+                .withPolicy(new DecodingPolicy())
+                .withHttpClient(httpClient)
+                .build();
+        //
+        return AzureProxy.create(serviceClass, null, pipeline, serializer);
     }
 
     private static void assertContains(String value, String expectedSubstring) {

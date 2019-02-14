@@ -7,7 +7,7 @@
 package com.microsoft.rest.v3.http;
 
 /**
- * A Logger that can be added to an HttpPipeline. This enables each RequestPolicy to log
+ * A Logger that can be added to an HttpPipeline. This enables each HttpPipelinePolicy to log
  * messages that can be used for debugging purposes.
  */
 public interface HttpPipelineLogger {

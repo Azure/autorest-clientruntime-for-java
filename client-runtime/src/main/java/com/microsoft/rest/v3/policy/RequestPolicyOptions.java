@@ -10,7 +10,7 @@ import com.microsoft.rest.v3.http.HttpPipelineLogLevel;
 import com.microsoft.rest.v3.http.HttpPipelineLogger;
 
 /**
- * Optional properties that can be used when creating a RequestPolicy.
+ * Optional properties that can be used when creating a HttpPipelinePolicy.
  */
 public final class RequestPolicyOptions {
     /**
@@ -19,7 +19,12 @@ public final class RequestPolicyOptions {
     private final HttpPipelineLogger logger;
 
     /**
-     * Create a new RequestPolicy.Options object.
+     * Null RequestPolicyOptions.
+     */
+    public static final RequestPolicyOptions NULL_REQUEST_POLICY_OPTIONS = new RequestPolicyOptions(null);
+
+    /**
+     * Create a new HttpPipelinePolicy.Options object.
      * @param logger The logger that has been assigned to the HttpPipeline.
      */
     public RequestPolicyOptions(HttpPipelineLogger logger) {

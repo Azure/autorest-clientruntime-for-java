@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * {@code ContextData} offers a means of passing arbitrary data (key/value pairs) to an {@link HttpPipeline}'s
  * policy objects. Most applications do not need to pass arbitrary data to the pipeline and can pass
- * {@code Context.NONE} or {@code null}. Each context object is immutable. The {@link this#addData(Object, Object)}
+ * {@code ContextData.NONE} or {@code null}. Each context object is immutable. The {@link this#addData(Object, Object)}
  * method creates a new {@code ContextData} object that refers to its parent, forming a linked list.
  */
 public class ContextData {

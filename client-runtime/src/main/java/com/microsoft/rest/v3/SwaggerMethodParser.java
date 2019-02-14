@@ -21,6 +21,7 @@ import com.microsoft.rest.v3.annotations.PathParam;
 import com.microsoft.rest.v3.annotations.QueryParam;
 import com.microsoft.rest.v3.annotations.ReturnValueWireType;
 import com.microsoft.rest.v3.annotations.UnexpectedResponseExceptionType;
+import com.microsoft.rest.v3.http.ContextData;
 import com.microsoft.rest.v3.http.HttpHeader;
 import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpMethod;
@@ -308,19 +309,19 @@ public class SwaggerMethodParser {
                 }
             }
         }
-
         return result;
     }
 
     /**
-     * Get the {@link Context} passed into the proxy method.
+     * Get the {@link ContextData} passed into the proxy method.
+     *
      * @param swaggerMethodArguments the arguments passed to the proxy method
-     * @return the Context, or null if no Context was provided
+     * @return the context, or null if no context was provided
      */
-    public Context context(Object[] swaggerMethodArguments) {
+    public ContextData contextData(Object[] swaggerMethodArguments) {
         Object firstArg = swaggerMethodArguments != null && swaggerMethodArguments.length > 0 ? swaggerMethodArguments[0] : null;
-        if (firstArg instanceof Context) {
-            return (Context) firstArg;
+        if (firstArg instanceof ContextData) {
+            return (ContextData) firstArg;
         } else {
             return null;
         }

@@ -12,6 +12,7 @@ import java.util.Map;
 
 /**
  * The response object that is a result of making a REST request.
+ *
  * @param <THeaders> The deserialized type of the response headers.
  * @param <TBody> The deserialized type of the response body.
  */

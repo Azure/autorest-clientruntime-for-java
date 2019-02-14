@@ -17,8 +17,9 @@ public class HttpHeader {
 
     /**
      * Create a new HttpHeader using the provided name and value.
-     * @param name The name of the HttpHeader.
-     * @param value The value of the HttpHeader.
+     *
+     * @param name the name of the HttpHeader
+     * @param value the value of the HttpHeader
      */
     public HttpHeader(String name, String value) {
         this.name = name;
@@ -27,39 +28,38 @@ public class HttpHeader {
 
     /**
      * Get the name of this Header.
-     * @return The name of this Header.
+     *
+     * @return the name of this Header
      */
     public String name() {
         return name;
     }
 
     /**
-     * Get the value of this Header.
-     * @return The value of this Header.
+     * @return the value of this Header
      */
     public String value() {
         return value;
     }
 
     /**
-     * Get the values of this Header that are separated by a comma.
-     * @return The values of this Header that are separated by a comma.
+     * @return the values of this Header that are separated by a comma
      */
     public String[] values() {
         return value == null ? null : value.split(",");
     }
 
     /**
-     * Add another value to the end of this Header.
-     * @param value The value to add to the end of this Header.
+     * add another value to the end of this Header
+     *
+     * @param value the value to add to the end of this Header
      */
     public void addValue(String value) {
         this.value += "," + value;
     }
 
     /**
-     * Get the String representation of this HttpHeader.
-     * @return The String representation of this HttpHeader.
+     * @return the String representation of this HttpHeader
      */
     @Override
     public String toString() {

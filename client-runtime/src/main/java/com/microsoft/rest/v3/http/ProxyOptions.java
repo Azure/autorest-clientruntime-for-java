@@ -11,7 +11,7 @@ import reactor.netty.tcp.ProxyProvider.Proxy;
 import java.net.InetSocketAddress;
 
 /**
- * Optional configurations for proxy.
+ * proxy configuration.
  */
 public class ProxyOptions {
     private final InetSocketAddress address;

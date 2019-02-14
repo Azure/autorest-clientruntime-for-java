@@ -150,7 +150,13 @@ public final class FluxUtil {
                 return writerIndex;
             } else {
                 int readSize = Math.min(writerIndex - readFromIndex, chunkSize);
-                synchronousSync.next(whole.slice(readFromIndex, readSize));
+                // Netty slice operation will not increment the ref count.
+                //
+                // Here we need to invoke 'retain' on each slice, since we assume
+                // consumer of the returned Flux stream is responsible for releasing
+                // each chunk as it gets consumed.
+                //
+                synchronousSync.next(whole.slice(readFromIndex, readSize).retain());
                 return readFromIndex + readSize;
             }
         });

@@ -7,6 +7,7 @@
 package com.microsoft.azure.v3;
 
 import com.microsoft.azure.v3.annotations.AzureHost;
+import com.microsoft.azure.v3.policy.AsyncCredentialsPolicy;
 import com.microsoft.azure.v3.serializer.AzureJacksonAdapter;
 import com.microsoft.rest.v3.InvalidReturnTypeException;
 import com.microsoft.rest.v3.OperationDescription;
@@ -19,15 +20,14 @@ import com.microsoft.rest.v3.http.HttpClient;
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
 import com.microsoft.rest.v3.http.HttpPipelineBuilder;
+import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.NettyClient;
-import com.microsoft.azure.v3.policy.AsyncCredentialsPolicyFactory;
-import com.microsoft.rest.v3.policy.CookiePolicyFactory;
-import com.microsoft.rest.v3.policy.CredentialsPolicyFactory;
-import com.microsoft.rest.v3.policy.DecodingPolicyFactory;
-import com.microsoft.rest.v3.policy.RequestPolicyFactory;
-import com.microsoft.rest.v3.policy.RetryPolicyFactory;
+import com.microsoft.rest.v3.policy.CookiePolicy;
+import com.microsoft.rest.v3.policy.CredentialsPolicy;
+import com.microsoft.rest.v3.policy.DecodingPolicy;
+import com.microsoft.rest.v3.policy.RetryPolicy;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 import com.microsoft.rest.v3.protocol.SerializerEncoding;
 import com.microsoft.rest.v3.util.TypeUtil;
@@ -157,7 +157,7 @@ public final class AzureProxy extends RestProxy {
      * @return the default HttpPipeline.
      */
     public static HttpPipeline createDefaultPipeline(Class<?> swaggerInterface) {
-        return createDefaultPipeline(swaggerInterface, (RequestPolicyFactory) null);
+        return createDefaultPipeline(swaggerInterface, (HttpPipelinePolicy) null);
     }
 
     /**
@@ -168,7 +168,7 @@ public final class AzureProxy extends RestProxy {
      * @return the default HttpPipeline.
      */
     public static HttpPipeline createDefaultPipeline(Class<?> swaggerInterface, ServiceClientCredentials credentials) {
-        return createDefaultPipeline(swaggerInterface, new CredentialsPolicyFactory(credentials));
+        return createDefaultPipeline(swaggerInterface, new CredentialsPolicy(credentials));
     }
 
     /**
@@ -179,7 +179,7 @@ public final class AzureProxy extends RestProxy {
      * @return the default HttpPipeline.
      */
     public static HttpPipeline createDefaultPipeline(Class<?> swaggerInterface, AsyncServiceClientCredentials credentials) {
-        return createDefaultPipeline(swaggerInterface, new AsyncCredentialsPolicyFactory(credentials));
+        return createDefaultPipeline(swaggerInterface, new AsyncCredentialsPolicy(credentials));
     }
 
     /**
@@ -190,16 +190,18 @@ public final class AzureProxy extends RestProxy {
      *                          pipeline.
      * @return the default HttpPipeline.
      */
-    public static HttpPipeline createDefaultPipeline(Class<?> swaggerInterface, RequestPolicyFactory credentialsPolicy) {
+    public static HttpPipeline createDefaultPipeline(Class<?> swaggerInterface, HttpPipelinePolicy credentialsPolicy) {
         final HttpClient httpClient = new NettyClient.Factory().create(null);
         final HttpPipelineBuilder builder = new HttpPipelineBuilder().withHttpClient(httpClient);
+        // Order in which policies applied will be the order in which they added to builder
         builder.withUserAgentPolicy(getDefaultUserAgentString(swaggerInterface));
-        builder.withRequestPolicy(new RetryPolicyFactory());
-        builder.withRequestPolicy(new DecodingPolicyFactory());
-        builder.withRequestPolicy(new CookiePolicyFactory());
+        builder.withPolicy(new RetryPolicy());
+        builder.withPolicy(new DecodingPolicy());
+        builder.withPolicy(new CookiePolicy());
         if (credentialsPolicy != null) {
-            builder.withRequestPolicy(credentialsPolicy);
+            builder.withPolicy(credentialsPolicy);
         }
+
         return builder.build();
     }
 

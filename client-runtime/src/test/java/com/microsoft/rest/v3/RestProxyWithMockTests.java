@@ -8,7 +8,7 @@ import com.microsoft.rest.v3.annotations.ReturnValueWireType;
 import com.microsoft.rest.v3.entities.HttpBinJSON;
 import com.microsoft.rest.v3.http.HttpClient;
 import com.microsoft.rest.v3.http.HttpHeaders;
-import com.microsoft.rest.v3.http.HttpPipeline;
+import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.MockHttpClient;
@@ -158,7 +158,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
     public void ServiceErrorWithResponseContentType() {
         ServiceErrorWithCharsetService service = RestProxy.create(
                 ServiceErrorWithCharsetService.class,
-                HttpPipeline.build(new HttpClient() {
+                new HttpPipelineBuilder().withHttpClient(new HttpClient() {
                     @Override
                     public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
@@ -168,7 +168,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
                                 "{ \"error\": \"Something went wrong, but at least this JSON is valid.\"}".getBytes(StandardCharsets.UTF_8));
                         return Mono.just(response);
                     }
-                }));
+                }).build());
 
         try {
             service.get();
@@ -182,7 +182,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
     public void ServiceErrorWithResponseContentTypeBadJSON() {
         ServiceErrorWithCharsetService service = RestProxy.create(
                 ServiceErrorWithCharsetService.class,
-                HttpPipeline.build(new HttpClient() {
+                new HttpPipelineBuilder().withHttpClient(new HttpClient() {
                     @Override
                     public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
@@ -191,7 +191,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
                         HttpResponse response = new MockHttpResponse(200, headers, "BAD JSON".getBytes(StandardCharsets.UTF_8));
                         return Mono.just(response);
                     }
-                }));
+                }).build());
 
         try {
             service.get();
@@ -206,7 +206,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
     public void ServiceErrorWithResponseContentTypeCharset() {
         ServiceErrorWithCharsetService service = RestProxy.create(
                 ServiceErrorWithCharsetService.class,
-                HttpPipeline.build(new HttpClient() {
+                new HttpPipelineBuilder().withHttpClient(new HttpClient() {
                     @Override
                     public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
@@ -216,7 +216,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
                                 "{ \"error\": \"Something went wrong, but at least this JSON is valid.\"}".getBytes(StandardCharsets.UTF_8));
                         return Mono.just(response);
                     }
-                }));
+                }).build());
 
         try {
             service.get();
@@ -230,7 +230,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
     public void ServiceErrorWithResponseContentTypeCharsetBadJSON() {
         ServiceErrorWithCharsetService service = RestProxy.create(
                 ServiceErrorWithCharsetService.class,
-                HttpPipeline.build(new HttpClient() {
+                new HttpPipelineBuilder().withHttpClient(new HttpClient() {
                     @Override
                     public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
@@ -239,7 +239,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
                         HttpResponse response = new MockHttpResponse(200, headers, "BAD JSON".getBytes(StandardCharsets.UTF_8));
                         return Mono.just(response);
                     }
-                }));
+                }).build());
 
         try {
             service.get();

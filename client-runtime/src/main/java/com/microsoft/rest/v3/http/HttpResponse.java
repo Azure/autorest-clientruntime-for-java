@@ -9,7 +9,7 @@ package com.microsoft.rest.v3.http;
 
 import java.io.Closeable;
 
-import com.microsoft.rest.v3.policy.DecodingPolicyFactory;
+import com.microsoft.rest.v3.policy.DecodingPolicy;
 import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -106,7 +106,7 @@ public abstract class HttpResponse implements Closeable {
     }
 
     /**
-     * Returns a value indicating whether this HttpResponse has been decoded by a {@link DecodingPolicyFactory}.
+     * Returns a value indicating whether this HttpResponse has been decoded by a {@link DecodingPolicy}.
      * @return whether this HttpResponse has been decoded
      */
     public boolean isDecoded() {
@@ -114,7 +114,7 @@ public abstract class HttpResponse implements Closeable {
     }
 
     /**
-     * Sets the flag indicating whether this HttpResponse has been decoded by a {@link DecodingPolicyFactory}.
+     * Sets the flag indicating whether this HttpResponse has been decoded by a {@link DecodingPolicy}.
      * @param isDecoded whether this HttpResponse has been decoded
      * @return this HTTP repsonse
      */

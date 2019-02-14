@@ -1,6 +1,9 @@
 package com.microsoft.rest.v3.policy;
 
+import com.microsoft.rest.v3.http.HttpClient;
 import com.microsoft.rest.v3.http.HttpMethod;
+import com.microsoft.rest.v3.http.HttpPipeline;
+import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import org.junit.Test;
@@ -15,32 +18,45 @@ public class ProtocolPolicyTests {
 
     @Test
     public void withOverwrite() throws MalformedURLException {
-        final RequestPolicy policy = createProtocolPolicy("ftp", "ftp://www.bing.com");
-        policy.sendAsync(createHttpRequest("http://www.bing.com"));
+        final HttpPipeline pipeline = createPipeline("ftp", "ftp://www.bing.com");
+        pipeline.sendRequest(createHttpRequest("http://www.bing.com"));
     }
 
     @Test
     public void withNoOverwrite() throws MalformedURLException {
-        final RequestPolicy policy = createProtocolPolicy("ftp", false, "https://www.bing.com");
-        policy.sendAsync(createHttpRequest("https://www.bing.com"));
+        final HttpPipeline pipeline = createPipeline("ftp", false, "https://www.bing.com");
+        pipeline.sendRequest(createHttpRequest("https://www.bing.com"));
+    }
+    private static HttpPipeline createPipeline(String protocol, String expectedUrl) {
+        return new HttpPipelineBuilder()
+                .withPolicy(new ProtocolPolicy(protocol))
+                .withPolicy((context, next) -> {
+                    assertEquals(expectedUrl, context.httpRequest().url().toString());
+                    return next.process();
+                })
+                .withHttpClient(new HttpClient() {
+                    @Override
+                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                        return Mono.empty(); // NOP
+                    }
+                })
+                .build();
     }
 
-    private static RequestPolicy createMockRequestPolicy(final String expectedUrl) {
-        return new RequestPolicy() {
-            @Override
-            public Mono<HttpResponse> sendAsync(HttpRequest request) {
-                assertEquals(expectedUrl, request.url().toString());
-                return null;
-            }
-        };
-    }
-
-    private static RequestPolicy createProtocolPolicy(String protocol, String expectedUrl) {
-        return new ProtocolPolicyFactory(protocol).create(createMockRequestPolicy(expectedUrl), null);
-    }
-
-    private static RequestPolicy createProtocolPolicy(String protocol, boolean overwrite, String expectedUrl) {
-        return new ProtocolPolicyFactory(protocol, overwrite).create(createMockRequestPolicy(expectedUrl), null);
+    private static HttpPipeline createPipeline(String protocol, boolean overwrite, String expectedUrl) {
+        return new HttpPipelineBuilder()
+                .withPolicy(new ProtocolPolicy(protocol, overwrite, RequestPolicyOptions.NULL_REQUEST_POLICY_OPTIONS))
+                .withPolicy((context, next) -> {
+                    assertEquals(expectedUrl, context.httpRequest().url().toString());
+                    return next.process();
+                })
+                .withHttpClient(new HttpClient() {
+                    @Override
+                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                        return Mono.empty(); // NOP
+                    }
+                })
+            .build();
     }
 
     private static HttpRequest createHttpRequest(String url) throws MalformedURLException {

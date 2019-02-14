@@ -6,7 +6,6 @@
 
 package com.microsoft.rest.v3.policy;
 
-
 import com.microsoft.rest.v3.http.*;
 import org.junit.Assert;
 import org.junit.Test;
@@ -19,22 +18,21 @@ import java.time.temporal.ChronoUnit;
 public class RetryPolicyTests {
     @Test
     public void exponentialRetryEndOn501() throws Exception {
-        HttpPipeline pipeline = HttpPipeline.build(
-            new MockHttpClient() {
-                // Send 408, 500, 502, all retried, with a 501 ending
-                private final int[] codes = new int[]{408, 500, 502, 501};
-                private int count = 0;
+       HttpPipeline pipeline = new HttpPipelineBuilder()
+                .withPolicy( new RetryPolicy(3, 0, ChronoUnit.MILLIS))
+                .withHttpClient(new MockHttpClient() {
+                    // Send 408, 500, 502, all retried, with a 501 ending
+                    private final int[] codes = new int[]{408, 500, 502, 501};
+                    private int count = 0;
 
-                @Override
-                public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
-                    return Mono.<HttpResponse>just(new MockHttpResponse(codes[count++]));
-                }
-            },
-            new RetryPolicyFactory(3, 0, ChronoUnit.MILLIS));
+                    @Override
+                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                        return Mono.<HttpResponse>just(new MockHttpResponse(codes[count++]));
+                    }
+                })
+                .build();
 
-        HttpResponse response = pipeline.sendRequestAsync(
-                new HttpRequest(
-                        "exponentialRetryEndOn501",
+        HttpResponse response = pipeline.sendRequest(new HttpRequest("exponentialRetryEndOn501",
                         HttpMethod.GET,
                         new URL("http://localhost/"), null)).block();
 
@@ -45,21 +43,20 @@ public class RetryPolicyTests {
     public void exponentialRetryMax() throws Exception {
         final int maxRetries = 5;
 
-        HttpPipeline pipeline = HttpPipeline.build(
-            new MockHttpClient() {
-                int count = -1;
+        HttpPipeline pipeline = new HttpPipelineBuilder()
+                .withPolicy( new RetryPolicy(maxRetries, 0, ChronoUnit.MILLIS))
+                .withHttpClient(new MockHttpClient() {
+                    int count = -1;
 
-                @Override
-                public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
-                    Assert.assertTrue(count++ < maxRetries);
-                    return Mono.<HttpResponse>just(new MockHttpResponse(500));
-                }
-            },
-            new RetryPolicyFactory(maxRetries, 0, ChronoUnit.MILLIS));
+                    @Override
+                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                        Assert.assertTrue(count++ < maxRetries);
+                        return Mono.<HttpResponse>just(new MockHttpResponse(500));
+                    }
+                })
+                .build();
 
-        HttpResponse response = pipeline.sendRequestAsync(
-                new HttpRequest(
-                        "exponentialRetryMax",
+        HttpResponse response = pipeline.sendRequest(new HttpRequest("exponentialRetryMax",
                         HttpMethod.GET,
                         new URL("http://localhost/"), null)).block();
 

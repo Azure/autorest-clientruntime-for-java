@@ -9,33 +9,22 @@ package com.microsoft.rest.v3.policy;
 import com.microsoft.rest.v3.http.HttpPipelineLogLevel;
 
 /**
- * An abstract RequestPolicy base-class.
+ * An abstract HttpPipelinePolicy base-class.
  */
-public abstract class AbstractRequestPolicy implements RequestPolicy {
-    private final RequestPolicy nextPolicy;
+public abstract class AbstractPipelinePolicy implements HttpPipelinePolicy {
     private final RequestPolicyOptions options;
 
     /**
-     * Initialize the fields for this AbstractRequestPolicy.
-     * @param nextPolicy The next RequestPolicy in the policy chain.
-     * @param options The options for this RequestPolicy.
+     * Creates AbstractRequestPolicy.
+     *
+     * @param options the options for this HttpPipelinePolicy.
      */
-    protected AbstractRequestPolicy(RequestPolicy nextPolicy, RequestPolicyOptions options) {
-        this.nextPolicy = nextPolicy;
+    protected AbstractPipelinePolicy(RequestPolicyOptions options) {
         this.options = options;
     }
 
     /**
-     * Get the next RequestPolicy in the policy chain.
-     * @return The next RequestPolicy in the policy chain.
-     */
-    protected RequestPolicy nextPolicy() {
-        return nextPolicy;
-    }
-
-    /**
-     * Get the options that were provided to this AbstractRequestPolicy.
-     * @return The options that were provided to this AbstractRequestPolicy.
+     * @return the options.
      */
     protected RequestPolicyOptions options() {
         return options;
@@ -43,8 +32,9 @@ public abstract class AbstractRequestPolicy implements RequestPolicy {
 
     /**
      * Get whether or not a log with the provided log level should be logged.
-     * @param logLevel The log level of the log that will be logged.
-     * @return Whether or not a log with the provided log level should be logged.
+     *
+     * @param logLevel the log level of the log that will be logged.
+     * @return whether or not a log with the provided log level should be logged.
      */
     public boolean shouldLog(HttpPipelineLogLevel logLevel) {
         return options != null && options.shouldLog(logLevel);
@@ -53,8 +43,9 @@ public abstract class AbstractRequestPolicy implements RequestPolicy {
     /**
      * Attempt to log the provided message to the provided logger. If no logger was provided or if
      * the log level does not meat the logger's threshold, then nothing will be logged.
-     * @param logLevel The log level of this log.
-     * @param message The message of this log.
+     *
+     * @param logLevel the log level of this log.
+     * @param message the message of this log.
      * @param formattedMessageArguments The formatted arguments to apply to the message.
      */
     protected void log(HttpPipelineLogLevel logLevel, String message, Object... formattedMessageArguments) {

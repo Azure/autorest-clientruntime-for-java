@@ -7,18 +7,20 @@
 package com.microsoft.rest.v3.http;
 
 import com.microsoft.rest.v3.credentials.ServiceClientCredentials;
-import com.microsoft.rest.v3.policy.CookiePolicyFactory;
-import com.microsoft.rest.v3.policy.CredentialsPolicyFactory;
-import com.microsoft.rest.v3.policy.DecodingPolicyFactory;
-import com.microsoft.rest.v3.policy.HostPolicyFactory;
+import com.microsoft.rest.v3.policy.CookiePolicy;
+import com.microsoft.rest.v3.policy.CredentialsPolicy;
+import com.microsoft.rest.v3.policy.DecodingPolicy;
+import com.microsoft.rest.v3.policy.HostPolicy;
 import com.microsoft.rest.v3.policy.HttpLogDetailLevel;
-import com.microsoft.rest.v3.policy.HttpLoggingPolicyFactory;
-import com.microsoft.rest.v3.policy.ProxyAuthenticationPolicyFactory;
-import com.microsoft.rest.v3.policy.RequestIdPolicyFactory;
-import com.microsoft.rest.v3.policy.RequestPolicyFactory;
-import com.microsoft.rest.v3.policy.RetryPolicyFactory;
-import com.microsoft.rest.v3.policy.TimeoutPolicyFactory;
-import com.microsoft.rest.v3.policy.UserAgentPolicyFactory;
+import com.microsoft.rest.v3.policy.HttpLoggingPolicy;
+import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
+import com.microsoft.rest.v3.policy.ProxyAuthenticationPolicy;
+import com.microsoft.rest.v3.policy.RequestIdPolicy;
+import com.microsoft.rest.v3.policy.RequestPolicyOptions;
+import com.microsoft.rest.v3.policy.RetryPolicy;
+import com.microsoft.rest.v3.policy.TimeoutPolicy;
+import com.microsoft.rest.v3.policy.UserAgentPolicy;
+import com.microsoft.rest.v3.protocol.HttpResponseDecoder;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -27,18 +29,16 @@ import java.util.List;
 /**
  * A builder class that can be used to create a HttpPipeline.
  */
-public final class HttpPipelineBuilder {
+public class HttpPipelineBuilder {
     /**
      * The optional properties that will be set on the created HTTP pipelines.
      */
-    private HttpPipelineOptions options;
+    private HttpPipelineOptions pipelineOptions;
 
     /**
-     * The list of RequestPolicy factories that will be applied to HTTP requests and responses.
-     * The factories appear in this list in the reverse order that they will be applied to
-     * outgoing requests.
+     * The list of policies that will be applied to HTTP requests and responses.
      */
-    private final List<RequestPolicyFactory> requestPolicyFactories;
+    private final List<HttpPipelinePolicy> pipelinePolicies;
 
     /**
      * Create a new HttpPipeline builder.
@@ -50,135 +50,139 @@ public final class HttpPipelineBuilder {
     /**
      * Create a new HttpPipeline builder.
      *
-     * @param options The optional properties that will be set on the created HTTP pipelines.
+     * @param pipelineOptions The optional properties that will be set on the created HTTP pipelines.
      */
-    public HttpPipelineBuilder(HttpPipelineOptions options) {
-        this.options = options;
-        this.requestPolicyFactories = new ArrayList<>();
+    public HttpPipelineBuilder(HttpPipelineOptions pipelineOptions) {
+        this.pipelineOptions = pipelineOptions;
+        this.pipelinePolicies = new ArrayList<>();
     }
 
     /**
-     * Get the RequestPolicy factories in this HttpPipeline builder.
-     * @return the RequestPolicy factories in this HttpPipeline builder.
+     * Get the policies HttpPipeline builder.
+     *
+     * @return the policies in this HttpPipeline builder.
      */
-    List<RequestPolicyFactory> requestPolicyFactories() {
-        return requestPolicyFactories;
+    List<HttpPipelinePolicy> pipelinePolicies() {
+        return pipelinePolicies;
     }
 
     /**
-     * Get the options for this HttpPipeline builder.
-     * @return the options for this HttpPipeline builder.
+     * @return the pipelineOptions for this HttpPipeline builder.
      */
     HttpPipelineOptions options() {
-        return options;
+        return pipelineOptions;
     }
 
     /**
      * Set the HttpClient that will be used by HttpPipelines that are created by this Builder.
+     *
      * @param httpClient The HttpClient to use.
      * @return This HttpPipeline builder.
      */
     public HttpPipelineBuilder withHttpClient(HttpClient httpClient) {
-        if (options == null) {
-            options = new HttpPipelineOptions();
+        if (pipelineOptions == null) {
+            pipelineOptions = new HttpPipelineOptions();
         }
-        options.withHttpClient(httpClient);
+        pipelineOptions.withHttpClient(httpClient);
         return this;
     }
 
     /**
-     * Set the Logger that will be used for each RequestPolicy within the created HttpPipeline.
-     * @param logger The Logger to provide to each RequestPolicy.
-     * @return This HttpPipeline options object.
+     * Set the Logger that will be used for each HttpPipelinePolicy within the created HttpPipeline.
+     *
+     * @param logger The Logger to provide to each HttpPipelinePolicy.
+     * @return This HttpPipeline pipelineOptions object.
      */
     public HttpPipelineBuilder withLogger(HttpPipelineLogger logger) {
-        if (options == null) {
-            options = new HttpPipelineOptions();
+        if (pipelineOptions == null) {
+            pipelineOptions = new HttpPipelineOptions();
         }
-        options.withLogger(logger);
+        pipelineOptions.withLogger(logger);
         return this;
     }
 
     /**
-     * Add the provided RequestPolicy factory to this HttpPipeline builder.
-     * @param requestPolicyFactory The RequestPolicy factory to add to this HttpPipeline builder.
+     * Add the provided HttpPipelinePolicy factory to this HttpPipeline builder.
+     *
+     * @param requestPolicy The request policy to add to this HttpPipeline builder.
      * @return This HttpPipeline builder.
      */
-    public HttpPipelineBuilder withRequestPolicy(RequestPolicyFactory requestPolicyFactory) {
-        return withRequestPolicy(requestPolicyFactories.size(), requestPolicyFactory);
+    public HttpPipelineBuilder withPolicy(HttpPipelinePolicy requestPolicy) {
+        return withPolicy(pipelinePolicies.size(), requestPolicy);
     }
 
     /**
-     * Add the provided RequestPolicy factory to this HttpPipeline builder
+     * Add the provided HttpPipelinePolicy factory to this HttpPipeline builder
      * at the provided index in the pipeline.
-     * @param index The index to insert the provided RequestPolicy factory.
-     * @param requestPolicyFactory The RequestPolicy factory to add to this
-     *                             HttpPipeline builder.
+     *
+     * @param index The index to insert the provided HttpPipelinePolicy factory.
+     * @param requestPolicy The request policy to add to this HttpPipeline builder.
      * @return This HttpPipeline builder.
      */
-    public HttpPipelineBuilder withRequestPolicy(int index, RequestPolicyFactory requestPolicyFactory) {
-        // The requestPolicyFactories list is in reverse order that the
-        // policies will be in. The caller of this method should be
-        // providing the index based on the policy list, not the factory
-        // list.
-        final int insertIndex = requestPolicyFactories.size() - index;
-        requestPolicyFactories.add(insertIndex, requestPolicyFactory);
+    public HttpPipelineBuilder withPolicy(int index, HttpPipelinePolicy requestPolicy) {
+        pipelinePolicies.add(index, requestPolicy);
         return this;
     }
 
     /**
-     * Add the provided RequestPolicy factories to this HttpPipeline builder.
-     * @param requestPolicyFactories The RequestPolicy factories to add to this
-     *                               HttpPipeline builder.
+     * Add the provided HttpPipelinePolicy factories to this HttpPipeline builder.
+     *
+     * @param requestPolicies The request policies add to this HttpPipeline builder.
      * @return This HttpPipeline builder.
      */
-    public HttpPipelineBuilder withRequestPolicies(RequestPolicyFactory... requestPolicyFactories) {
-        for (RequestPolicyFactory factory : requestPolicyFactories) {
-            withRequestPolicy(factory);
+    public HttpPipelineBuilder withPolicies(HttpPipelinePolicy... requestPolicies) {
+        for (HttpPipelinePolicy policy : requestPolicies) {
+            withPolicy(policy);
         }
         return this;
     }
 
     /**
-     * Add a RequestPolicy which stores and adds cookies across multiple
+     * Add a HttpPipelinePolicy which stores and adds cookies across multiple
      * requests and responses.
+     *
      * @return This HttpPipeline builder.
      */
     public HttpPipelineBuilder withCookiePolicy() {
-        return withRequestPolicy(new CookiePolicyFactory());
+        return withPolicy(new CookiePolicy());
     }
 
     /**
-     * Add a RequestPolicy which applies the given ServiceClientCredentials to
+     * Add a HttpPipelinePolicy which applies the given ServiceClientCredentials to
      * outgoing requests.
+     *
      * @param credentials The credentials to apply to requests.
      * @return This HttpPipeline builder.
      */
     public HttpPipelineBuilder withCredentialsPolicy(ServiceClientCredentials credentials) {
-        return withRequestPolicy(new CredentialsPolicyFactory(credentials));
+        return withPolicy(new CredentialsPolicy(credentials));
     }
 
     /**
-     * Adds a RequestPolicy which decodes the headers and body of incoming
+     * Adds a HttpPipelinePolicy which decodes the headers and body of incoming
      * responses.
      * Required for services that need to deserialize JSON or XML responses.
+     *
+     * @param decoder decoder to deserialize JSON or XML responses
      * @return This HttpPipeline builder.
      */
-    public HttpPipelineBuilder withDecodingPolicy() {
-        return withRequestPolicy(new DecodingPolicyFactory());
+    public HttpPipelineBuilder withDecodingPolicy(HttpResponseDecoder decoder) {
+        return withPolicy(new DecodingPolicy(decoder));
     }
 
     /**
-     * Adds a RequestPolicy which sets the host on all outgoing requests.
+     * Adds a HttpPipelinePolicy which sets the host on all outgoing requests.
+     *
      * @param host The hostname to use in all outgoing requests.
      * @return This HttpPipelineBuilder.
      */
     public HttpPipelineBuilder withHostPolicy(String host) {
-        return withRequestPolicy(new HostPolicyFactory(host));
+        return withPolicy(new HostPolicy(host));
     }
 
     /**
-     * Adds a RequestPolicy which logs all HTTP traffic using SLF4J.
+     * Adds a HttpPipelinePolicy which logs all HTTP traffic using SLF4J.
+     *
      * @param level The HTTP logging detail level.
      * @return This HttpPipeline builder.
      */
@@ -187,76 +191,89 @@ public final class HttpPipelineBuilder {
     }
 
     /**
-     * Adds a RequestPolicy which logs all HTTP traffic using SLF4J.
+     * Adds a HttpPipelinePolicy which logs all HTTP traffic using SLF4J.
+     *
      * @param level The HTTP logging detail level.
      * @param prettyPrintJSON Whether or not to pretty print JSON message bodies.
      * @return This HttpPipeline builder.
      */
     public HttpPipelineBuilder withHttpLoggingPolicy(HttpLogDetailLevel level, boolean prettyPrintJSON) {
-        return withRequestPolicy(new HttpLoggingPolicyFactory(level, prettyPrintJSON));
+        return withPolicy(new HttpLoggingPolicy(level, prettyPrintJSON));
     }
 
     /**
-     * Adds a RequestPolicy which adds proxy authentication headers to
+     * Adds a HttpPipelinePolicy which adds proxy authentication headers to
      * outgoing requests.
+     *
      * @param username The username for authentication.
      * @param password The password for authentication.
      * @return This HttpPipeline builder.
      */
     public HttpPipelineBuilder withProxyAuthenticationPolicy(String username, String password) {
-        return withRequestPolicy(new ProxyAuthenticationPolicyFactory(username, password));
+        return withPolicy(new ProxyAuthenticationPolicy(username, password));
     }
 
     /**
-     * Adds a RequestPolicy which adds a per-request ID to the
+     * Adds a HttpPipelinePolicy which adds a per-request ID to the
      * "x-ms-client-request-id" header to outgoing requests.
      * @return This HttpPipeline builder.
      */
     public HttpPipelineBuilder withRequestIdPolicy() {
-        return withRequestPolicy(new RequestIdPolicyFactory());
+        return withPolicy(new RequestIdPolicy());
     }
 
     /**
-     * Adds a RequestPolicy which retries a failed request up to the given
+     * Adds a HttpPipelinePolicy which retries a failed request up to the given
      * number of times.
+     *
      * @param maxRetries The maximum number of times to retry failed requests.
      * @param delayTime the delay between retries
      * @param timeUnit the time unit of the delay
      * @return This HttpPipeline builder.
      */
     public HttpPipelineBuilder withRetryPolicy(int maxRetries, long delayTime, ChronoUnit timeUnit) {
-        return withRequestPolicy(new RetryPolicyFactory(maxRetries, delayTime, timeUnit));
+        return withPolicy(new RetryPolicy(maxRetries, delayTime, timeUnit));
     }
 
     /**
-     * Adds a RequestPolicy which fails a request if it does not complete by
+     * Adds a HttpPipelinePolicy which fails a request if it does not complete by
      * the time the given interval elapses.
+     *
      * @param timeout The amount of time to wait before timing out a request.
      * @param unit The unit of time associated with the timeout parameter.
      * @return This HttpPipeline builder.
      */
     public HttpPipelineBuilder withTimeoutPolicy(long timeout, ChronoUnit unit) {
-        return withRequestPolicy(new TimeoutPolicyFactory(timeout, unit));
+        return withPolicy(new TimeoutPolicy(timeout, unit));
     }
 
     /**
-     * Add a RequestPolicy that will add the provided UserAgent header to each
+     * Add a HttpPipelinePolicy that will add the provided UserAgent header to each
      * outgoing HttpRequest.
+     *
      * @param userAgent The userAgent header value to add to each outgoing HttpRequest.
      * @return This HttpPipeline builder.
      */
     public HttpPipelineBuilder withUserAgentPolicy(String userAgent) {
-        return withRequestPolicy(new UserAgentPolicyFactory(userAgent));
+        return withPolicy(new UserAgentPolicy(userAgent));
     }
 
     /**
-     * Create a new HttpPipeline from the RequestPolicy factories that have been added to this
+     * Create a new HttpPipeline from the HttpPipelinePolicy factories that have been added to this
      * HttpPipeline builder.
+     *
      * @return The created HttpPipeline.
      */
     public HttpPipeline build() {
-        final int requestPolicyCount = requestPolicyFactories.size();
-        final RequestPolicyFactory[] requestPolicyFactoryArray = new RequestPolicyFactory[requestPolicyCount];
-        return new HttpPipeline(requestPolicyFactories.toArray(requestPolicyFactoryArray), options);
+        final int policyCount = pipelinePolicies.size();
+        final HttpPipelinePolicy[] requestPolicyArray = new HttpPipelinePolicy[policyCount];
+        //
+        HttpClient httpClient = (pipelineOptions == null || pipelineOptions.httpClient() == null)
+                ? HttpClient.createDefault()
+                : pipelineOptions.httpClient();
+        //
+        return new HttpPipeline(pipelinePolicies.toArray(requestPolicyArray),
+                httpClient,
+                new RequestPolicyOptions(pipelineOptions == null ? null : pipelineOptions.logger()));
     }
 }

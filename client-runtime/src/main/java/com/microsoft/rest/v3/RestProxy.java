@@ -14,15 +14,15 @@ import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
 import com.microsoft.rest.v3.http.HttpPipelineBuilder;
+import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.UrlBuilder;
-import com.microsoft.rest.v3.policy.CookiePolicyFactory;
-import com.microsoft.rest.v3.policy.CredentialsPolicyFactory;
-import com.microsoft.rest.v3.policy.DecodingPolicyFactory;
-import com.microsoft.rest.v3.policy.RequestPolicyFactory;
-import com.microsoft.rest.v3.policy.RetryPolicyFactory;
-import com.microsoft.rest.v3.policy.UserAgentPolicyFactory;
+import com.microsoft.rest.v3.policy.CookiePolicy;
+import com.microsoft.rest.v3.policy.CredentialsPolicy;
+import com.microsoft.rest.v3.policy.DecodingPolicy;
+import com.microsoft.rest.v3.policy.RetryPolicy;
+import com.microsoft.rest.v3.policy.UserAgentPolicy;
 import com.microsoft.rest.v3.protocol.HttpResponseDecoder;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 import com.microsoft.rest.v3.protocol.SerializerEncoding;
@@ -60,7 +60,7 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create a new instance of RestProxy.
-     * @param httpPipeline The RequestPolicy and HttpClient httpPipeline that will be used to send HTTP
+     * @param httpPipeline The HttpPipelinePolicy and HttpClient httpPipeline that will be used to send HTTP
      *                 requests.
      * @param serializer The serializer that will be used to convert response bodies to POJOs.
      * @param interfaceParser The parser that contains information about the swagger interface that
@@ -96,7 +96,7 @@ public class RestProxy implements InvocationHandler {
      * @return A {@link Single} representing the HTTP response that will arrive asynchronously.
      */
     public Mono<HttpResponse> sendHttpRequestAsync(HttpRequest request) {
-        return httpPipeline.sendRequestAsync(request);
+        return httpPipeline.sendRequest(request);
     }
 
     @Override
@@ -438,7 +438,7 @@ public class RestProxy implements InvocationHandler {
                 Type headersType = deserializedTypes[0];
                 if (!response.isDecoded() && !TypeUtil.isTypeOrSubTypeOf(headersType, Void.class)) {
                     asyncResult = asyncResult.then(Mono.error(new RestException(
-                            "No deserialized headers were found. Please add a DecodingPolicyFactory to the HttpPipeline.",
+                            "No deserialized headers were found. Please add a DecodingPolicy to the HttpPipeline.",
                             response,
                             (Object) null)));
                 }
@@ -473,7 +473,7 @@ public class RestProxy implements InvocationHandler {
             asyncResult = Mono.just(response.body());
         } else if (!response.isDecoded()) {
             asyncResult = Mono.error(new RestException(
-                    "No deserialized response body was found. Please add a DecodingPolicyFactory to the HttpPipeline.",
+                    "No deserialized response body was found. Please add a DecodingPolicy to the HttpPipeline.",
                     response,
                     (Object) null));
         } else {
@@ -547,7 +547,7 @@ public class RestProxy implements InvocationHandler {
      * @return the default HttpPipeline.
      */
     public static HttpPipeline createDefaultPipeline() {
-        return createDefaultPipeline((RequestPolicyFactory) null);
+        return createDefaultPipeline((HttpPipelinePolicy) null);
     }
 
     /**
@@ -556,7 +556,7 @@ public class RestProxy implements InvocationHandler {
      * @return the default HttpPipeline.
      */
     public static HttpPipeline createDefaultPipeline(ServiceClientCredentials credentials) {
-        return createDefaultPipeline(new CredentialsPolicyFactory(credentials));
+        return createDefaultPipeline(new CredentialsPolicy(credentials));
     }
 
     /**
@@ -565,14 +565,15 @@ public class RestProxy implements InvocationHandler {
      *                          pipeline.
      * @return the default HttpPipeline.
      */
-    public static HttpPipeline createDefaultPipeline(RequestPolicyFactory credentialsPolicy) {
+    public static HttpPipeline createDefaultPipeline(HttpPipelinePolicy credentialsPolicy) {
         final HttpPipelineBuilder builder = new HttpPipelineBuilder();
-        builder.withRequestPolicy(new UserAgentPolicyFactory());
-        builder.withRequestPolicy(new RetryPolicyFactory());
-        builder.withRequestPolicy(new DecodingPolicyFactory());
-        builder.withRequestPolicy(new CookiePolicyFactory());
+        // Order in which policies applied will be the order in which they added to builder
+        builder.withPolicy(new UserAgentPolicy());
+        builder.withPolicy(new RetryPolicy());
+        builder.withPolicy(new DecodingPolicy());
+        builder.withPolicy(new CookiePolicy());
         if (credentialsPolicy != null) {
-            builder.withRequestPolicy(credentialsPolicy);
+            builder.withPolicy(credentialsPolicy);
         }
         return builder.build();
     }
@@ -591,7 +592,7 @@ public class RestProxy implements InvocationHandler {
     /**
      * Create a proxy implementation of the provided Swagger interface.
      * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
-     * @param httpPipeline The RequestPolicy and HttpClient pipline that will be used to send Http
+     * @param httpPipeline The HttpPipelinePolicy and HttpClient pipline that will be used to send Http
      *                 requests.
      * @param <A> The type of the Swagger interface.
      * @return A proxy implementation of the provided Swagger interface.
@@ -617,7 +618,7 @@ public class RestProxy implements InvocationHandler {
     /**
      * Create a proxy implementation of the provided Swagger interface.
      * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
-     * @param httpPipeline The RequestPolicy and HttpClient pipline that will be used to send Http
+     * @param httpPipeline The HttpPipelinePolicy and HttpClient pipline that will be used to send Http
      *                 requests.
      * @param serializer The serializer that will be used to convert POJOs to and from request and
      *                   response bodies.

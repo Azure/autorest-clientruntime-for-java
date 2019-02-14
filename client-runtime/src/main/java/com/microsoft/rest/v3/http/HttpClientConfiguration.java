@@ -29,6 +29,12 @@ public class HttpClientConfiguration {
         this.poolOptions = new SharedChannelPoolOptions();
     }
 
+    /**
+     * Sets proxy configuration.
+     *
+     * @param proxyOptions the proxy configuration
+     * @return HttpClientConfiguration
+     */
     public HttpClientConfiguration withProxy(ProxyOptions proxyOptions) {
         this.proxy = proxyOptions;
         return this;

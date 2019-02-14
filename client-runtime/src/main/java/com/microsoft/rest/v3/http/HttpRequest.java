@@ -6,7 +6,6 @@
 
 package com.microsoft.rest.v3.http;
 
-import com.microsoft.rest.v3.Context;
 import com.microsoft.rest.v3.protocol.HttpResponseDecoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -24,7 +23,6 @@ public class HttpRequest {
     private URL url;
     private HttpHeaders headers;
     private Flux<ByteBuf> body;
-    private Context context;
     private final HttpResponseDecoder responseDecoder;
 
     /**
@@ -191,22 +189,6 @@ public class HttpRequest {
      */
     public HttpRequest withBody(Flux<ByteBuf> body) {
         this.body = body;
-        return this;
-    }
-
-    /**
-     * @return the {@link Context} associated with this HttpRequest
-     */
-    public Context context() {
-        return context;
-    }
-
-    /**
-     * @param context the context to associate with this HttpRequest
-     * @return This HttpRequest so that multiple operations can be chained together.
-     */
-    public HttpRequest withContext(Context context) {
-        this.context = context;
         return this;
     }
 

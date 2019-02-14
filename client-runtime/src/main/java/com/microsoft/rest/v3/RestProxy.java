@@ -9,6 +9,7 @@ package com.microsoft.rest.v3;
 import com.microsoft.rest.v3.annotations.ResumeOperation;
 import com.microsoft.rest.v3.credentials.ServiceClientCredentials;
 import com.microsoft.rest.v3.http.ContentType;
+import com.microsoft.rest.v3.http.ContextData;
 import com.microsoft.rest.v3.http.HttpHeader;
 import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpMethod;
@@ -30,7 +31,6 @@ import com.microsoft.rest.v3.serializer.JacksonAdapter;
 import com.microsoft.rest.v3.util.FluxUtil;
 import com.microsoft.rest.v3.util.TypeUtil;
 import io.netty.buffer.ByteBuf;
-import io.reactivex.Single;
 import io.reactivex.exceptions.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -94,11 +94,13 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Send the provided request asynchronously, applying any request policies provided to the HttpClient instance.
-     * @param request The HTTP request to send.
-     * @return A {@link Single} representing the HTTP response that will arrive asynchronously.
+     *
+     * @param request the HTTP request to send
+     * @param contextData the context
+     * @return a {@link Mono} that emits HttpResponse asynchronously
      */
-    public Mono<HttpResponse> sendHttpRequestAsync(HttpRequest request) {
-        return httpPipeline.sendRequest(request);
+    public Mono<HttpResponse> sendHttpRequestAsync(HttpRequest request, ContextData contextData) {
+        return httpPipeline.sendRequest(httpPipeline.newContext(request, contextData));
     }
 
     @Override
@@ -125,7 +127,7 @@ public class RestProxy implements InvocationHandler {
             } else {
                 methodParser = methodParser(method);
                 request = createHttpRequest(methodParser, args);
-                final Mono<HttpResponse> asyncResponse = sendHttpRequestAsync(request);
+                final Mono<HttpResponse> asyncResponse = sendHttpRequestAsync(request, methodParser.contextData(args));
                 final Type returnType = methodParser.returnType();
                 return handleAsyncHttpResponse(request, asyncResponse, methodParser, returnType);
             }
@@ -175,7 +177,6 @@ public class RestProxy implements InvocationHandler {
 
         final URL url = urlBuilder.toURL();
         final HttpRequest request = new HttpRequest(methodParser.fullyQualifiedMethodName(), methodParser.httpMethod(), url, new HttpResponseDecoder(methodParser, serializer));
-        request.withContext(methodParser.context(args));
 
         final Object bodyContentObject = methodParser.body(args);
         if (bodyContentObject == null) {

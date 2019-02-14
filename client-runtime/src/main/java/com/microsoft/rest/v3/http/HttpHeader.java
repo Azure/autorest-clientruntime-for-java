@@ -50,7 +50,7 @@ public class HttpHeader {
     }
 
     /**
-     * add another value to the end of this Header
+     * add another value to the end of this Header.
      *
      * @param value the value to add to the end of this Header
      */

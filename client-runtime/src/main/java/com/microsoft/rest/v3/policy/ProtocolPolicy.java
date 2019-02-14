@@ -28,7 +28,7 @@ public class ProtocolPolicy extends AbstractPipelinePolicy {
      * @param protocol The protocol to set on every HttpRequest.
      */
     public ProtocolPolicy(String protocol) {
-        this(protocol, true, RequestPolicyOptions.NULL_REQUEST_POLICY_OPTIONS);
+        this(protocol, true, new HttpPipelineOptions(null));
     }
 
     /**
@@ -38,7 +38,7 @@ public class ProtocolPolicy extends AbstractPipelinePolicy {
      * @param overwrite Whether or not to overwrite a HttpRequest's protocol if it already has one.
      * @param options the request options
      */
-    public ProtocolPolicy(String protocol, boolean overwrite, RequestPolicyOptions options) {
+    public ProtocolPolicy(String protocol, boolean overwrite, HttpPipelineOptions options) {
         super(options);
         this.protocol = protocol;
         this.overwrite = overwrite;

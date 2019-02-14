@@ -2,7 +2,6 @@ package com.microsoft.rest.v3.policy;
 
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.MockHttpClient;
 import org.junit.Test;
@@ -21,15 +20,14 @@ public class ProxyAuthenticationPolicyTests {
         final String username = "testuser";
         final String password = "testpass";
         //
-        final HttpPipeline pipeline = new HttpPipelineBuilder()
-                .withPolicy(new ProxyAuthenticationPolicy(username, password))
-                .withPolicy((context, next) -> {
+        final HttpPipeline pipeline = new HttpPipeline(new MockHttpClient(),
+                new HttpPipelineOptions(null),
+                new ProxyAuthenticationPolicy(username, password),
+                (context, next) -> {
                     assertEquals("Basic dGVzdHVzZXI6dGVzdHBhc3M=", context.httpRequest().headers().value("Proxy-Authentication"));
                     auditorVisited.set(true);
                     return next.process();
-                })
-                .withHttpClient(new MockHttpClient())
-                .build();
+                });
 
         pipeline.sendRequest(new HttpRequest("test", HttpMethod.GET, new URL("http://localhost"), null))
                 .block();

@@ -6,7 +6,7 @@
 
 package com.microsoft.rest.v3.http;
 
-import com.microsoft.rest.v3.policy.RequestPolicyOptions;
+import com.microsoft.rest.v3.policy.HttpPipelineOptions;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -17,7 +17,7 @@ import java.util.Optional;
 public final class HttpPipelineCallContext {
     private HttpRequest httpRequest;
     private ContextData data;
-    private final RequestPolicyOptions requestPolicyOptions;
+    private final HttpPipelineOptions requestPolicyOptions;
 
     //<editor-fold defaultstate="collapsed" desc="Package internal methods">
     /**
@@ -30,7 +30,7 @@ public final class HttpPipelineCallContext {
      *
      * @throws IllegalArgumentException if there are multiple policies with same name
      */
-    HttpPipelineCallContext(HttpRequest httpRequest, RequestPolicyOptions requestPolicyOptions) {
+    HttpPipelineCallContext(HttpRequest httpRequest, HttpPipelineOptions requestPolicyOptions) {
        this(httpRequest, ContextData.NONE, requestPolicyOptions);
     }
 
@@ -45,7 +45,7 @@ public final class HttpPipelineCallContext {
      *
      * @throws IllegalArgumentException if there are multiple policies with same name
      */
-    HttpPipelineCallContext(HttpRequest httpRequest, ContextData data, RequestPolicyOptions requestPolicyOptions) {
+    HttpPipelineCallContext(HttpRequest httpRequest, ContextData data, HttpPipelineOptions requestPolicyOptions) {
         Objects.requireNonNull(httpRequest);
         Objects.requireNonNull(data);
         //
@@ -98,7 +98,7 @@ public final class HttpPipelineCallContext {
     /**
      * @return the policy options
      */
-    public RequestPolicyOptions requestPolicyOptions() {
+    public HttpPipelineOptions requestPolicyOptions() {
         return this.requestPolicyOptions;
     }
 

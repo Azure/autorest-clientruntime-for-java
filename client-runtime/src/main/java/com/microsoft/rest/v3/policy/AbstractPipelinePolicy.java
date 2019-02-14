@@ -12,21 +12,21 @@ import com.microsoft.rest.v3.http.HttpPipelineLogLevel;
  * An abstract HttpPipelinePolicy base-class.
  */
 public abstract class AbstractPipelinePolicy implements HttpPipelinePolicy {
-    private final RequestPolicyOptions options;
+    private final HttpPipelineOptions options;
 
     /**
      * Creates AbstractRequestPolicy.
      *
      * @param options the options for this HttpPipelinePolicy.
      */
-    protected AbstractPipelinePolicy(RequestPolicyOptions options) {
+    protected AbstractPipelinePolicy(HttpPipelineOptions options) {
         this.options = options;
     }
 
     /**
      * @return the options.
      */
-    protected RequestPolicyOptions options() {
+    protected HttpPipelineOptions options() {
         return options;
     }
 

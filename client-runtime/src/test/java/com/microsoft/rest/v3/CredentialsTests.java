@@ -11,10 +11,11 @@ import com.microsoft.rest.v3.credentials.TokenCredentials;
 
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
+import com.microsoft.rest.v3.policy.CredentialsPolicy;
 import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.MockHttpClient;
+import com.microsoft.rest.v3.policy.HttpPipelineOptions;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,12 +32,12 @@ public class CredentialsTests {
             Assert.assertEquals("Basic dXNlcjpwYXNz", headerValue);
             return next.process();
         };
+        //
+        final HttpPipeline pipeline = new HttpPipeline(new MockHttpClient(),
+                new HttpPipelineOptions(null),
+                new CredentialsPolicy(credentials),
+                auditorPolicy);
 
-        final HttpPipeline pipeline = new HttpPipelineBuilder()
-                .withCredentialsPolicy(credentials)
-                .withPolicy(auditorPolicy)
-                .withHttpClient(new MockHttpClient())
-                .build();
 
         HttpRequest request = new HttpRequest("basicCredentialsTest", HttpMethod.GET, new URL("http://localhost"), null);
         pipeline.sendRequest(request).block();
@@ -52,11 +53,10 @@ public class CredentialsTests {
             return next.process();
         };
 
-        final HttpPipeline pipeline = new HttpPipelineBuilder()
-                .withCredentialsPolicy(credentials)
-                .withPolicy(auditorPolicy)
-                .withHttpClient(new MockHttpClient())
-                .build();
+        final HttpPipeline pipeline = new HttpPipeline(new MockHttpClient(),
+                new HttpPipelineOptions(null),
+                new CredentialsPolicy(credentials),
+                auditorPolicy);
 
         HttpRequest request = new HttpRequest("basicCredentialsTest", HttpMethod.GET, new URL("http://localhost"), null);
         pipeline.sendRequest(request).block();

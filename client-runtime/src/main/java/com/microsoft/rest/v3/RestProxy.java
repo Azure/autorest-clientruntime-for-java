@@ -13,7 +13,6 @@ import com.microsoft.rest.v3.http.HttpHeader;
 import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
@@ -21,6 +20,7 @@ import com.microsoft.rest.v3.http.UrlBuilder;
 import com.microsoft.rest.v3.policy.CookiePolicy;
 import com.microsoft.rest.v3.policy.CredentialsPolicy;
 import com.microsoft.rest.v3.policy.DecodingPolicy;
+import com.microsoft.rest.v3.policy.HttpPipelineOptions;
 import com.microsoft.rest.v3.policy.RetryPolicy;
 import com.microsoft.rest.v3.policy.UserAgentPolicy;
 import com.microsoft.rest.v3.protocol.HttpResponseDecoder;
@@ -43,6 +43,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -566,16 +568,16 @@ public class RestProxy implements InvocationHandler {
      * @return the default HttpPipeline.
      */
     public static HttpPipeline createDefaultPipeline(HttpPipelinePolicy credentialsPolicy) {
-        final HttpPipelineBuilder builder = new HttpPipelineBuilder();
-        // Order in which policies applied will be the order in which they added to builder
-        builder.withPolicy(new UserAgentPolicy());
-        builder.withPolicy(new RetryPolicy());
-        builder.withPolicy(new DecodingPolicy());
-        builder.withPolicy(new CookiePolicy());
+        List<HttpPipelinePolicy> policies = new ArrayList<HttpPipelinePolicy>();
+        policies.add(new UserAgentPolicy());
+        policies.add(new RetryPolicy());
+        policies.add(new DecodingPolicy());
+        policies.add(new CookiePolicy());
         if (credentialsPolicy != null) {
-            builder.withPolicy(credentialsPolicy);
+            policies.add(credentialsPolicy);
         }
-        return builder.build();
+        return new HttpPipeline(new HttpPipelineOptions(null),
+                policies.toArray(new HttpPipelinePolicy[policies.size()]));
     }
 
     /**

@@ -16,8 +16,9 @@ import com.microsoft.rest.v3.annotations.PUT;
 import com.microsoft.rest.v3.annotations.PathParam;
 import com.microsoft.rest.v3.http.ContentType;
 import com.microsoft.rest.v3.http.HttpHeaders;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
+import com.microsoft.rest.v3.http.HttpPipeline;
 import com.microsoft.rest.v3.http.HttpPipelineCallContext;
+import com.microsoft.rest.v3.policy.HttpLoggingPolicy;
 import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.NextPolicy;
@@ -25,6 +26,7 @@ import com.microsoft.rest.v3.policy.AddDatePolicy;
 import com.microsoft.rest.v3.policy.AddHeadersPolicy;
 import com.microsoft.rest.v3.policy.HostPolicy;
 import com.microsoft.rest.v3.policy.HttpLogDetailLevel;
+import com.microsoft.rest.v3.policy.HttpPipelineOptions;
 import com.microsoft.rest.v3.util.FluxUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -65,7 +67,9 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
@@ -98,20 +102,22 @@ public class RestProxyStressTests {
         HttpHeaders headers = new HttpHeaders()
                 .set("x-ms-version", "2017-04-17");
         // Order in which policies applied will be the order in which they added to builder
-        HttpPipelineBuilder builder = new HttpPipelineBuilder()
-                .withPolicy(new AddDatePolicy())
-                .withPolicy(new AddHeadersPolicy(headers))
-                .withPolicy(new ThrottlingRetryPolicy());
-
+        List<HttpPipelinePolicy> polices = new ArrayList<HttpPipelinePolicy>();
+        polices.add(new AddDatePolicy());
+        polices.add(new AddHeadersPolicy(headers));
+        polices.add(new ThrottlingRetryPolicy());
+        //
         String liveStressTests = System.getenv("JAVA_SDK_TEST_SAS");
         if (liveStressTests == null || liveStressTests.isEmpty()) {
             launchTestServer();
-            builder.withPolicy(new HostPolicy("http://localhost:" + port));
+            polices.add(new HostPolicy("http://localhost:" + port));
         }
-
-        builder.withHttpLoggingPolicy(HttpLogDetailLevel.BASIC);
-
-        service = RestProxy.create(IOService.class, builder.build());
+        //
+        polices.add(new HttpLoggingPolicy(HttpLogDetailLevel.BASIC, false));
+        //
+        service = RestProxy.create(IOService.class,
+                new HttpPipeline(new HttpPipelineOptions(null),
+                        polices.toArray(new HttpPipelinePolicy[polices.size()])));
 
         TEMP_FOLDER_PATH = Paths.get(tempFolderPath);
         create100MFiles(false);
@@ -555,16 +561,17 @@ public class RestProxyStressTests {
                 .set("x-ms-version", "2017-04-17");
         // Order in which policies applied will be the order in which they added to builder
         //
-        HttpPipelineBuilder builder = new HttpPipelineBuilder()
-                .withPolicy(new AddDatePolicy())
-                .withPolicy(new AddHeadersPolicy(headers))
-                .withPolicy(new ThrottlingRetryPolicy());
+        List<HttpPipelinePolicy> policies = new ArrayList<>();
+        policies.add(new AddDatePolicy());
+        policies.add(new AddHeadersPolicy(headers));
+        policies.add(new ThrottlingRetryPolicy());
 
         if (sas == null || sas.isEmpty()) {
-            builder.withPolicy(new HostPolicy("http://localhost:" + port));
+            policies.add(new HostPolicy("http://localhost:" + port));
         }
 
-        final IOService innerService = RestProxy.create(IOService.class, builder.build());
+        final IOService innerService = RestProxy.create(IOService.class,
+                new HttpPipeline(new HttpPipelineOptions(null), policies.toArray(new HttpPipelinePolicy[policies.size()])));
 
         // When running with MockServer, connections sometimes get dropped,
         // but this doesn't seem to result in any bad behavior as long as we retry.

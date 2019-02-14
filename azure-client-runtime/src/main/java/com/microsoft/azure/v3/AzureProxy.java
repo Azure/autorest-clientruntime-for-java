@@ -16,18 +16,16 @@ import com.microsoft.rest.v3.SwaggerInterfaceParser;
 import com.microsoft.rest.v3.SwaggerMethodParser;
 import com.microsoft.azure.v3.credentials.AsyncServiceClientCredentials;
 import com.microsoft.rest.v3.credentials.ServiceClientCredentials;
-import com.microsoft.rest.v3.http.HttpClient;
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.http.HttpPipelineBuilder;
 import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
-import com.microsoft.rest.v3.http.NettyClient;
 import com.microsoft.rest.v3.policy.CookiePolicy;
 import com.microsoft.rest.v3.policy.CredentialsPolicy;
 import com.microsoft.rest.v3.policy.DecodingPolicy;
 import com.microsoft.rest.v3.policy.RetryPolicy;
+import com.microsoft.rest.v3.policy.UserAgentPolicy;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 import com.microsoft.rest.v3.protocol.SerializerEncoding;
 import com.microsoft.rest.v3.util.TypeUtil;
@@ -41,7 +39,9 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.net.NetworkInterface;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -191,18 +191,17 @@ public final class AzureProxy extends RestProxy {
      * @return the default HttpPipeline.
      */
     public static HttpPipeline createDefaultPipeline(Class<?> swaggerInterface, HttpPipelinePolicy credentialsPolicy) {
-        final HttpClient httpClient = new NettyClient.Factory().create(null);
-        final HttpPipelineBuilder builder = new HttpPipelineBuilder().withHttpClient(httpClient);
-        // Order in which policies applied will be the order in which they added to builder
-        builder.withUserAgentPolicy(getDefaultUserAgentString(swaggerInterface));
-        builder.withPolicy(new RetryPolicy());
-        builder.withPolicy(new DecodingPolicy());
-        builder.withPolicy(new CookiePolicy());
+        // Order in which policies applied will be the order in which they appear in the array
+        //
+        List<HttpPipelinePolicy> policies = new ArrayList<HttpPipelinePolicy>();
+        policies.add(new UserAgentPolicy(getDefaultUserAgentString(swaggerInterface)));
+        policies.add(new RetryPolicy());
+        policies.add(new DecodingPolicy());
+        policies.add(new CookiePolicy());
         if (credentialsPolicy != null) {
-            builder.withPolicy(credentialsPolicy);
+            policies.add(credentialsPolicy);
         }
-
-        return builder.build();
+        return new HttpPipeline(policies.toArray(new HttpPipelinePolicy[policies.size()]));
     }
 
     /**

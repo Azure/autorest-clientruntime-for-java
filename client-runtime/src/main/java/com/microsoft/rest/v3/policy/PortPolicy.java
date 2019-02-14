@@ -28,7 +28,7 @@ public class PortPolicy extends AbstractPipelinePolicy {
      * @param port The port to set on every HttpRequest.
      */
     public PortPolicy(int port) {
-        this(port, true, RequestPolicyOptions.NULL_REQUEST_POLICY_OPTIONS);
+        this(port, true, new HttpPipelineOptions(null));
     }
 
     /**
@@ -38,7 +38,7 @@ public class PortPolicy extends AbstractPipelinePolicy {
      * @param overwrite Whether or not to overwrite a HttpRequest's port if it already has one.
      * @param options the request options
      */
-    public PortPolicy(int port, boolean overwrite, RequestPolicyOptions options) {
+    public PortPolicy(int port, boolean overwrite, HttpPipelineOptions options) {
         super(options);
         this.port = port;
         this.overwrite = overwrite;

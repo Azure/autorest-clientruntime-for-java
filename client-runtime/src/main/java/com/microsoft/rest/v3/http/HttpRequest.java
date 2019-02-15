@@ -174,7 +174,6 @@ public class HttpRequest {
         return responseDecoder;
     }
 
-
     /**
      * Creates a clone of the request.
      *

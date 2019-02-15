@@ -7,19 +7,21 @@
 package com.microsoft.rest.v3.http;
 
 /**
- * A single header within a HTTP request. If multiple header values are added to a HTTP request with
- * the same name (case-insensitive), then the values will be appended to the end of the same Header
- * with commas separating them.
+ * A single header within a HTTP request or response.
+ *
+ * If multiple header values are added to a HTTP request or response with
+ * the same name (case-insensitive), then the values will be appended
+ * to the end of the same Header with commas separating them.
  */
 public class HttpHeader {
     private final String name;
     private String value;
 
     /**
-     * Create a new HttpHeader using the provided name and value.
+     * Create a HttpHeader instance using the provided name and value.
      *
-     * @param name the name of the HttpHeader
-     * @param value the value of the HttpHeader
+     * @param name the name
+     * @param value the value
      */
     public HttpHeader(String name, String value) {
         this.name = name;
@@ -27,8 +29,6 @@ public class HttpHeader {
     }
 
     /**
-     * Get the name of this Header.
-     *
      * @return the name of this Header
      */
     public String name() {
@@ -50,9 +50,9 @@ public class HttpHeader {
     }
 
     /**
-     * add another value to the end of this Header.
+     * add a new value to the end of this Header.
      *
-     * @param value the value to add to the end of this Header
+     * @param value the value to add
      */
     public void addValue(String value) {
         this.value += "," + value;

@@ -18,7 +18,7 @@ public class ProxyOptions {
     private final Type type;
 
     /**
-     * Creates a default proxy options object.
+     * Creates ProxyOptions.
      *
      * @param type the proxy type
      * @param address the proxy address (ip and port number)
@@ -43,7 +43,7 @@ public class ProxyOptions {
     }
 
     /**
-     * The type of the proxy, mapping the types defined in Reactor-Netty.
+     * The type of the proxy.
      */
     public enum Type {
         /**

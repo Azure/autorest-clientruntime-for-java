@@ -6,7 +6,6 @@
 
 package com.microsoft.rest.v3.http;
 
-
 import java.io.Closeable;
 
 import com.microsoft.rest.v3.policy.DecodingPolicy;
@@ -16,8 +15,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 
 /**
- * This class contains all of the details necessary for reacting to a HTTP response from a
- * HttpResponse.
+ * The type representing response of {@link HttpRequest}.
  */
 public abstract class HttpResponse implements Closeable {
     private Object deserializedHeaders;
@@ -26,22 +24,20 @@ public abstract class HttpResponse implements Closeable {
     private HttpRequest request;
 
     /**
-     * Get this response object's HTTP status code.
-     * @return This response object's HTTP status code.
+     * @return the response status code.
      */
     public abstract int statusCode();
 
     /**
-     * Get the header value for the provided header name, or null if the provided header name does
-     * not appear in this HttpResponse's headers.
-     * @param headerName The name of the header to lookup.
-     * @return The value of the header, or null if the header doesn't exist in this HttpResponse.
+     * Lookup a response header with the provided name.
+     *
+     * @param name the name of the header to lookup.
+     * @return the value of the header, or null if the header doesn't exist in the response.
      */
-    public abstract String headerValue(String headerName);
+    public abstract String headerValue(String name);
 
     /**
-     * Get all the headers on this HTTP response.
-     * @return All headers on this HTTP response.
+     * @return all the response headers
      */
     public abstract HttpHeaders headers();
 
@@ -70,58 +66,19 @@ public abstract class HttpResponse implements Closeable {
      * the `subscribeOn` and `observeOn` but should be considered a template for
      * more complex situations.
      *
-     * @return The response's body as a stream of {@link ByteBuf}.
+     * @return The response's content as a stream of {@link ByteBuf}.
      */
     public abstract Flux<ByteBuf> body();
 
     /**
-     * Get this response object's body as a byte[]. If this response object doesn't have a body,
-     * then null will be returned.
-     * @return This response object's body as a byte[]. If this response object doesn't have a body,
-     * then null will be returned.
+     * @return this response content as a byte[]
      */
     public abstract Mono<byte[]> bodyAsByteArray();
 
     /**
-     * Get this response object's body as a string. If this response object doesn't have a body,
-     * then null will be returned.
-     * @return This response object's body as a string. If this response object doesn't have a body,
-     * then null will be returned.
+     * @return This response content as a string
      */
     public abstract Mono<String> bodyAsString();
-
-    /**
-     * Buffers the HTTP response body into memory, allowing the content to be inspected and replayed.
-     * @return This HTTP response, with body content buffered into memory.
-     */
-    public BufferedHttpResponse buffer() {
-        return new BufferedHttpResponse(this);
-    }
-
-    /**
-     * Closes the stream providing this HttpResponse's content, if any.
-     */
-    public void close() {
-        // no-op
-    }
-
-    /**
-     * Returns a value indicating whether this HttpResponse has been decoded by a {@link DecodingPolicy}.
-     * @return whether this HttpResponse has been decoded
-     */
-    public boolean isDecoded() {
-        return isDecoded;
-    }
-
-    /**
-     * Sets the flag indicating whether this HttpResponse has been decoded by a {@link DecodingPolicy}.
-     * @param isDecoded whether this HttpResponse has been decoded
-     * @return this HTTP repsonse
-     */
-    public boolean withIsDecoded(boolean isDecoded) {
-        this.isDecoded = isDecoded;
-        return isDecoded;
-    }
 
     /**
      * @return the deserialized headers, if present. Otherwise, null.
@@ -131,9 +88,10 @@ public abstract class HttpResponse implements Closeable {
     }
 
     /**
-     * Set the deserialized headers on this HttpResponse.
+     * Set the deserialized headers on this response.
+     *
      * @param deserializedHeaders the deserialized headers
-     * @return this HTTP repsonse
+     * @return this HttpResponse
      */
     public HttpResponse withDeserializedHeaders(Object deserializedHeaders) {
         this.deserializedHeaders = deserializedHeaders;
@@ -148,9 +106,10 @@ public abstract class HttpResponse implements Closeable {
     }
 
     /**
-     * Sets the deserialized body on this HttpResponse.
-     * @param deserializedBody the deserialized body
-     * @return this HTTP response
+     * Sets the deserialized content on this response.
+     *
+     * @param deserializedBody the deserialized content
+     * @return this HttpResponse
      */
     public HttpResponse withDeserializedBody(Object deserializedBody) {
         this.deserializedBody = deserializedBody;
@@ -158,16 +117,16 @@ public abstract class HttpResponse implements Closeable {
     }
 
     /**
-     * @return The request which resulted in this HttpResponse.
+     * @return The request which resulted in this response.
      */
     public final HttpRequest request() {
         return request;
     }
 
-
     /**
-     * Sets the request on this HttpResponse.
-     * @param request the request which resulted in this HttpResponse
+     * Sets the request which resulted in this HttpResponse.
+     *
+     * @param request the request
      * @return this HTTP response
      */
     public final HttpResponse withRequest(HttpRequest request) {
@@ -175,8 +134,40 @@ public abstract class HttpResponse implements Closeable {
         return this;
     }
 
+    /**
+     * @return true if the response content decoded by {@link DecodingPolicy} false otherwise.
+     */
+    public boolean isDecoded() {
+        return isDecoded;
+    }
+
+    /**
+     * Sets the flag indicating whether this HttpResponse has been decoded by a {@link DecodingPolicy}.
+     * @param isDecoded whether this HttpResponse has been decoded
+     * @return this response
+     */
+    public boolean withIsDecoded(boolean isDecoded) {
+        this.isDecoded = isDecoded;
+        return isDecoded;
+    }
+
+    /**
+     * @return new Response object wrapping the this response with it's content
+     * buffered into memory.
+     */
+    public BufferedHttpResponse buffer() {
+        return new BufferedHttpResponse(this);
+    }
+
+    /**
+     * Closes the response content stream, if any.
+     */
+    @Override
+    public void close() {
+    }
+
+    // package private for test purpose
     Connection internConnection() {
         return null;
     }
-
 }

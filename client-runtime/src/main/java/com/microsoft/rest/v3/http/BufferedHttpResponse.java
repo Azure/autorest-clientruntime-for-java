@@ -22,7 +22,8 @@ public final class BufferedHttpResponse extends HttpResponse {
 
     /**
      * Creates a buffered HTTP response.
-     * @param innerHttpResponse The HTTP response to buffer.
+     *
+     * @param innerHttpResponse The HTTP response to buffer
      */
     public BufferedHttpResponse(HttpResponse innerHttpResponse) {
         this.innerHttpResponse = innerHttpResponse;
@@ -35,8 +36,8 @@ public final class BufferedHttpResponse extends HttpResponse {
     }
 
     @Override
-    public String headerValue(String headerName) {
-        return innerHttpResponse.headerValue(headerName);
+    public String headerValue(String name) {
+        return innerHttpResponse.headerValue(name);
     }
 
     @Override

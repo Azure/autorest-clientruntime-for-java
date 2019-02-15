@@ -38,22 +38,24 @@ import java.util.Set;
  */
 public final class HttpResponseDecoder {
     private final SwaggerMethodParser methodParser;
-    private final SerializerAdapter<?> serializer;
+    private final SerializerAdapter serializer;
 
     /**
-     * Creates an HttpResponseDecoder.
-     * @param methodParser metadata about the Swagger method used for decoding.
+     * Creates HttpResponseDecoder.
+     *
+     * @param methodParser metadata about the Swagger method used for decoding
      * @param serializer the serializer
      */
-    public HttpResponseDecoder(SwaggerMethodParser methodParser, SerializerAdapter<?> serializer) {
+    public HttpResponseDecoder(SwaggerMethodParser methodParser, SerializerAdapter serializer) {
         this.methodParser = methodParser;
         this.serializer = serializer;
     }
 
     /**
      * Asynchronously decodes an {@link HttpResponse}, deserializing into a response or error value.
+     *
      * @param response the {@link HttpResponse}
-     * @return A {@link Mono} containing either the decoded HttpResponse or an error
+     * @return A {@link Mono} that emits decoded HttpResponse upon subscription.
      */
     public Mono<HttpResponse> decode(final HttpResponse response) {
         response.withIsDecoded(true);

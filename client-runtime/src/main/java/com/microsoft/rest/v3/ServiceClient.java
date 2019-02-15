@@ -21,7 +21,7 @@ public abstract class ServiceClient {
     /**
      * The lazily-created serializer for this ServiceClient.
      */
-    private SerializerAdapter<?> serializerAdapter;
+    private SerializerAdapter serializerAdapter;
 
     /**
      * Creates ServiceClient.
@@ -42,14 +42,14 @@ public abstract class ServiceClient {
     /**
      * @return the serializer for this ServiceClient.
      */
-    public SerializerAdapter<?> serializerAdapter() {
+    public SerializerAdapter serializerAdapter() {
         if (this.serializerAdapter == null) {
             this.serializerAdapter = createSerializerAdapter();
         }
         return this.serializerAdapter;
     }
 
-    protected SerializerAdapter<?> createSerializerAdapter() {
+    protected SerializerAdapter createSerializerAdapter() {
         return RestProxy.createDefaultSerializer();
     }
 }

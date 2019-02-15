@@ -23,7 +23,7 @@ public abstract class HttpClient {
     /**
      * Create default HttpClient instance.
      *
-     * @return an instance of the default HttpClient
+     * @return the HttpClient
      */
     public static HttpClient createDefault() {
         return createDefault(null);
@@ -33,7 +33,7 @@ public abstract class HttpClient {
      * Create default HttpClient instance with the provided configuration applied.
      *
      * @param configuration The configuration to apply to the HttpClient
-     * @return an instance of the default HttpClient
+     * @return the HttpClient
      */
     public static HttpClient createDefault(HttpClientConfiguration configuration) {
         return DefaultHttpClientHolder.defaultHttpClientFactory.create(configuration);

@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
 import java.io.IOException;
 
 public class MockHttpResponse extends HttpResponse {
-    private final static SerializerAdapter<?> serializer = new JacksonAdapter();
+    private final static SerializerAdapter serializer = new JacksonAdapter();
 
     private final int statusCode;
 

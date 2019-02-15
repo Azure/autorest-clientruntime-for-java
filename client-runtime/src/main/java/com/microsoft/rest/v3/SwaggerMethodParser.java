@@ -45,7 +45,7 @@ import java.util.Map;
  * method.
  */
 public class SwaggerMethodParser {
-    private final SerializerAdapter<?> serializer;
+    private final SerializerAdapter serializer;
     private final String rawHost;
     private final String fullyQualifiedMethodName;
     private HttpMethod httpMethod;
@@ -71,7 +71,7 @@ public class SwaggerMethodParser {
      *                host value in an HTTP request, it must be processed through the possible host
      *                substitutions.
      */
-    SwaggerMethodParser(Method swaggerMethod, SerializerAdapter<?> serializer, String rawHost) {
+    SwaggerMethodParser(Method swaggerMethod, SerializerAdapter serializer, String rawHost) {
         this.serializer = serializer;
         this.rawHost = rawHost;
 

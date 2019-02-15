@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 public class MockAzureHttpResponse extends HttpResponse {
-    private final static SerializerAdapter<?> serializer = new JacksonAdapter();
+    private final static SerializerAdapter serializer = new JacksonAdapter();
 
     private final int statusCode;
 

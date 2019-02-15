@@ -1439,5 +1439,5 @@ public abstract class RestProxyTests {
         assertTrue("Expected \"" + value + "\" to contain \"" + expectedSubstring + "\".", value.contains(expectedSubstring));
     }
 
-    private static final SerializerAdapter<?> serializer = new JacksonAdapter();
+    private static final SerializerAdapter serializer = new JacksonAdapter();
 }

@@ -127,7 +127,7 @@ public class RestProxy implements InvocationHandler {
             } else {
                 methodParser = methodParser(method);
                 request = createHttpRequest(methodParser, args);
-                final Mono<HttpResponse> asyncResponse = sendHttpRequestAsync(request, methodParser.contextData(args));
+                final Mono<HttpResponse> asyncResponse = sendHttpRequestAsync(request, methodParser.contextData(args).addData("caller-method", methodParser.fullyQualifiedMethodName()));
                 final Type returnType = methodParser.returnType();
                 return handleAsyncHttpResponse(request, asyncResponse, methodParser, returnType);
             }
@@ -176,7 +176,7 @@ public class RestProxy implements InvocationHandler {
         }
 
         final URL url = urlBuilder.toURL();
-        final HttpRequest request = new HttpRequest(methodParser.fullyQualifiedMethodName(), methodParser.httpMethod(), url, new HttpResponseDecoder(methodParser, serializer));
+        final HttpRequest request = new HttpRequest(methodParser.httpMethod(), url, new HttpResponseDecoder(methodParser, serializer));
 
         final Object bodyContentObject = methodParser.body(args);
         if (bodyContentObject == null) {
@@ -242,7 +242,6 @@ public class RestProxy implements InvocationHandler {
     @SuppressWarnings("unchecked")
     private HttpRequest createHttpRequest(OperationDescription operationDescription, SwaggerMethodParser methodParser, Object[] args) throws IOException {
         final HttpRequest request = new HttpRequest(
-                methodParser.fullyQualifiedMethodName(),
                 methodParser.httpMethod(),
                 operationDescription.url(),
                 new HttpResponseDecoder(methodParser, serializer));

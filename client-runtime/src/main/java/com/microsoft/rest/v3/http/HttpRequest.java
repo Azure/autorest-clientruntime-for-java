@@ -15,10 +15,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 /**
- * This class contains all of the details necessary for sending a HTTP request through a HttpClient.
+ * The outgoing Http request.
  */
 public class HttpRequest {
-    private String callerMethod;
     private HttpMethod httpMethod;
     private URL url;
     private HttpHeaders headers;
@@ -26,15 +25,13 @@ public class HttpRequest {
     private final HttpResponseDecoder responseDecoder;
 
     /**
-     * Create a new HttpRequest object with the provided HTTP method (GET, POST, PUT, etc.) and the
-     * provided URL.
-     * @param callerMethod The fully qualified method that was called to invoke this HTTP request.
-     * @param httpMethod The HTTP method to use with this request.
-     * @param url The URL where this HTTP request should be sent to.
-     * @param responseDecoder the which decodes messages sent in response to this HttpRequest.
+     * Create a new HttpRequest instance.
+     *
+     * @param httpMethod the HTTP request method
+     * @param url the target address to send the request to
+     * @param responseDecoder decoder to decode response of this request
      */
-    public HttpRequest(String callerMethod, HttpMethod httpMethod, URL url, HttpResponseDecoder responseDecoder) {
-        this.callerMethod = callerMethod;
+    public HttpRequest(HttpMethod httpMethod, URL url, HttpResponseDecoder responseDecoder) {
         this.httpMethod = httpMethod;
         this.url = url;
         this.headers = new HttpHeaders();
@@ -42,16 +39,15 @@ public class HttpRequest {
     }
 
     /**
-     * Create a new HttpRequest object.
-     * @param callerMethod The fully qualified method that was called to invoke this HTTP request.
-     * @param httpMethod The HTTP method to use with this request.
-     * @param url The URL where this HTTP request should be sent to.
-     * @param headers The HTTP headers to use with this request.
-     * @param body The body of this HTTP request.
-     * @param responseDecoder the which decodes messages sent in response to this HttpRequest.
+     * Create a new HttpRequest instance.
+     *
+     * @param httpMethod the HTTP request method
+     * @param url the target address to send the request to
+     * @param headers the HTTP headers to use with this request
+     * @param body the request content
+     * @param responseDecoder decoder to decode response of this request
      */
-    public HttpRequest(String callerMethod, HttpMethod httpMethod, URL url, HttpHeaders headers, Flux<ByteBuf> body, HttpResponseDecoder responseDecoder) {
-        this.callerMethod = callerMethod;
+    public HttpRequest(HttpMethod httpMethod, URL url, HttpHeaders headers, Flux<ByteBuf> body, HttpResponseDecoder responseDecoder) {
         this.httpMethod = httpMethod;
         this.url = url;
         this.headers = headers;
@@ -60,35 +56,17 @@ public class HttpRequest {
     }
 
     /**
-     * Get the fully qualified method that was called to invoke this HTTP request.
-     * @return The fully qualified method that was called to invoke this HTTP request.
-     */
-    public String callerMethod() {
-        return callerMethod;
-    }
-
-    /**
-     * Set the caller method for this request.
-     * @param callerMethod The fully qualified method that was called to invoke this HTTP request.
-     * @return This HttpRequest instance for chaining.
-     */
-    public HttpRequest withCallerMethod(String callerMethod) {
-        this.callerMethod = callerMethod;
-        return this;
-    }
-
-    /**
-     * Get the HTTP method that this request will use.
-     * @return The HTTP method that this request will use.
+     * @return the HTTP request method
      */
     public HttpMethod httpMethod() {
         return httpMethod;
     }
 
     /**
-     * Set the HTTP method that this request will use.
-     * @param httpMethod The HTTP method to use, e.g. "GET".
-     * @return This HttpRequest so that multiple operations can be chained together.
+     * Set the HTTP request method.
+     *
+     * @param httpMethod the HTTP method
+     * @return this HttpRequest
      */
     public HttpRequest withHttpMethod(HttpMethod httpMethod) {
         this.httpMethod = httpMethod;
@@ -96,17 +74,17 @@ public class HttpRequest {
     }
 
     /**
-     * Get the URL that this request will be sent to.
-     * @return The URL that this request will be sent to.
+     * @return the target address
      */
     public URL url() {
         return url;
     }
 
     /**
-     * Set the URL that this request will be sent to.
-     * @param url The new URL that this request will be sent to.
-     * @return This HttpRequest so that multiple operations can be chained together.
+     * Set the target address to send the request to.
+     *
+     * @param url target address as {@link URL}
+     * @return this HttpRequest
      */
     public HttpRequest withUrl(URL url) {
         this.url = url;
@@ -114,25 +92,17 @@ public class HttpRequest {
     }
 
     /**
-     * Get the {@link HttpResponseDecoder} which decodes messages sent in response to this HttpRequest.
-     * @return the response decoder
-     */
-    public HttpResponseDecoder responseDecoder() {
-        return responseDecoder;
-    }
-
-    /**
-     * Get the headers for this request.
-     * @return The headers for this request.
+     * @return headers to be sent.
      */
     public HttpHeaders headers() {
         return headers;
     }
 
     /**
-     * Set the headers for this request.
-     * @param headers The set of headers to send for this request.
-     * @return This HttpRequest so that multiple operations can be chained together.
+     * Set the request headers.
+     *
+     * @param headers the set of headers
+     * @return this HttpRequest
      */
     public HttpRequest withHeaders(HttpHeaders headers) {
         this.headers = headers;
@@ -140,67 +110,82 @@ public class HttpRequest {
     }
 
     /**
-     * Add the provided headerName and headerValue to the list of headers for this request.
-     * @param headerName The name of the header.
-     * @param headerValue The value of the header.
-     * @return This HttpRequest so that multiple operations can be chained together.
+     * Set a request header, replacing any existing value.
+     * A null for {@code value} will remove the header if one with matching name exists.
+     *
+     * @param name the header name
+     * @param value the header value
+     * @return this HttpRequest
      */
-    public HttpRequest withHeader(String headerName, String headerValue) {
-        headers.set(headerName, headerValue);
+    public HttpRequest withHeader(String name, String value) {
+        headers.set(name, value);
         return this;
     }
 
     /**
-     * Get the body for this HttpRequest.
-     * @return The body for this HttpRequest.
+     * @return the content to be send.
      */
     public Flux<ByteBuf> body() {
         return body;
     }
 
     /**
-     * Set the body of this HTTP request.
-     * @param body The body of this HTTP request.
-     * @return This HttpRequest so that multiple operations can be chained together.
+     * Set the request content.
+     *
+     * @param content the request content
+     * @return this HttpRequest
      */
-    public HttpRequest withBody(String body) {
-        final byte[] bodyBytes = body.getBytes(StandardCharsets.UTF_8);
+    public HttpRequest withBody(String content) {
+        final byte[] bodyBytes = content.getBytes(StandardCharsets.UTF_8);
         return withBody(bodyBytes);
     }
 
     /**
-     * Set the body of this HTTP request, automatically setting the Content-Length header based on the given body's length.
+     * Set the request content.
+     * The Content-Length header will be set based on the given content's length
      *
-     * @param body The body of this HTTP request.
-     * @return This HttpRequest so that multiple operations can be chained together.
+     * @param content the request content
+     * @return this HttpRequest
      */
-    public HttpRequest withBody(byte[] body) {
-        headers.set("Content-Length", String.valueOf(body.length));
+    public HttpRequest withBody(byte[] content) {
+        headers.set("Content-Length", String.valueOf(content.length));
         // Unpooled.wrappedBuffer(body) ByteBuf in unpooled heap
-        return withBody(Flux.just(Unpooled.wrappedBuffer(body)));
+        return withBody(Flux.just(Unpooled.wrappedBuffer(content)));
     }
 
     /**
-     * Set the body of this HTTP request, leaving request headers unmodified.
-     * Users must set the Content-Length header to indicate the length of the new body, or use Transfer-Encoding: chunked.
+     * Set request content.
      *
-     * @param body The body of this HTTP request.
-     * @return This HttpRequest so that multiple operations can be chained together.
+     * Caller must set the Content-Length header to indicate the length of the content,
+     * or use Transfer-Encoding: chunked.
+     *
+     * @param content the request content
+     * @return this HttpRequest
      */
-    public HttpRequest withBody(Flux<ByteBuf> body) {
-        this.body = body;
+    public HttpRequest withBody(Flux<ByteBuf> content) {
+        this.body = content;
         return this;
     }
 
     /**
-     * Performs a deep clone of this HTTP request. The main purpose of this is so that this
-     * HttpRequest can be changed and the resulting HttpRequest can be a backup. This means
-     * that the buffered HttpHeaders and body must not be able to change from side effects of
-     * this HttpRequest.
-     * @return A new HTTP request instance with cloned instances of all mutable properties.
+     * @return the {@link HttpResponseDecoder} to decodes the response of this request.
+     */
+    public HttpResponseDecoder responseDecoder() {
+        return responseDecoder;
+    }
+
+
+    /**
+     * Creates a clone of the request.
+     *
+     * The main purpose of this is so that this HttpRequest can be changed and the resulting
+     * HttpRequest can be a backup. This means that the buffered HttpHeaders and body must
+     * not be able to change from side effects of this HttpRequest.
+     *
+     * @return a new HTTP request instance with cloned instances of all mutable properties.
      */
     public HttpRequest buffer() {
         final HttpHeaders bufferedHeaders = new HttpHeaders(headers);
-        return new HttpRequest(callerMethod, httpMethod, url, bufferedHeaders, body, responseDecoder);
+        return new HttpRequest(httpMethod, url, bufferedHeaders, body, responseDecoder);
     }
 }

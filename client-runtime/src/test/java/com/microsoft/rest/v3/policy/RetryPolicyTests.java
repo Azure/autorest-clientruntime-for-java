@@ -31,8 +31,7 @@ public class RetryPolicyTests {
        new HttpPipelineOptions(null),
        new RetryPolicy(3, 0, ChronoUnit.MILLIS));
 
-        HttpResponse response = pipeline.sendRequest(new HttpRequest("exponentialRetryEndOn501",
-                        HttpMethod.GET,
+        HttpResponse response = pipeline.sendRequest(new HttpRequest(HttpMethod.GET,
                         new URL("http://localhost/"), null)).block();
 
         Assert.assertEquals(501, response.statusCode());
@@ -54,8 +53,7 @@ public class RetryPolicyTests {
         new RetryPolicy(maxRetries, 0, ChronoUnit.MILLIS));
 
 
-        HttpResponse response = pipeline.sendRequest(new HttpRequest("exponentialRetryMax",
-                        HttpMethod.GET,
+        HttpResponse response = pipeline.sendRequest(new HttpRequest(HttpMethod.GET,
                         new URL("http://localhost/"), null)).block();
 
         Assert.assertEquals(500, response.statusCode());

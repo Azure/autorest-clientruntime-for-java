@@ -323,7 +323,7 @@ public class SwaggerMethodParser {
         if (firstArg instanceof ContextData) {
             return (ContextData) firstArg;
         } else {
-            return null;
+            return ContextData.NONE;
         }
     }
 

@@ -41,6 +41,6 @@ public class HostPolicyTests {
     }
 
     private static HttpRequest createHttpRequest(String url) throws MalformedURLException {
-        return new HttpRequest("mock.caller", HttpMethod.GET, new URL(url), null);
+        return new HttpRequest(HttpMethod.GET, new URL(url), null);
     }
 }

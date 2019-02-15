@@ -16,22 +16,22 @@ import java.util.Map;
 /**
  * A response to a REST call with a streaming content.
  */
-public final class StreamResponse extends RestResponse<Void, Flux<ByteBuf>> implements Closeable {
+public final class RestStreamResponse extends RestResponse<Void, Flux<ByteBuf>> implements Closeable {
     /**
-     * Creates a StreamResponse.
+     * Creates a RestStreamResponse.
      *
-     * @param request the request which resulted in this StreamResponse
+     * @param request the request which resulted in this RestStreamResponse
      * @param statusCode the status code of the HTTP response
      * @param rawHeaders the raw headers of the HTTP response
      * @param body the streaming body
      */
-    public StreamResponse(HttpRequest request, int statusCode, Map<String, String> rawHeaders, Flux<ByteBuf> body) {
+    public RestStreamResponse(HttpRequest request, int statusCode, Map<String, String> rawHeaders, Flux<ByteBuf> body) {
         super(request, statusCode, null, rawHeaders, body);
     }
 
     // Used for uniform reflective creation in RestProxy.
     @SuppressWarnings("unused")
-    StreamResponse(HttpRequest request, int statusCode, Void headers, Map<String, String> rawHeaders, Flux<ByteBuf> body) {
+    RestStreamResponse(HttpRequest request, int statusCode, Void headers, Map<String, String> rawHeaders, Flux<ByteBuf> body) {
         super(request, statusCode, headers, rawHeaders, body);
     }
 
@@ -55,7 +55,7 @@ public final class StreamResponse extends RestResponse<Void, Flux<ByteBuf>> impl
     }
 
     /**
-     * Disposes of the connection associated with this StreamResponse.
+     * Disposes of the connection associated with this RestStreamResponse.
      */
     @Override
     public void close() {

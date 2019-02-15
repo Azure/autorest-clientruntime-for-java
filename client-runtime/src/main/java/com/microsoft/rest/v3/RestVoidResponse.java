@@ -13,21 +13,21 @@ import java.util.Map;
 /**
  * A response to a REST call containing only a status code and raw headers.
  */
-public final class VoidResponse extends RestResponse<Void, Void> {
+public final class RestVoidResponse extends RestResponse<Void, Void> {
     /**
-     * Creates a VoidResponse.
+     * Creates a RestVoidResponse.
      *
-     * @param request the request which resulted in this VoidResponse
+     * @param request the request which resulted in this RestVoidResponse
      * @param statusCode the status code of the HTTP response
      * @param rawHeaders the raw headers of the HTTP response
      */
-    public VoidResponse(HttpRequest request, int statusCode, Map<String, String> rawHeaders) {
+    public RestVoidResponse(HttpRequest request, int statusCode, Map<String, String> rawHeaders) {
         super(request, statusCode, null, rawHeaders, null);
     }
 
     // Used for uniform reflective creation in RestProxy.
     @SuppressWarnings("unused")
-    VoidResponse(HttpRequest request, int statusCode, Void headers, Map<String, String> rawHeaders, Void body) {
+    RestVoidResponse(HttpRequest request, int statusCode, Void headers, Map<String, String> rawHeaders, Void body) {
         super(request, statusCode, headers, rawHeaders, body);
     }
 

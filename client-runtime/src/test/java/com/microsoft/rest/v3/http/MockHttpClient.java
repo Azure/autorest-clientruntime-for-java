@@ -36,7 +36,7 @@ public class MockHttpClient extends HttpClient {
             .set("Content-Type", "application/json");
 
     @Override
-    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+    public Mono<HttpResponse> send(HttpRequest request) {
         HttpResponse response = null;
 
         try {

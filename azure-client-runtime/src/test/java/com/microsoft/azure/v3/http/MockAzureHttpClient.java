@@ -55,7 +55,7 @@ public class MockAzureHttpClient extends HttpClient {
     }
 
     @Override
-    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+    public Mono<HttpResponse> send(HttpRequest request) {
         MockAzureHttpResponse response = null;
 
         try {

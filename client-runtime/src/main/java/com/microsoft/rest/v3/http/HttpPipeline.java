@@ -75,7 +75,7 @@ public final class HttpPipeline {
     }
 
     /**
-     * @return the http client associated with the pipeline.
+     * @return the {@link HttpClient} associated with the pipeline.
      */
     public HttpClient httpClient() {
         return this.httpClient;
@@ -113,12 +113,14 @@ public final class HttpPipeline {
     }
 
     /**
-     * Sends the context through pipeline.
+     * Sends the context (containing request) through pipeline.
      *
      * @param context the request context
      * @return a publisher upon subscription flows the context through policies, sends the request and emits response upon completion.
      */
     public Mono<HttpResponse> sendRequest(HttpPipelineCallContext context) {
+        // Return deferred to mono for complete lazy behaviour.
+        //
         return Mono.defer(() -> {
             NextPolicy next = new NextPolicy(this, context);
             return next.process();

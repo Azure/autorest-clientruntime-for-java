@@ -7,7 +7,7 @@
 package com.microsoft.rest.v3.http;
 
 /**
- * The set of parameters used to create an HTTP client.
+ * The configuration to be applied on a {@link HttpClient}.
  */
 public class HttpClientConfiguration {
     private ProxyOptions proxy;

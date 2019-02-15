@@ -161,7 +161,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
                 ServiceErrorWithCharsetService.class,
                 new HttpPipeline(new HttpClient() {
                     @Override
-                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                    public Mono<HttpResponse> send(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
                         headers.set("Content-Type", "application/json");
 
@@ -185,7 +185,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
                 ServiceErrorWithCharsetService.class,
                 new HttpPipeline(new HttpClient() {
                     @Override
-                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                    public Mono<HttpResponse> send(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
                         headers.set("Content-Type", "application/json");
 
@@ -209,7 +209,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
                 ServiceErrorWithCharsetService.class,
                 new HttpPipeline(new HttpClient() {
                     @Override
-                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                    public Mono<HttpResponse> send(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
                         headers.set("Content-Type", "application/json; charset=UTF-8");
 
@@ -233,7 +233,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
                 ServiceErrorWithCharsetService.class,
                 new HttpPipeline(new HttpClient() {
                     @Override
-                    public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                    public Mono<HttpResponse> send(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
                         headers.set("Content-Type", "application/json; charset=UTF-8");
 
@@ -296,7 +296,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
 
     private static final HttpClient headerCollectionHttpClient = new MockHttpClient() {
         @Override
-        public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+        public Mono<HttpResponse> send(HttpRequest request) {
             final HttpHeaders headers = new HttpHeaders();
             headers.set("name", "Phillip");
             headers.set("header-collection-prefix-one", "1");

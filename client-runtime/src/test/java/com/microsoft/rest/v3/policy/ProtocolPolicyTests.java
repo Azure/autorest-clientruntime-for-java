@@ -29,7 +29,7 @@ public class ProtocolPolicyTests {
     private static HttpPipeline createPipeline(String protocol, String expectedUrl) {
         return new HttpPipeline(new HttpClient() {
             @Override
-            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+            public Mono<HttpResponse> send(HttpRequest request) {
                 return Mono.empty(); // NOP
             }
         },
@@ -44,7 +44,7 @@ public class ProtocolPolicyTests {
     private static HttpPipeline createPipeline(String protocol, boolean overwrite, String expectedUrl) {
         return new HttpPipeline(new HttpClient() {
             @Override
-            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+            public Mono<HttpResponse> send(HttpRequest request) {
                 return Mono.empty(); // NOP
             }
         },

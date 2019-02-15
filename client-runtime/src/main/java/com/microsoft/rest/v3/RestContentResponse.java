@@ -11,15 +11,15 @@ import com.microsoft.rest.v3.http.HttpRequest;
 import java.util.Map;
 
 /**
- * A response to a REST call with a strongly-typed content specified.
+ * REST response with a strongly-typed content specified.
  *
  * @param <TBody> The deserialized type of the response body.
  */
 public final class RestContentResponse<TBody> extends RestResponse<Void, TBody> {
     /**
-     * Creates a new RestContentResponse object.
+     * Creates RestContentResponse.
      *
-     * @param request the request which resulted in this RestContentResponse
+     * @param request the request which resulted in this response
      * @param statusCode the status code of the HTTP response
      * @param rawHeaders the raw headers of the HTTP response
      * @param body the deserialized body

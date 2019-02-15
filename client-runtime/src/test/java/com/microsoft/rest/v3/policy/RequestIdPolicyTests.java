@@ -61,7 +61,7 @@ public class RequestIdPolicyTests {
         HttpPipeline pipeline = new HttpPipeline(new MockHttpClient() {
             String firstRequestId = null;
             @Override
-            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+            public Mono<HttpResponse> send(HttpRequest request) {
                 if (firstRequestId != null) {
                     String newRequestId = request.headers().value(REQUEST_ID_HEADER);
                     Assert.assertNotNull(newRequestId);
@@ -88,7 +88,7 @@ public class RequestIdPolicyTests {
             String firstRequestId = null;
 
             @Override
-            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+            public Mono<HttpResponse> send(HttpRequest request) {
                 if (firstRequestId != null) {
                     String newRequestId = request.headers().value(REQUEST_ID_HEADER);
                     Assert.assertNotNull(newRequestId);

@@ -43,7 +43,7 @@ public class NextPolicy {
         } else {
             this.currentPolicyIndex++;
             if (this.currentPolicyIndex == size) {
-                return this.pipeline.httpClient().sendRequestAsync(this.context);
+                return this.pipeline.httpClient().send(this.context.httpRequest());
             } else {
                 return this.pipeline.pipelinePolicies()[this.currentPolicyIndex].process(this.context, this);
             }

@@ -836,7 +836,7 @@ public class AzureProxyTests {
     public void deleteAsyncWithForbiddenResponse() {
         final MockAzureHttpClient httpClient = new MockAzureHttpClient() {
             @Override
-            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+            public Mono<HttpResponse> send(HttpRequest request) {
                 return Mono.<HttpResponse>just(new MockAzureHttpResponse(403, MockAzureHttpClient.responseHeaders()));
             }
         };

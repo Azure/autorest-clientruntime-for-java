@@ -57,7 +57,7 @@ public class HttpPipelineTests {
         final URL expectedUrl = new URL("http://my.site.com");
         final HttpPipeline httpPipeline = new HttpPipeline(new HttpClient() {
             @Override
-            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+            public Mono<HttpResponse> send(HttpRequest request) {
                 assertEquals(0, request.headers().size());
                 assertEquals(expectedHttpMethod, request.httpMethod());
                 assertEquals(expectedUrl, request.url());
@@ -77,7 +77,7 @@ public class HttpPipelineTests {
         final String expectedUserAgent = "my-user-agent";
         final HttpClient httpClient = new HttpClient() {
             @Override
-            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+            public Mono<HttpResponse> send(HttpRequest request) {
                 assertEquals(1, request.headers().size());
                 assertEquals(expectedUserAgent, request.headers().value("User-Agent"));
                 assertEquals(expectedHttpMethod, request.httpMethod());
@@ -101,7 +101,7 @@ public class HttpPipelineTests {
         final URL expectedUrl = new URL("http://my.site.com/1");
         final HttpPipeline httpPipeline = new HttpPipeline(new HttpClient() {
                 @Override
-                public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                public Mono<HttpResponse> send(HttpRequest request) {
                     assertEquals(1, request.headers().size());
                     final String requestId = request.headers().value("x-ms-client-request-id");
                     assertNotNull(requestId);

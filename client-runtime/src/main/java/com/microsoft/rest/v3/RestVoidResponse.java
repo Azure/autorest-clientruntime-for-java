@@ -11,13 +11,13 @@ import com.microsoft.rest.v3.http.HttpRequest;
 import java.util.Map;
 
 /**
- * A response to a REST call containing only a status code and raw headers.
+ * REST response containing only a status code and raw headers.
  */
 public final class RestVoidResponse extends RestResponse<Void, Void> {
     /**
-     * Creates a RestVoidResponse.
+     * Creates RestVoidResponse.
      *
-     * @param request the request which resulted in this RestVoidResponse
+     * @param request the request which resulted in this response
      * @param statusCode the status code of the HTTP response
      * @param rawHeaders the raw headers of the HTTP response
      */

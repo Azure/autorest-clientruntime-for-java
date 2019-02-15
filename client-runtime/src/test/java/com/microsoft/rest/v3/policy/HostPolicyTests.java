@@ -29,7 +29,7 @@ public class HostPolicyTests {
     private static HttpPipeline createPipeline(String host, String expectedUrl) {
         return new HttpPipeline(new HttpClient() {
             @Override
-            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+            public Mono<HttpResponse> send(HttpRequest request) {
                 return Mono.empty(); // NOP
             }
         }, new HttpPipelineOptions(null),

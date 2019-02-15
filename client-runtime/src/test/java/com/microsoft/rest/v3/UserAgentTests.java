@@ -26,7 +26,7 @@ public class UserAgentTests {
     public void defaultUserAgentTests() throws Exception {
         final HttpPipeline pipeline = new HttpPipeline(new MockHttpClient() {
                 @Override
-                public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                public Mono<HttpResponse> send(HttpRequest request) {
                     Assert.assertEquals(
                             request.headers().value("User-Agent"),
                             "AutoRest-Java");
@@ -46,7 +46,7 @@ public class UserAgentTests {
     public void customUserAgentTests() throws Exception {
         final HttpPipeline pipeline = new HttpPipeline(new MockHttpClient() {
             @Override
-                public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+                public Mono<HttpResponse> send(HttpRequest request) {
                     String header = request.headers().value("User-Agent");
                     Assert.assertEquals("Awesome", header);
                     return Mono.<HttpResponse>just(new MockHttpResponse(200));

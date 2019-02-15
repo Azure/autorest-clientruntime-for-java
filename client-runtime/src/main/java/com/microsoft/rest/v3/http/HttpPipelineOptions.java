@@ -16,8 +16,9 @@ public final class HttpPipelineOptions {
     private final HttpPipelineLogger logger;
 
     /**
-     * Create a new HttpPipelinePolicy.Options object.
-     * @param logger The logger that has been assigned to the HttpPipeline.
+     * Create a new HttpPipelinePolicyOptions object.
+     *
+     * @param logger The logger that has been assigned to the HttpPipeline
      */
     public HttpPipelineOptions(HttpPipelineLogger logger) {
         this.logger = logger;
@@ -26,8 +27,8 @@ public final class HttpPipelineOptions {
     /**
      * Get whether or not a log with the provided log level should be logged.
      *
-     * @param logLevel The log level of the log that will be logged.
-     * @return Whether or not a log with the provided log level should be logged.
+     * @param logLevel The log level of the log that will be logged
+     * @return Whether or not a log with the provided log level should be logged
      */
     public boolean shouldLog(HttpPipelineLogLevel logLevel) {
         boolean result = false;

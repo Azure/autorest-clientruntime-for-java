@@ -32,8 +32,7 @@ public final class NettyClient extends HttpClient {
     /**
      * Creates NettyClient.
      *
-     * @param configuration
-     *            the HTTP client configuration.
+     * @param configuration the HTTP client configuration
      */
     private NettyClient(HttpClientConfiguration configuration) {
         this.httpClient = reactor.netty.http.client.HttpClient.create().wiretap(true);

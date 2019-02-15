@@ -29,6 +29,8 @@ public class HttpHeader {
     }
 
     /**
+     * Get the header name.
+     *
      * @return the name of this Header
      */
     public String name() {
@@ -36,6 +38,8 @@ public class HttpHeader {
     }
 
     /**
+     * Get the header value.
+     *
      * @return the value of this Header
      */
     public String value() {
@@ -43,6 +47,8 @@ public class HttpHeader {
     }
 
     /**
+     * Get the comma separated value as an array.
+     *
      * @return the values of this Header that are separated by a comma
      */
     public String[] values() {
@@ -50,7 +56,7 @@ public class HttpHeader {
     }
 
     /**
-     * add a new value to the end of this Header.
+     * Add a new value to the end of the Header.
      *
      * @param value the value to add
      */
@@ -59,6 +65,8 @@ public class HttpHeader {
     }
 
     /**
+     * Get the String representation of the header.
+     *
      * @return the String representation of this HttpHeader
      */
     @Override

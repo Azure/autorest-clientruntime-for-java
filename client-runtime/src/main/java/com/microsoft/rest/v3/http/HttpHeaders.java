@@ -53,6 +53,8 @@ public class HttpHeaders implements Iterable<HttpHeader>, JsonSerializable {
     }
 
     /**
+     * Gets the number of headers in the collection.
+     *
      * @return the number of headers in this collection.
      */
     public int size() {
@@ -61,6 +63,7 @@ public class HttpHeaders implements Iterable<HttpHeader>, JsonSerializable {
 
     /**
      * Set a header.
+     *
      * if header with same name already exists then the value will be overwritten.
      * if value is null and header with provided name already exists then it will be removed.
      *
@@ -109,7 +112,9 @@ public class HttpHeaders implements Iterable<HttpHeader>, JsonSerializable {
     }
 
     /**
-     * @return the {@link Map} representation of this HttpHeaders collection
+     * Get {@link Map} representation of the HttpHeaders collection.
+     *
+     * @return the headers as map
      */
     public Map<String, String> toMap() {
         final Map<String, String> result = new HashMap<>();

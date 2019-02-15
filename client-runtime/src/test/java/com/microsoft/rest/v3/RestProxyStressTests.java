@@ -466,7 +466,7 @@ public class RestProxyStressTests {
                                 String base64MD5 = uploadResponse.rawHeaders().get("Content-MD5");
                                 byte[] uploadMD5 = Base64.getDecoder().decode(base64MD5);
                                 assertArrayEquals(md5, uploadMD5);
-                                LoggerFactory.getLogger(getClass()).info("Finished upload and validation for id " + id);
+                                LoggerFactory.getLogger(getClass()).info("Finished upload and validation for id " + id);
                                 return Mono.just(uploadResponse);
                             });
                 })

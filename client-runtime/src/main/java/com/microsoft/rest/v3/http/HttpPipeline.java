@@ -94,7 +94,7 @@ public final class HttpPipeline {
      * Creates a new context local to the provided http request.
      *
      * @param httpRequest the request for a context needs to be created
-     * @param data the data to associate with this context
+     * @param data the data to associate with the context
      * @return the request context
      */
     public HttpPipelineCallContext newContext(HttpRequest httpRequest, ContextData data) {

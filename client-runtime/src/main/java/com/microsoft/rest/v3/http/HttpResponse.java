@@ -24,7 +24,9 @@ public abstract class HttpResponse implements Closeable {
     private HttpRequest request;
 
     /**
-     * @return the response status code.
+     * Get the response status code.
+     *
+     * @return the response status code
      */
     public abstract int statusCode();
 
@@ -37,11 +39,15 @@ public abstract class HttpResponse implements Closeable {
     public abstract String headerValue(String name);
 
     /**
-     * @return all the response headers
+     * Get all response headers.
+     *
+     * @return the response headers
      */
     public abstract HttpHeaders headers();
 
     /**
+     * Get the publisher emitting response content chunks.
+     *
      * <p>
      * Returns a stream of the response's body content. Emissions may occur on the
      * Netty EventLoop threads which are shared across channels and should not be
@@ -60,7 +66,6 @@ public abstract class HttpResponse implements Closeable {
      *     .blockingGet();
      * }
      * </pre>
-     *
      * <p>
      * The above code is a simplistic example and would probably run fine without
      * the `subscribeOn` and `observeOn` but should be considered a template for
@@ -71,17 +76,23 @@ public abstract class HttpResponse implements Closeable {
     public abstract Flux<ByteBuf> body();
 
     /**
+     * Get the response content as a byte[].
+     *
      * @return this response content as a byte[]
      */
     public abstract Mono<byte[]> bodyAsByteArray();
 
     /**
+     * Get the response content as a string.
+     *
      * @return This response content as a string
      */
     public abstract Mono<String> bodyAsString();
 
     /**
-     * @return the deserialized headers, if present. Otherwise, null.
+     * Get the deserialized headers.
+     *
+     * @return the deserialized headers, if present. Otherwise, null
      */
     public Object deserializedHeaders() {
         return deserializedHeaders;
@@ -99,6 +110,8 @@ public abstract class HttpResponse implements Closeable {
     }
 
     /**
+     * Get the deserialized body.
+     *
      * @return the deserialized body, if present. Otherwise, null.
      */
     public Object deserializedBody() {
@@ -117,7 +130,9 @@ public abstract class HttpResponse implements Closeable {
     }
 
     /**
-     * @return The request which resulted in this response.
+     * Get the request which resulted in this response.
+     *
+     * @return the request which resulted in this response.
      */
     public final HttpRequest request() {
         return request;
@@ -135,7 +150,9 @@ public abstract class HttpResponse implements Closeable {
     }
 
     /**
-     * @return true if the response content decoded by {@link DecodingPolicy} false otherwise.
+     * Checks the response content is decoded.
+     *
+     * @return true if the response content decoded by {@link DecodingPolicy} false otherwise
      */
     public boolean isDecoded() {
         return isDecoded;
@@ -143,6 +160,7 @@ public abstract class HttpResponse implements Closeable {
 
     /**
      * Sets the flag indicating whether this HttpResponse has been decoded by a {@link DecodingPolicy}.
+     *
      * @param isDecoded whether this HttpResponse has been decoded
      * @return this response
      */
@@ -152,8 +170,10 @@ public abstract class HttpResponse implements Closeable {
     }
 
     /**
-     * @return new Response object wrapping the this response with it's content
+     * Get a new Response object wrapping this response with it's content
      * buffered into memory.
+     *
+     * @return the new Response object
      */
     public BufferedHttpResponse buffer() {
         return new BufferedHttpResponse(this);

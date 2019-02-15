@@ -9,10 +9,10 @@ package com.microsoft.rest.v3.http;
 import java.util.Optional;
 
 /**
- * {@code ContextData} offers a means of passing arbitrary data (key/value pairs) to {@link HttpPipeline}'s
+ * {@code ContextData} offers a means of passing arbitrary data (key-value pairs) to {@link HttpPipeline}'s
  * policy objects. Most applications do not need to pass arbitrary data to the pipeline and can pass
  * {@code ContextData.NONE} or {@code null}. Each context object is immutable.
- * The {@link this#addData(Object, Object)} method creates a new {@code ContextData} object that refers
+ * The {@code addData(Object, Object)} method creates a new {@code ContextData} object that refers
  * to its parent, forming a linked list.
  */
 public class ContextData {
@@ -49,7 +49,7 @@ public class ContextData {
     }
 
     /**
-     * Adds a new immutable {@link ContextData} object with the specified key/value pair to
+     * Adds a new immutable {@link ContextData} object with the specified key-value pair to
      * the existing {@link ContextData} chain.
      *
      * @param key the key
@@ -64,7 +64,7 @@ public class ContextData {
     }
 
     /**
-     * Scans a linked-list of {@link ContextData} objects looking for one with the specified key.
+     * Scans the linked-list of {@link ContextData} objects looking for one with the specified key.
      * Note that the first key found, i.e. the most recently added, will be returned.
      *
      * @param key the key to search for

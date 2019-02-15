@@ -29,7 +29,7 @@ import com.microsoft.rest.v3.http.policy.UserAgentPolicy;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 import com.microsoft.rest.v3.protocol.SerializerEncoding;
 import com.microsoft.rest.v3.util.TypeUtil;
-import io.reactivex.exceptions.Exceptions;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 

@@ -27,6 +27,7 @@ import com.microsoft.rest.v3.http.policy.AddHeadersPolicy;
 import com.microsoft.rest.v3.http.policy.HostPolicy;
 import com.microsoft.rest.v3.http.policy.HttpLogDetailLevel;
 import com.microsoft.rest.v3.http.HttpPipelineOptions;
+import com.microsoft.rest.v3.util.FlowableUtils;
 import com.microsoft.rest.v3.util.FluxUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -254,7 +255,7 @@ public class RestProxyStressTests {
                             .take(CHUNKS_PER_FILE)
                             .doOnNext(buf -> messageDigest.update(buf.array()));
 
-                    return FluxUtil.writeFile(fileContent, file).andThen(Completable.defer(new Callable<CompletableSource>() {
+                    return FlowableUtils.writeFile(fileContent, file).andThen(Completable.defer(new Callable<CompletableSource>() {
                         @Override
                         public CompletableSource call() throws Exception {
                             file.close();

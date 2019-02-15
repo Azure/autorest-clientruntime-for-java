@@ -79,8 +79,8 @@ public class RequestIdPolicyTests {
         new HttpPipelineOptions(null),
         new RequestIdPolicy());
 
-        pipeline.sendRequest(new HttpRequest(HttpMethod.GET, new URL("http://localhost/"), null)).block();
-        pipeline.sendRequest(new HttpRequest(HttpMethod.GET, new URL("http://localhost/"), null)).block();
+        pipeline.send(new HttpRequest(HttpMethod.GET, new URL("http://localhost/"), null)).block();
+        pipeline.send(new HttpRequest(HttpMethod.GET, new URL("http://localhost/"), null)).block();
     }
 
     @Test
@@ -106,6 +106,6 @@ public class RequestIdPolicyTests {
         new RequestIdPolicy(),
         new RetryPolicy(1, 0, ChronoUnit.SECONDS));
 
-        pipeline.sendRequest(new HttpRequest(HttpMethod.GET, new URL("http://localhost/"), null)).block();
+        pipeline.send(new HttpRequest(HttpMethod.GET, new URL("http://localhost/"), null)).block();
     }
 }

@@ -100,7 +100,7 @@ public class RestProxy implements InvocationHandler {
      * @return a {@link Mono} that emits HttpResponse asynchronously
      */
     public Mono<HttpResponse> sendHttpRequestAsync(HttpRequest request, ContextData contextData) {
-        return httpPipeline.sendRequest(httpPipeline.newContext(request, contextData));
+        return httpPipeline.send(httpPipeline.newContext(request, contextData));
     }
 
     @Override

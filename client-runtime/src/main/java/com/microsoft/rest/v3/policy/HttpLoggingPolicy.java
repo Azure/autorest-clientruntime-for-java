@@ -22,6 +22,7 @@ import reactor.core.publisher.Mono;
 
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -57,10 +58,15 @@ public class HttpLoggingPolicy implements HttpPipelinePolicy {
 
     @Override
     public Mono<HttpResponse> process(HttpPipelineCallContext context, NextPolicy next) {
-        String callerMethod =  context.httpRequest().callerMethod();
-        if (callerMethod == null) {
+        //
+        Optional<Object> data = context.getData("caller-method");
+        String callerMethod;
+        if (!data.isPresent() || data.get() == null) {
             callerMethod = "";
+        } else {
+            callerMethod = (String) data.get();
         }
+        //
         final Logger logger = LoggerFactory.getLogger(callerMethod);
         final long startNs = System.nanoTime();
         //

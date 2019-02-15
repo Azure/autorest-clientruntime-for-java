@@ -29,7 +29,7 @@ public class ProxyAuthenticationPolicyTests {
                     return next.process();
                 });
 
-        pipeline.sendRequest(new HttpRequest("test", HttpMethod.GET, new URL("http://localhost"), null))
+        pipeline.sendRequest(new HttpRequest(HttpMethod.GET, new URL("http://localhost"), null))
                 .block();
 
         if (!auditorVisited.get()) {

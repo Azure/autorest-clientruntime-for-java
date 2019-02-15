@@ -44,7 +44,7 @@ public class HttpPipelineTests {
                 new ProtocolPolicy("ftp"),
                 new RetryPolicy());
 
-        HttpPipelineCallContext context = pipeline.newContext(new HttpRequest("", HttpMethod.GET, new URL("http://foo.com"), null));
+        HttpPipelineCallContext context = pipeline.newContext(new HttpRequest(HttpMethod.GET, new URL("http://foo.com"), null));
         assertNotNull(context);
         assertNotNull(context.requestPolicyOptions());
         assertNotNull(pipeline.httpClient());
@@ -65,7 +65,7 @@ public class HttpPipelineTests {
             }
         }, new HttpPipelineOptions(null));
 
-        final HttpResponse response = httpPipeline.sendRequest(new HttpRequest("MOCK_CALLER_METHOD", expectedHttpMethod, expectedUrl, null)).block();
+        final HttpResponse response = httpPipeline.sendRequest(new HttpRequest(expectedHttpMethod, expectedUrl, null)).block();
         assertNotNull(response);
         assertEquals(200, response.statusCode());
     }
@@ -90,7 +90,7 @@ public class HttpPipelineTests {
                 new HttpPipelineOptions(null),
                 new UserAgentPolicy(expectedUserAgent));
 
-        final HttpResponse response = httpPipeline.sendRequest(new HttpRequest("MOCK_CALLER_METHOD", expectedHttpMethod, expectedUrl, null)).block();
+        final HttpResponse response = httpPipeline.sendRequest(new HttpRequest(expectedHttpMethod, expectedUrl, null)).block();
         assertNotNull(response);
         assertEquals(200, response.statusCode());
     }
@@ -115,7 +115,7 @@ public class HttpPipelineTests {
             new HttpPipelineOptions(null),
             new RequestIdPolicy());
 
-        final HttpResponse response = httpPipeline.sendRequest(new HttpRequest("MOCK_CALLER_METHOD", expectedHttpMethod, expectedUrl, null)).block();
+        final HttpResponse response = httpPipeline.sendRequest(new HttpRequest(expectedHttpMethod, expectedUrl, null)).block();
         assertNotNull(response);
         assertEquals(200, response.statusCode());
     }

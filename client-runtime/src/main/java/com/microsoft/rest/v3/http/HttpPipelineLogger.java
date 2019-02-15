@@ -13,12 +13,14 @@ package com.microsoft.rest.v3.http;
 public interface HttpPipelineLogger {
     /**
      * The log level threshold for what logs will be logged.
+     *
      * @return The log level threshold for what logs will be logged.
      */
     HttpPipelineLogLevel minimumLogLevel();
 
     /**
      * Log the provided message.
+     *
      * @param logLevel The HttpLogDetailLevel associated with this message.
      * @param message The message to log.
      * @param formattedArguments A variadic list of arguments that should be formatted into the

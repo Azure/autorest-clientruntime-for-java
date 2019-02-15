@@ -67,14 +67,18 @@ public final class HttpPipeline {
     }
 
     /**
-     * @return policies in the pipeline.
+     * Get the policies in the pipeline.
+     *
+     * @return policies in the pipeline
      */
     public HttpPipelinePolicy[] pipelinePolicies() {
         return this.pipelinePolicies;
     }
 
     /**
-     * @return the {@link HttpClient} associated with the pipeline.
+     * Get the {@link HttpClient} associated with the pipeline.
+     *
+     * @return the {@link HttpClient} associated with the pipeline
      */
     public HttpClient httpClient() {
         return this.httpClient;

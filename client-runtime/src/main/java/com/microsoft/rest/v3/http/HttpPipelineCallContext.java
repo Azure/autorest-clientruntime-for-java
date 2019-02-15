@@ -76,7 +76,9 @@ public final class HttpPipelineCallContext {
     }
 
     /**
-     * @return the http request.
+     * Get the http request.
+     *
+     * @return the request.
      */
     public HttpRequest httpRequest() {
         return this.httpRequest;
@@ -94,6 +96,8 @@ public final class HttpPipelineCallContext {
     }
 
     /**
+     * Get the policy options.
+     *
      * @return the policy options
      */
     public HttpPipelineOptions requestPolicyOptions() {

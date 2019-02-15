@@ -1,6 +1,5 @@
 /**
- * Code related to creating proxy implementations of interfaces that have been generated from
- * Swagger specifications.
+ * Package containing HttpPipeline policies.
  */
 package com.microsoft.rest.v3.http.policy;
 

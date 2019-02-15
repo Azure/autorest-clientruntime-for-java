@@ -4,9 +4,10 @@
  * license information.
  */
 
-package com.microsoft.rest.v3.policy;
+package com.microsoft.rest.v3.http.policy;
 
 import com.microsoft.rest.v3.http.HttpPipelineLogLevel;
+import com.microsoft.rest.v3.http.HttpPipelineOptions;
 
 /**
  * An abstract HttpPipelinePolicy base-class.

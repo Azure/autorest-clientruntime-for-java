@@ -4,10 +4,7 @@
  * license information.
  */
 
-package com.microsoft.rest.v3.policy;
-
-import com.microsoft.rest.v3.http.HttpPipelineLogLevel;
-import com.microsoft.rest.v3.http.HttpPipelineLogger;
+package com.microsoft.rest.v3.http;
 
 /**
  * Optional properties that can be used when creating a HttpPipeline.

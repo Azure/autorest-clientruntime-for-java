@@ -4,10 +4,11 @@
  * license information.
  */
 
-package com.microsoft.rest.v3.policy;
+package com.microsoft.rest.v3.http.policy;
 
 import com.microsoft.rest.v3.http.HttpPipelineCallContext;
 import com.microsoft.rest.v3.http.HttpPipelineLogLevel;
+import com.microsoft.rest.v3.http.HttpPipelineOptions;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.NextPolicy;
 import com.microsoft.rest.v3.http.UrlBuilder;
@@ -16,43 +17,43 @@ import reactor.core.publisher.Mono;
 import java.net.MalformedURLException;
 
 /**
- * The Pipeline policy that adds a given port to each HttpRequest.
+ * The Pipeline policy that adds a given protocol to each HttpRequest.
  */
-public class PortPolicy extends AbstractPipelinePolicy {
-    private final int port;
+public class ProtocolPolicy extends AbstractPipelinePolicy {
+    private final String protocol;
     private final boolean overwrite;
 
     /**
-     * Create a new PortPolicy object.
+     * Create a new ProtocolPolicy.
      *
-     * @param port The port to set on every HttpRequest.
+     * @param protocol The protocol to set on every HttpRequest.
      */
-    public PortPolicy(int port) {
-        this(port, true, new HttpPipelineOptions(null));
+    public ProtocolPolicy(String protocol) {
+        this(protocol, true, new HttpPipelineOptions(null));
     }
 
     /**
-     * Create a new PortPolicy object.
+     * Create a new ProtocolPolicy.
      *
-     * @param port The port to set.
-     * @param overwrite Whether or not to overwrite a HttpRequest's port if it already has one.
+     * @param protocol The protocol to set.
+     * @param overwrite Whether or not to overwrite a HttpRequest's protocol if it already has one.
      * @param options the request options
      */
-    public PortPolicy(int port, boolean overwrite, HttpPipelineOptions options) {
+    public ProtocolPolicy(String protocol, boolean overwrite, HttpPipelineOptions options) {
         super(options);
-        this.port = port;
+        this.protocol = protocol;
         this.overwrite = overwrite;
     }
 
     @Override
     public Mono<HttpResponse> process(HttpPipelineCallContext context, NextPolicy next) {
         final UrlBuilder urlBuilder = UrlBuilder.parse(context.httpRequest().url());
-        if (overwrite || urlBuilder.port() == null) {
+        if (overwrite || urlBuilder.scheme() == null) {
             if (shouldLog(HttpPipelineLogLevel.INFO)) {
-                log(HttpPipelineLogLevel.INFO, "Changing port to {0}", port);
+                log(HttpPipelineLogLevel.INFO, "Setting protocol to {0}", protocol);
             }
             try {
-                context.httpRequest().withUrl(urlBuilder.withPort(port).toURL());
+                context.httpRequest().withUrl(urlBuilder.withScheme(protocol).toURL());
             } catch (MalformedURLException e) {
                 return Mono.error(e);
             }

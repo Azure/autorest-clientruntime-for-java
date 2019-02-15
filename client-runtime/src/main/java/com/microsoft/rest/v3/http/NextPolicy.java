@@ -6,7 +6,7 @@
 
 package com.microsoft.rest.v3.http;
 
-import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
+import com.microsoft.rest.v3.http.policy.HttpPipelinePolicy;
 import reactor.core.publisher.Mono;
 
 /**

@@ -12,8 +12,8 @@ import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.MockHttpClient;
 import com.microsoft.rest.v3.http.MockHttpResponse;
-import com.microsoft.rest.v3.policy.HttpPipelineOptions;
-import com.microsoft.rest.v3.policy.UserAgentPolicy;
+import com.microsoft.rest.v3.http.HttpPipelineOptions;
+import com.microsoft.rest.v3.http.policy.UserAgentPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 

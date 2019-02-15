@@ -8,7 +8,7 @@ package com.microsoft.azure.v3.policy;
 
 import com.microsoft.azure.v3.credentials.AsyncServiceClientCredentials;
 import com.microsoft.rest.v3.http.HttpPipelineCallContext;
-import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
+import com.microsoft.rest.v3.http.policy.HttpPipelinePolicy;
 import com.microsoft.rest.v3.http.HttpResponse;
 import com.microsoft.rest.v3.http.NextPolicy;
 import reactor.core.publisher.Mono;

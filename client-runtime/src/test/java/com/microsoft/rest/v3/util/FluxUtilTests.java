@@ -8,6 +8,7 @@ package com.microsoft.rest.v3.util;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.Exceptions;
@@ -18,7 +19,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
@@ -35,8 +35,12 @@ public class FluxUtilTests {
         FileOutputStream stream = new FileOutputStream(file);
         stream.write("hello there".getBytes(StandardCharsets.UTF_8));
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-            byte[] bytes = FluxUtil.byteBufferStreamFromFile(channel, 1, 3)
-                    .map(bb -> toBytes(bb))
+            byte[] bytes = FluxUtil.byteBufStreamFromFile(channel, 1, 3)
+                    .map(bb -> {
+                        byte[] bt = toBytes(bb);
+                        ReferenceCountUtil.release(bb);
+                        return bt;
+                    })
                     .collect(() -> new ByteArrayOutputStream(),
                         (bos, b) -> {
                             try {
@@ -59,8 +63,12 @@ public class FluxUtilTests {
         File file = new File("target/test2");
         file.createNewFile();
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-            byte[] bytes = FluxUtil.byteBufferStreamFromFile(channel, 1, 3)
-                    .map(bb -> toBytes(bb)) //
+            byte[] bytes = FluxUtil.byteBufStreamFromFile(channel, 1, 3)
+                    .map(bb -> {
+                        byte[] bt = toBytes(bb);
+                        ReferenceCountUtil.release(bb);
+                        return bt;
+                    })
                     .collect(() -> new ByteArrayOutputStream(),
                             (bos, b) -> {
                                 try {
@@ -81,9 +89,13 @@ public class FluxUtilTests {
         FileOutputStream stream = new FileOutputStream(file);
         stream.write("hello there".getBytes(StandardCharsets.UTF_8));
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-            byte[] bytes = FluxUtil.byteBufferStreamFromFile(channel)
-                    .map(bb -> toBytes(bb))
-                    .limitRequest(1)    // TODO: Check with smaldini - With Rx rebatchRequests(1) was used, what is equivalent in reactor
+            byte[] bytes = FluxUtil.byteBufStreamFromFile(channel)
+                    .map(bb -> {
+                        byte[] bt = toBytes(bb);
+                        ReferenceCountUtil.release(bb);
+                        return bt;
+                    })
+                    .limitRequest(1)
                     .subscribeOn(reactor.core.scheduler.Schedulers.newElastic("io", 30))
                     .publishOn(reactor.core.scheduler.Schedulers.newElastic("io", 30))
                     .collect(() -> new ByteArrayOutputStream(),
@@ -118,10 +130,13 @@ public class FluxUtilTests {
         byte[] expected = digest.digest();
         digest.reset();
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-            FluxUtil.byteBufferStreamFromFile(channel)
+            FluxUtil.byteBufStreamFromFile(channel)
                     .subscribeOn(reactor.core.scheduler.Schedulers.newElastic("io", 30))
                     .publishOn(reactor.core.scheduler.Schedulers.newElastic("io", 30))
-                    .toIterable().forEach(bb -> digest.update(bb));
+                    .toIterable().forEach(bb -> {
+                        digest.update(bb.nioBuffer());
+                        ReferenceCountUtil.release(bb);
+                    });
 
             assertArrayEquals(expected, digest.digest());
         }
@@ -215,10 +230,24 @@ public class FluxUtilTests {
             }
         }
     }
+
+    @Test
+    public void toByteArrayWithEmptyByteBuffer() {
+        assertArrayEquals(new byte[0], FluxUtil.byteBufToArray(Unpooled.wrappedBuffer(new byte[0])));
+    }
+
+    @Test
+    public void toByteArrayWithNonEmptyByteBuffer() {
+        final ByteBuf byteBuffer = Unpooled.wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 });
+        assertEquals(5, byteBuffer.readableBytes());
+        final byte[] byteArray = FluxUtil.byteBufToArray(byteBuffer);
+        assertArrayEquals(new byte[] { 0, 1, 2, 3, 4 }, byteArray);
+        assertEquals(5, byteBuffer.readableBytes());
+    }
 //
-    private static byte[] toBytes(ByteBuffer bb) {
-        byte[] bytes = new byte[bb.remaining()];
-        bb.get(bytes);
+    private static byte[] toBytes(ByteBuf bb) {
+        byte[] bytes = new byte[bb.readableBytes()];
+        bb.readBytes(bytes);
         return bytes;
     }
 

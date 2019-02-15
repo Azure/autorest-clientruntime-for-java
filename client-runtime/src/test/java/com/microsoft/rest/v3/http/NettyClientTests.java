@@ -145,7 +145,7 @@ public class NettyClientTests {
                 .withHeader("Content-Length", "123")
                 .withBody(Flux.error(new RuntimeException("boo")));
 
-        StepVerifier.create(client.sendRequestAsync(request))
+        StepVerifier.create(client.send(request))
                 .expectErrorMessage("boo")
                 .verify();
     }
@@ -161,7 +161,7 @@ public class NettyClientTests {
                         .repeat(repetitions)
                         .map(s -> Unpooled.wrappedBuffer(s.getBytes(StandardCharsets.UTF_8)))
                         .concatWith(Flux.error(new RuntimeException("boo"))));
-        StepVerifier.create(client.sendRequestAsync(request))
+        StepVerifier.create(client.send(request))
                 // .awaitDone(10, TimeUnit.SECONDS)
                 .expectErrorMessage("boo")
                 .verify();
@@ -203,7 +203,7 @@ public class NettyClientTests {
             HttpClient client = HttpClient.createDefault();
             HttpRequest request = new HttpRequest(HttpMethod.GET,
                     new URL("http://localhost:" + ss.getLocalPort() + "/get"), null);
-            HttpResponse response = client.sendRequestAsync(request).block();
+            HttpResponse response = client.send(request).block();
             assertEquals(200, response.statusCode());
             System.out.println("reading body");
             //
@@ -303,7 +303,7 @@ public class NettyClientTests {
 
     private static HttpResponse getResponse(HttpClient client, String path) {
         HttpRequest request = new HttpRequest(HttpMethod.GET, url(server, path), null);
-        return client.sendRequestAsync(request).block();
+        return client.send(request).block();
     }
 
     private static URL url(WireMockServer server, String path) {
@@ -332,7 +332,7 @@ public class NettyClientTests {
 
     private HttpResponse doRequest(HttpClient client, String path) {
         HttpRequest request = new HttpRequest(HttpMethod.GET, url(server, path), null);
-        HttpResponse response = client.sendRequestAsync(request).block();
+        HttpResponse response = client.send(request).block();
         return response;
     }
 }

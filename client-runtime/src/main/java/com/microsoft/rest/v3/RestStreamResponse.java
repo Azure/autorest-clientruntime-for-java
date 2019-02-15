@@ -14,13 +14,13 @@ import java.io.Closeable;
 import java.util.Map;
 
 /**
- * A response to a REST call with a streaming content.
+ * REST response with a streaming content.
  */
 public final class RestStreamResponse extends RestResponse<Void, Flux<ByteBuf>> implements Closeable {
     /**
-     * Creates a RestStreamResponse.
+     * Creates RestStreamResponse.
      *
-     * @param request the request which resulted in this RestStreamResponse
+     * @param request the request which resulted in this response
      * @param statusCode the status code of the HTTP response
      * @param rawHeaders the raw headers of the HTTP response
      * @param body the streaming body
@@ -55,7 +55,7 @@ public final class RestStreamResponse extends RestResponse<Void, Flux<ByteBuf>> 
     }
 
     /**
-     * Disposes of the connection associated with this RestStreamResponse.
+     * Disposes the connection associated with this RestStreamResponse.
      */
     @Override
     public void close() {

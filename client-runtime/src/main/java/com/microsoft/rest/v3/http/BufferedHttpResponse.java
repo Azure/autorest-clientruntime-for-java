@@ -72,8 +72,9 @@ public final class BufferedHttpResponse extends HttpResponse {
     }
 
     @Override
-    public boolean withIsDecoded(boolean isDecoded) {
-        return innerHttpResponse.withIsDecoded(isDecoded);
+    public BufferedHttpResponse withIsDecoded(boolean isDecoded) {
+        innerHttpResponse.withIsDecoded(isDecoded);
+        return this;
     }
 
     @Override

@@ -10,7 +10,7 @@ import com.microsoft.rest.v3.http.HttpPipeline;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 
 /**
- * The base class for Autorest generated service clients.
+ * The base class for REST service clients.
  */
 public abstract class ServiceClient {
     /**

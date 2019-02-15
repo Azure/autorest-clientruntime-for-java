@@ -24,7 +24,7 @@ public class RetryPolicyTests {
            private int count = 0;
 
            @Override
-           public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+           public Mono<HttpResponse> send(HttpRequest request) {
                return Mono.<HttpResponse>just(new MockHttpResponse(codes[count++]));
            }
        },
@@ -44,7 +44,7 @@ public class RetryPolicyTests {
             int count = -1;
 
             @Override
-            public Mono<HttpResponse> sendRequestAsync(HttpRequest request) {
+            public Mono<HttpResponse> send(HttpRequest request) {
                 Assert.assertTrue(count++ < maxRetries);
                 return Mono.<HttpResponse>just(new MockHttpResponse(500));
             }

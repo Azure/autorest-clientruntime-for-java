@@ -42,7 +42,7 @@ public class HttpHeaders implements Iterable<HttpHeader>, JsonSerializable {
     /**
      * Create a HttpHeaders instance with the provided initial headers.
      *
-     * @param headers the collection of initial headers.
+     * @param headers the collection of initial headers
      */
     public HttpHeaders(Iterable<HttpHeader> headers) {
         this();
@@ -83,8 +83,8 @@ public class HttpHeaders implements Iterable<HttpHeader>, JsonSerializable {
      * Get the header value for the provided header name. Null will be returned if the header
      * name isn't found.
      *
-     * @param name the name of the header to look for.
-     * @return The String value of the header, or null if the header isn't found.
+     * @param name the name of the header to look for
+     * @return The String value of the header, or null if the header isn't found
      */
     public String value(String name) {
         final HttpHeader header = getHeader(name);
@@ -95,8 +95,8 @@ public class HttpHeaders implements Iterable<HttpHeader>, JsonSerializable {
      * Get the header values for the provided header name. Null will be returned if
      * the header name isn't found.
      *
-     * @param name The name of the header to look for.
-     * @return the values of the header, or null if the header isn't found.
+     * @param name the name of the header to look for
+     * @return the values of the header, or null if the header isn't found
      */
     public String[] values(String name) {
         final HttpHeader header = getHeader(name);
@@ -109,7 +109,7 @@ public class HttpHeaders implements Iterable<HttpHeader>, JsonSerializable {
     }
 
     /**
-     * @return the Map representation of this HttpHeaders collection
+     * @return the {@link Map} representation of this HttpHeaders collection
      */
     public Map<String, String> toMap() {
         final Map<String, String> result = new HashMap<>();

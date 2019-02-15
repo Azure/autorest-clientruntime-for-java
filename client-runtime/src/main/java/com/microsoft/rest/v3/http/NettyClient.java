@@ -43,7 +43,7 @@ public final class NettyClient extends HttpClient {
     }
 
     @Override
-    public Mono<HttpResponse> sendRequestAsync(final HttpRequest request) {
+    public Mono<HttpResponse> send(final HttpRequest request) {
         Objects.requireNonNull(request.httpMethod());
         Objects.requireNonNull(request.url());
         Objects.requireNonNull(request.url().getProtocol());

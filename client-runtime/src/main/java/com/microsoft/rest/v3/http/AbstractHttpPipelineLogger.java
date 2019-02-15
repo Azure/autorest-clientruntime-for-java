@@ -16,6 +16,7 @@ public abstract class AbstractHttpPipelineLogger implements HttpPipelineLogger {
     /**
      * Set the minimum log level that this logger should log. Anything with a higher log level
      * should be ignored.
+     *
      * @param minimumLogLevel The minimum log level to set.
      * @return This Logger.
      */

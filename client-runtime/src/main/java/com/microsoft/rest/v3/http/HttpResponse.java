@@ -146,9 +146,9 @@ public abstract class HttpResponse implements Closeable {
      * @param isDecoded whether this HttpResponse has been decoded
      * @return this response
      */
-    public boolean withIsDecoded(boolean isDecoded) {
+    public HttpResponse withIsDecoded(boolean isDecoded) {
         this.isDecoded = isDecoded;
-        return isDecoded;
+        return this;
     }
 
     /**

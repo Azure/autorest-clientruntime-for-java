@@ -40,7 +40,7 @@ public class CredentialsTests {
 
 
         HttpRequest request = new HttpRequest(HttpMethod.GET, new URL("http://localhost"), null);
-        pipeline.sendRequest(request).block();
+        pipeline.send(request).block();
     }
 
     @Test
@@ -59,6 +59,6 @@ public class CredentialsTests {
                 auditorPolicy);
 
         HttpRequest request = new HttpRequest(HttpMethod.GET, new URL("http://localhost"), null);
-        pipeline.sendRequest(request).block();
+        pipeline.send(request).block();
     }
 }

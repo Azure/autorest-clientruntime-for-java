@@ -18,13 +18,13 @@ public class HostPolicyTests {
     @Test
     public void withNoPort() throws MalformedURLException {
         final HttpPipeline pipeline = createPipeline("localhost", "ftp://localhost");
-        pipeline.sendRequest(createHttpRequest("ftp://www.example.com")).block();
+        pipeline.send(createHttpRequest("ftp://www.example.com")).block();
     }
 
     @Test
     public void withPort() throws MalformedURLException {
         final HttpPipeline pipeline = createPipeline("localhost", "ftp://localhost:1234");
-        pipeline.sendRequest(createHttpRequest("ftp://www.example.com:1234"));
+        pipeline.send(createHttpRequest("ftp://www.example.com:1234"));
     }
 
     private static HttpPipeline createPipeline(String host, String expectedUrl) {

@@ -19,13 +19,13 @@ public class ProtocolPolicyTests {
     @Test
     public void withOverwrite() throws MalformedURLException {
         final HttpPipeline pipeline = createPipeline("ftp", "ftp://www.bing.com");
-        pipeline.sendRequest(createHttpRequest("http://www.bing.com"));
+        pipeline.send(createHttpRequest("http://www.bing.com"));
     }
 
     @Test
     public void withNoOverwrite() throws MalformedURLException {
         final HttpPipeline pipeline = createPipeline("ftp", false, "https://www.bing.com");
-        pipeline.sendRequest(createHttpRequest("https://www.bing.com"));
+        pipeline.send(createHttpRequest("https://www.bing.com"));
     }
     private static HttpPipeline createPipeline(String protocol, String expectedUrl) {
         return new HttpPipeline(new HttpClient() {

@@ -36,7 +36,7 @@ public class UserAgentTests {
             new HttpPipelineOptions(null),
             new UserAgentPolicy("AutoRest-Java"));
 
-        HttpResponse response = pipeline.sendRequest(new HttpRequest(
+        HttpResponse response = pipeline.send(new HttpRequest(
                 HttpMethod.GET, new URL("http://localhost"), null)).block();
 
         Assert.assertEquals(200, response.statusCode());
@@ -55,7 +55,7 @@ public class UserAgentTests {
             new HttpPipelineOptions(null),
             new UserAgentPolicy("Awesome"));
 
-        HttpResponse response = pipeline.sendRequest(new HttpRequest(HttpMethod.GET,
+        HttpResponse response = pipeline.send(new HttpRequest(HttpMethod.GET,
                 new URL("http://localhost"), null)).block();
         Assert.assertEquals(200, response.statusCode());
     }

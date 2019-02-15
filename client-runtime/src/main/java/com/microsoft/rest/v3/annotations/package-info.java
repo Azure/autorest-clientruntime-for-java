@@ -1,4 +1,4 @@
 /**
- * Package contains annotation for client side methods that invokes REST apis.
+ * Package containing annotation for client side methods to REST APIs.
  */
 package com.microsoft.rest.v3.annotations;

@@ -56,16 +56,18 @@ public class HttpRequest {
     }
 
     /**
-     * @return the HTTP request method
+     * Get the request method.
+     *
+     * @return the request method
      */
     public HttpMethod httpMethod() {
         return httpMethod;
     }
 
     /**
-     * Set the HTTP request method.
+     * Set the request method.
      *
-     * @param httpMethod the HTTP method
+     * @param httpMethod the request method
      * @return this HttpRequest
      */
     public HttpRequest withHttpMethod(HttpMethod httpMethod) {
@@ -74,6 +76,8 @@ public class HttpRequest {
     }
 
     /**
+     * Get the target address.
+     *
      * @return the target address
      */
     public URL url() {
@@ -92,7 +96,9 @@ public class HttpRequest {
     }
 
     /**
-     * @return headers to be sent.
+     * Get the request headers.
+     *
+     * @return headers to be sent
      */
     public HttpHeaders headers() {
         return headers;
@@ -123,7 +129,9 @@ public class HttpRequest {
     }
 
     /**
-     * @return the content to be send.
+     * Get the request content.
+     *
+     * @return the content to be send
      */
     public Flux<ByteBuf> body() {
         return body;
@@ -168,6 +176,8 @@ public class HttpRequest {
     }
 
     /**
+     * Get the response decoder for the request.
+     *
      * @return the {@link HttpResponseDecoder} to decodes the response of this request.
      */
     public HttpResponseDecoder responseDecoder() {

@@ -13,7 +13,9 @@ public class HttpClientConfiguration {
     private ProxyOptions proxy;
 
     /**
-     * @return the optional proxy to use.
+     * Get proxy options.
+     *
+     * @return the configuration of the proxy to use
      */
     public ProxyOptions proxy() {
         return proxy;

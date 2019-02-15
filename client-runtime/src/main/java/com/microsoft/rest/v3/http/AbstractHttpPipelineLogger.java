@@ -30,6 +30,13 @@ public abstract class AbstractHttpPipelineLogger implements HttpPipelineLogger {
         return minimumLogLevel;
     }
 
+    /**
+     * Format a message using the provided parameters.
+     *
+     * @param message the format message
+     * @param formattedMessageArguments the format parameters
+     * @return formatted message
+     */
     protected static String format(String message, Object... formattedMessageArguments) {
         if (formattedMessageArguments != null && formattedMessageArguments.length >= 1) {
             message = String.format(message, formattedMessageArguments);

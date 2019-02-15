@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
  */
 public abstract class HttpClient {
     /**
-     * Send the provided request asynchronously, applying any request policies provided to the HttpClient instance.
+     * Send the provided request asynchronously.
      *
      * @param request The HTTP request to send
      * @return A {@link Mono} that emits response asynchronously

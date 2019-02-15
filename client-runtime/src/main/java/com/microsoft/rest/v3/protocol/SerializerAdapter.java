@@ -13,8 +13,7 @@ import java.lang.reflect.Type;
 import java.util.List;
 
 /**
- * This interface defines the behaviors an adapter of a serializer
- * needs to implement.
+ * An interface defining the behaviors of a serializer.
  */
 public interface SerializerAdapter {
     /**

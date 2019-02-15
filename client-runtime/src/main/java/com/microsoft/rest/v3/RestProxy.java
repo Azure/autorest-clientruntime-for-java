@@ -57,7 +57,7 @@ import java.util.function.Supplier;
  */
 public class RestProxy implements InvocationHandler {
     private final HttpPipeline httpPipeline;
-    private final SerializerAdapter<?> serializer;
+    private final SerializerAdapter serializer;
     private final SwaggerInterfaceParser interfaceParser;
 
     /**
@@ -68,7 +68,7 @@ public class RestProxy implements InvocationHandler {
      * @param interfaceParser The parser that contains information about the swagger interface that
      *                        this RestProxy "implements".
      */
-    public RestProxy(HttpPipeline httpPipeline, SerializerAdapter<?> serializer, SwaggerInterfaceParser interfaceParser) {
+    public RestProxy(HttpPipeline httpPipeline, SerializerAdapter serializer, SwaggerInterfaceParser interfaceParser) {
         this.httpPipeline = httpPipeline;
         this.serializer = serializer;
         this.interfaceParser = interfaceParser;
@@ -88,7 +88,7 @@ public class RestProxy implements InvocationHandler {
      * Get the SerializerAdapter used by this RestProxy.
      * @return The SerializerAdapter used by this RestProxy.
      */
-    public SerializerAdapter<?> serializer() {
+    public SerializerAdapter serializer() {
         return serializer;
     }
 
@@ -540,7 +540,7 @@ public class RestProxy implements InvocationHandler {
      * Create an instance of the default serializer.
      * @return the default serializer.
      */
-    public static SerializerAdapter<?> createDefaultSerializer() {
+    public static SerializerAdapter createDefaultSerializer() {
         return new JacksonAdapter();
     }
 
@@ -628,7 +628,7 @@ public class RestProxy implements InvocationHandler {
      * @return A proxy implementation of the provided Swagger interface.
      */
     @SuppressWarnings("unchecked")
-    public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline, SerializerAdapter<?> serializer) {
+    public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline, SerializerAdapter serializer) {
         final SwaggerInterfaceParser interfaceParser = new SwaggerInterfaceParser(swaggerInterface, serializer);
         final RestProxy restProxy = new RestProxy(httpPipeline, serializer, interfaceParser);
         return (A) Proxy.newProxyInstance(swaggerInterface.getClassLoader(), new Class[]{swaggerInterface}, restProxy);

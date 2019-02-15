@@ -59,7 +59,7 @@ public final class AzureProxy extends RestProxy {
      * @param interfaceParser The parser that contains information about the swagger interface that
      *                        this RestProxy "implements".
      */
-    private AzureProxy(HttpPipeline httpPipeline, SerializerAdapter<?> serializer, SwaggerInterfaceParser interfaceParser) {
+    private AzureProxy(HttpPipeline httpPipeline, SerializerAdapter serializer, SwaggerInterfaceParser interfaceParser) {
         super(httpPipeline, serializer, interfaceParser);
     }
 
@@ -83,7 +83,7 @@ public final class AzureProxy extends RestProxy {
      * Get the default serializer.
      * @return the default serializer.
      */
-    public static SerializerAdapter<?> createDefaultSerializer() {
+    public static SerializerAdapter createDefaultSerializer() {
         return new AzureJacksonAdapter();
     }
 
@@ -227,7 +227,7 @@ public final class AzureProxy extends RestProxy {
      * @return A proxy implementation of the provided Swagger interface.
      */
     @SuppressWarnings("unchecked")
-    public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline, SerializerAdapter<?> serializer) {
+    public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline, SerializerAdapter serializer) {
         return AzureProxy.create(swaggerInterface, null, httpPipeline, serializer);
     }
 
@@ -242,7 +242,7 @@ public final class AzureProxy extends RestProxy {
      * @return A proxy implementation of the provided Swagger interface.
      */
     @SuppressWarnings("unchecked")
-    public static <A> A create(Class<A> swaggerInterface, AzureEnvironment azureEnvironment, HttpPipeline httpPipeline, SerializerAdapter<?> serializer) {
+    public static <A> A create(Class<A> swaggerInterface, AzureEnvironment azureEnvironment, HttpPipeline httpPipeline, SerializerAdapter serializer) {
         String baseUrl = null;
 
         if (azureEnvironment != null) {
@@ -384,7 +384,7 @@ public final class AzureProxy extends RestProxy {
                         }
                         PollStrategy pollStrategy;
                         try {
-                            final SerializerAdapter<?> serializer = serializer();
+                            final SerializerAdapter serializer = serializer();
                             final ResourceWithProvisioningState resource = serializer.deserialize(originalHttpResponseBody, ResourceWithProvisioningState.class, SerializerEncoding.JSON);
                             if (resource != null && resource.properties() != null && !OperationState.isCompleted(resource.properties().provisioningState())) {
                                 pollStrategy = new ProvisioningStatePollStrategy(

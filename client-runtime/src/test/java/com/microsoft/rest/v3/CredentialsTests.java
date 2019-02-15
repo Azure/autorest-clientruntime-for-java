@@ -11,11 +11,11 @@ import com.microsoft.rest.v3.credentials.TokenCredentials;
 
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpPipeline;
-import com.microsoft.rest.v3.policy.CredentialsPolicy;
-import com.microsoft.rest.v3.policy.HttpPipelinePolicy;
+import com.microsoft.rest.v3.http.policy.CredentialsPolicy;
+import com.microsoft.rest.v3.http.policy.HttpPipelinePolicy;
 import com.microsoft.rest.v3.http.HttpRequest;
 import com.microsoft.rest.v3.http.MockHttpClient;
-import com.microsoft.rest.v3.policy.HttpPipelineOptions;
+import com.microsoft.rest.v3.http.HttpPipelineOptions;
 import org.junit.Assert;
 import org.junit.Test;
 

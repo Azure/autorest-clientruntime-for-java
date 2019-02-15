@@ -4,7 +4,7 @@
  * license information.
  */
 
-package com.microsoft.rest.v3.policy;
+package com.microsoft.rest.v3.http.policy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

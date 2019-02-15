@@ -8,7 +8,7 @@ package com.microsoft.rest.v3.http;
 
 import java.io.Closeable;
 
-import com.microsoft.rest.v3.policy.DecodingPolicy;
+import com.microsoft.rest.v3.http.policy.DecodingPolicy;
 import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

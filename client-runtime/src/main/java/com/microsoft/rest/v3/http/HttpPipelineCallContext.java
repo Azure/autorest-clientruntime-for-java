@@ -6,8 +6,6 @@
 
 package com.microsoft.rest.v3.http;
 
-import com.microsoft.rest.v3.policy.HttpPipelineOptions;
-
 import java.util.Objects;
 import java.util.Optional;
 

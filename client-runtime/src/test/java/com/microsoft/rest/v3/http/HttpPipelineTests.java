@@ -1,11 +1,10 @@
 package com.microsoft.rest.v3.http;
 
-import com.microsoft.rest.v3.policy.HttpPipelineOptions;
-import com.microsoft.rest.v3.policy.PortPolicy;
-import com.microsoft.rest.v3.policy.ProtocolPolicy;
-import com.microsoft.rest.v3.policy.RequestIdPolicy;
-import com.microsoft.rest.v3.policy.RetryPolicy;
-import com.microsoft.rest.v3.policy.UserAgentPolicy;
+import com.microsoft.rest.v3.http.policy.PortPolicy;
+import com.microsoft.rest.v3.http.policy.ProtocolPolicy;
+import com.microsoft.rest.v3.http.policy.RequestIdPolicy;
+import com.microsoft.rest.v3.http.policy.RetryPolicy;
+import com.microsoft.rest.v3.http.policy.UserAgentPolicy;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 

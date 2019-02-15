@@ -14,7 +14,7 @@ import java.io.Closeable;
 import java.util.Map;
 
 /**
- * A response to a REST call with a streaming body.
+ * A response to a REST call with a streaming content.
  */
 public final class StreamResponse extends RestResponse<Void, Flux<ByteBuf>> implements Closeable {
     /**
@@ -47,7 +47,7 @@ public final class StreamResponse extends RestResponse<Void, Flux<ByteBuf>> impl
     }
 
     /**
-     * @return the body content stream
+     * @return the stream content
      */
     @Override
     public Flux<ByteBuf> body() {

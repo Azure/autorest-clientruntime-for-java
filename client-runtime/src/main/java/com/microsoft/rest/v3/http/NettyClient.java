@@ -10,8 +10,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
@@ -30,7 +28,6 @@ import java.util.function.BiFunction;
  */
 public final class NettyClient extends HttpClient {
     private reactor.netty.http.client.HttpClient httpClient;
-    private static final Logger LOGGER = LoggerFactory.getLogger(NettyClient.class);
 
     /**
      * Creates NettyClient.
@@ -92,8 +89,8 @@ public final class NettyClient extends HttpClient {
                 }
 
                 @Override
-                public String headerValue(String headerName) {
-                    return reactorNettyResponse.responseHeaders().get(headerName);
+                public String headerValue(String name) {
+                    return reactorNettyResponse.responseHeaders().get(name);
                 }
 
                 @Override
@@ -157,7 +154,6 @@ public final class NettyClient extends HttpClient {
      * The factory for creating a NettyClient.
      */
     public static class Factory implements HttpClientFactory {
-
         /**
          * Create a Netty client factory with default settings.
          */

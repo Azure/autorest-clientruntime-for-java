@@ -10,7 +10,7 @@ import com.microsoft.rest.v3.http.HttpPipeline;
 import com.microsoft.rest.v3.protocol.SerializerAdapter;
 
 /**
- * The base class for generated service clients.
+ * The base class for Autorest generated service clients.
  */
 public abstract class ServiceClient {
     /**
@@ -24,7 +24,7 @@ public abstract class ServiceClient {
     private SerializerAdapter<?> serializerAdapter;
 
     /**
-     * Initializes a new instance of the ServiceClient class.
+     * Creates ServiceClient.
      *
      * @param httpPipeline The HTTP pipeline to send requests through
      */

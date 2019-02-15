@@ -14,8 +14,9 @@ import reactor.core.publisher.Mono;
 public abstract class HttpClient {
     /**
      * Send the provided request asynchronously, applying any request policies provided to the HttpClient instance.
-     * @param request The HTTP request to send.
-     * @return A {@link Mono} representing the HTTP response that will arrive asynchronously.
+     *
+     * @param request The HTTP request to send
+     * @return A {@link Mono} that emits response asynchronously
      */
     public abstract Mono<HttpResponse> sendRequestAsync(HttpRequest request);
 
@@ -23,7 +24,7 @@ public abstract class HttpClient {
      * Send the provided context asynchronously, applying any request policies provided to the HttpClient instance.
      *
      * @param context the request context, containing request and associated details
-     * @return A {@link Mono} representing the HTTP response that will arrive asynchronously.
+     * @return A {@link Mono} that emits response asynchronously
      */
     public Mono<HttpResponse> sendRequestAsync(HttpPipelineCallContext context) {
         return sendRequestAsync(context.httpRequest());
@@ -37,7 +38,8 @@ public abstract class HttpClient {
 
     /**
      * Create an instance of the default HttpClient type.
-     * @return an instance of the default HttpClient type.
+     *
+     * @return an instance of the default HttpClient type
      */
     public static HttpClient createDefault() {
         return createDefault(null);
@@ -45,8 +47,9 @@ public abstract class HttpClient {
 
     /**
      * Create an instance of the default HttpClient type with the provided configuration.
-     * @param configuration The configuration to apply to the HttpClient.
-     * @return an instance of the default HttpClient type.
+     *
+     * @param configuration The configuration to apply to the HttpClient
+     * @return an instance of the default HttpClient type
      */
     public static HttpClient createDefault(HttpClientConfiguration configuration) {
         return DefaultHttpClientHolder.defaultHttpClientFactory.create(configuration);

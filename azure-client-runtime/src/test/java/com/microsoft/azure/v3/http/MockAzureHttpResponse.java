@@ -64,8 +64,8 @@ public class MockAzureHttpResponse extends HttpResponse {
     }
 
     @Override
-    public String headerValue(String headerName) {
-        return headers.value(headerName);
+    public String headerValue(String name) {
+        return headers.value(name);
     }
 
     @Override

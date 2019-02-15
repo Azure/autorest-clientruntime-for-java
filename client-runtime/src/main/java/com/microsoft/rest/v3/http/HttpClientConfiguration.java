@@ -13,7 +13,7 @@ public class HttpClientConfiguration {
     private ProxyOptions proxy;
 
     /**
-     * @return The optional proxy to use.
+     * @return the optional proxy to use.
      */
     public ProxyOptions proxy() {
         return proxy;
@@ -23,7 +23,7 @@ public class HttpClientConfiguration {
      * Sets proxy configuration.
      *
      * @param proxyOptions the proxy configuration
-     * @return HttpClientConfiguration
+     * @return this HttpClientConfiguration
      */
     public HttpClientConfiguration withProxy(ProxyOptions proxyOptions) {
         this.proxy = proxyOptions;

@@ -29,7 +29,7 @@ public class RequestIdPolicyTests {
         }
 
         @Override
-        public String headerValue(String headerName) {
+        public String headerValue(String name) {
             return null;
         }
 

@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import com.fasterxml.jackson.databind.ser.ResolvableSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import com.microsoft.rest.v3.annotations.Beta;
 import com.microsoft.rest.v3.util.TypeUtil;
 
 import java.io.IOException;
@@ -35,8 +34,7 @@ import java.util.Map.Entry;
  * name empty ("") of type Map&lt;String, Object&gt;, all items in this map will
  * become top level properties for this complex type.
  */
-@Beta(since = "2.0.0")
-public class AdditionalPropertiesSerializer extends StdSerializer<Object> implements ResolvableSerializer {
+final class AdditionalPropertiesSerializer extends StdSerializer<Object> implements ResolvableSerializer {
     /**
      * The default mapperAdapter for the current type.
      */

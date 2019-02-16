@@ -17,7 +17,7 @@ import java.time.Duration;
 /**
  * Custom serializer for serializing {@link Duration} object into ISO8601 formats.
  */
-public final class DurationSerializer extends JsonSerializer<Duration> {
+final class DurationSerializer extends JsonSerializer<Duration> {
     /**
      * Gets a module wrapping this serializer as an adapter for the Jackson
      * ObjectMapper.

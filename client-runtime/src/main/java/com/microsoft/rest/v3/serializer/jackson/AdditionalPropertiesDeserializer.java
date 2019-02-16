@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.microsoft.rest.v3.annotations.Beta;
 import com.microsoft.rest.v3.util.TypeUtil;
 
 import java.io.IOException;
@@ -32,8 +31,7 @@ import java.lang.reflect.Field;
  * name empty ("") of type Map&lt;String, Object&gt;, all extra properties on the
  * payload will be stored in this map.
  */
-@Beta(since = "2.0.0")
-public final class AdditionalPropertiesDeserializer extends StdDeserializer<Object> implements ResolvableDeserializer {
+final class AdditionalPropertiesDeserializer extends StdDeserializer<Object> implements ResolvableDeserializer {
     /**
      * The default mapperAdapter for the current type.
      */

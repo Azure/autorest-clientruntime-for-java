@@ -42,7 +42,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * will be mapped from a top level "name" property in the POJO model to
  * {'properties' : { 'name' : 'my_name' }} in the serialized payload.
  */
-public class FlatteningSerializer extends StdSerializer<Object> implements ResolvableSerializer {
+class FlatteningSerializer extends StdSerializer<Object> implements ResolvableSerializer {
     /**
      * The default mapperAdapter for the current type.
      */

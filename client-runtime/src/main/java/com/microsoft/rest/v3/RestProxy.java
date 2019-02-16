@@ -50,10 +50,11 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * This class can be used to create a proxy implementation for a provided Swagger generated
- * interface. RestProxy can create proxy implementations for interfaces with methods that return
- * deserialized Java objects as well as asynchronous Single objects that resolve to a deserialized
- * Java object.
+ * Type to create a proxy implementation for an interface describing REST API methods.
+ *
+ * RestProxy can create proxy implementations for interfaces with methods that return
+ * deserialized Java objects as well as asynchronous Single objects that resolve to a
+ * deserialized Java object.
  */
 public class RestProxy implements InvocationHandler {
     private final HttpPipeline httpPipeline;
@@ -61,12 +62,13 @@ public class RestProxy implements InvocationHandler {
     private final SwaggerInterfaceParser interfaceParser;
 
     /**
-     * Create a new instance of RestProxy.
-     * @param httpPipeline The HttpPipelinePolicy and HttpClient httpPipeline that will be used to send HTTP
+     * Create a RestProxy.
+     *
+     * @param httpPipeline the HttpPipelinePolicy and HttpClient httpPipeline that will be used to send HTTP
      *                 requests.
-     * @param serializer The serializer that will be used to convert response bodies to POJOs.
-     * @param interfaceParser The parser that contains information about the swagger interface that
-     *                        this RestProxy "implements".
+     * @param serializer the serializer that will be used to convert response bodies to POJOs.
+     * @param interfaceParser the parser that contains information about the interface describing REST API methods
+     *                        that this RestProxy "implements".
      */
     public RestProxy(HttpPipeline httpPipeline, SerializerAdapter serializer, SwaggerInterfaceParser interfaceParser) {
         this.httpPipeline = httpPipeline;
@@ -77,8 +79,9 @@ public class RestProxy implements InvocationHandler {
     /**
      * Get the SwaggerMethodParser for the provided method. The Method must exist on the Swagger
      * interface that this RestProxy was created to "implement".
-     * @param method The method to get a SwaggerMethodParser for.
-     * @return The SwaggerMethodParser for the provided method.
+     *
+     * @param method the method to get a SwaggerMethodParser for
+     * @return the SwaggerMethodParser for the provided method
      */
     private SwaggerMethodParser methodParser(Method method) {
         return interfaceParser.methodParser(method);
@@ -86,7 +89,8 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Get the SerializerAdapter used by this RestProxy.
-     * @return The SerializerAdapter used by this RestProxy.
+     *
+     * @return The SerializerAdapter used by this RestProxy
      */
     public SerializerAdapter serializer() {
         return serializer;
@@ -139,10 +143,11 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create a HttpRequest for the provided Swagger method using the provided arguments.
-     * @param methodParser The Swagger method parser to use.
-     * @param args The arguments to use to populate the method's annotation values.
-     * @return A HttpRequest.
-     * @throws IOException Thrown if the body contents cannot be serialized.
+     *
+     * @param methodParser the Swagger method parser to use
+     * @param args the arguments to use to populate the method's annotation values
+     * @return a HttpRequest
+     * @throws IOException thrown if the body contents cannot be serialized
      */
     @SuppressWarnings("unchecked")
     private HttpRequest createHttpRequest(SwaggerMethodParser methodParser, Object[] args) throws IOException {
@@ -234,10 +239,11 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create a HttpRequest for the provided Swagger method using the provided arguments.
-     * @param methodParser The Swagger method parser to use.
-     * @param args The arguments to use to populate the method's annotation values.
-     * @return A HttpRequest.
-     * @throws IOException Thrown if the body contents cannot be serialized.
+     *
+     * @param methodParser the Swagger method parser to use
+     * @param args the arguments to use to populate the method's annotation values
+     * @return a HttpRequest
+     * @throws IOException thrown if the body contents cannot be serialized
      */
     @SuppressWarnings("unchecked")
     private HttpRequest createHttpRequest(OperationDescription operationDescription, SwaggerMethodParser methodParser, Object[] args) throws IOException {
@@ -500,11 +506,12 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Handle the provided asynchronous HTTP response and return the deserialized value.
-     * @param httpRequest The original HTTP request.
-     * @param asyncHttpResponse The asynchronous HTTP response to the original HTTP request.
-     * @param methodParser The SwaggerMethodParser that the request originates from.
-     * @param returnType The type of value that will be returned.
-     * @return The deserialized result.
+     *
+     * @param httpRequest the original HTTP request
+     * @param asyncHttpResponse the asynchronous HTTP response to the original HTTP request
+     * @param methodParser the SwaggerMethodParser that the request originates from
+     * @param returnType the type of value that will be returned
+     * @return the deserialized result
      */
     public final Object handleRestReturnType(HttpRequest httpRequest, Mono<HttpResponse> asyncHttpResponse, final SwaggerMethodParser methodParser, final Type returnType) {
         Object result;
@@ -538,7 +545,8 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create an instance of the default serializer.
-     * @return the default serializer.
+     *
+     * @return the default serializer
      */
     public static SerializerAdapter createDefaultSerializer() {
         return new JacksonAdapter();
@@ -546,7 +554,8 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create the default HttpPipeline.
-     * @return the default HttpPipeline.
+     *
+     * @return the default HttpPipeline
      */
     public static HttpPipeline createDefaultPipeline() {
         return createDefaultPipeline((HttpPipelinePolicy) null);
@@ -554,8 +563,9 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create the default HttpPipeline.
-     * @param credentials The credentials to use to apply authentication to the pipeline.
-     * @return the default HttpPipeline.
+     *
+     * @param credentials the credentials to use to apply authentication to the pipeline
+     * @return the default HttpPipeline
      */
     public static HttpPipeline createDefaultPipeline(ServiceClientCredentials credentials) {
         return createDefaultPipeline(new CredentialsPolicy(credentials));
@@ -563,9 +573,9 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create the default HttpPipeline.
-     * @param credentialsPolicy The credentials policy factory to use to apply authentication to the
-     *                          pipeline.
-     * @return the default HttpPipeline.
+     * @param credentialsPolicy the credentials policy factory to use to apply authentication to the
+     *                          pipeline
+     * @return the default HttpPipeline
      */
     public static HttpPipeline createDefaultPipeline(HttpPipelinePolicy credentialsPolicy) {
         List<HttpPipelinePolicy> policies = new ArrayList<HttpPipelinePolicy>();
@@ -582,9 +592,10 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create a proxy implementation of the provided Swagger interface.
-     * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
-     * @param <A> The type of the Swagger interface.
-     * @return A proxy implementation of the provided Swagger interface.
+     *
+     * @param swaggerInterface the Swagger interface to provide a proxy implementation for
+     * @param <A> the type of the Swagger interface
+     * @return a proxy implementation of the provided Swagger interface
      */
     @SuppressWarnings("unchecked")
     public static <A> A create(Class<A> swaggerInterface) {
@@ -593,11 +604,13 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create a proxy implementation of the provided Swagger interface.
-     * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
-     * @param httpPipeline The HttpPipelinePolicy and HttpClient pipline that will be used to send Http
-     *                 requests.
-     * @param <A> The type of the Swagger interface.
-     * @return A proxy implementation of the provided Swagger interface.
+     *
+     * @param swaggerInterface the Swagger interface to provide a proxy implementation for
+     *
+     * @param httpPipeline the HttpPipelinePolicy and HttpClient pipline that will be used to send Http
+     *                 requests
+     * @param <A> the type of the Swagger interface
+     * @return a proxy implementation of the provided Swagger interface
      */
     @SuppressWarnings("unchecked")
     public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline) {
@@ -606,11 +619,12 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create a proxy implementation of the provided Swagger interface.
-     * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
-     * @param serviceClient The ServiceClient that contains the details to use to create the
-     *                      RestProxy implementation of the swagger interface.
-     * @param <A> The type of the Swagger interface.
-     * @return A proxy implementation of the provided Swagger interface.
+     *
+     * @param swaggerInterface the Swagger interface to provide a proxy implementation for
+     * @param serviceClient the ServiceClient that contains the details to use to create the
+     *                      RestProxy implementation of the swagger interface
+     * @param <A> the type of the Swagger interface
+     * @return a proxy implementation of the provided Swagger interface
      */
     @SuppressWarnings("unchecked")
     public static <A> A create(Class<A> swaggerInterface, ServiceClient serviceClient) {
@@ -619,13 +633,14 @@ public class RestProxy implements InvocationHandler {
 
     /**
      * Create a proxy implementation of the provided Swagger interface.
-     * @param swaggerInterface The Swagger interface to provide a proxy implementation for.
-     * @param httpPipeline The HttpPipelinePolicy and HttpClient pipline that will be used to send Http
-     *                 requests.
-     * @param serializer The serializer that will be used to convert POJOs to and from request and
-     *                   response bodies.
-     * @param <A> The type of the Swagger interface.
-     * @return A proxy implementation of the provided Swagger interface.
+     *
+     * @param swaggerInterface the Swagger interface to provide a proxy implementation for
+     * @param httpPipeline the HttpPipelinePolicy and HttpClient pipline that will be used to send Http
+     *                 requests
+     * @param serializer the serializer that will be used to convert POJOs to and from request and
+     *                   response bodies
+     * @param <A> the type of the Swagger interface.
+     * @return a proxy implementation of the provided Swagger interface
      */
     @SuppressWarnings("unchecked")
     public static <A> A create(Class<A> swaggerInterface, HttpPipeline httpPipeline, SerializerAdapter serializer) {

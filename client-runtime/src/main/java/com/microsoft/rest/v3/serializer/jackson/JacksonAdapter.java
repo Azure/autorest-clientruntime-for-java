@@ -4,7 +4,7 @@
  * license information.
  */
 
-package com.microsoft.rest.v3.serializer;
+package com.microsoft.rest.v3.serializer.jackson;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -16,8 +16,8 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.rest.v3.CollectionFormat;
-import com.microsoft.rest.v3.protocol.SerializerAdapter;
-import com.microsoft.rest.v3.protocol.SerializerEncoding;
+import com.microsoft.rest.v3.serializer.SerializerAdapter;
+import com.microsoft.rest.v3.serializer.SerializerEncoding;
 
 import java.io.IOException;
 import java.io.StringWriter;

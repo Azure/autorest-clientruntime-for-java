@@ -4,7 +4,7 @@
  * license information.
  */
 
-package com.microsoft.rest.v3.serializer;
+package com.microsoft.rest.v3.serializer.jackson;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -45,7 +45,7 @@ public final class AdditionalPropertiesDeserializer extends StdDeserializer<Obje
     private final ObjectMapper mapper;
 
     /**
-     * Creates an instance of FlatteningDeserializer.
+     * Creates FlatteningDeserializer.
      * @param vc handled type
      * @param defaultDeserializer the default JSON mapperAdapter
      * @param mapper the object mapper for default deserializations

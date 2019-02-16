@@ -4,7 +4,7 @@
  * license information.
  */
 
-package com.microsoft.rest.v3.protocol;
+package com.microsoft.rest.v3.serializer;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.microsoft.rest.v3.Base64Url;

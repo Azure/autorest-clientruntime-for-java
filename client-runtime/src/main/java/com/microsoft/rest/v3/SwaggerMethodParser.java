@@ -25,7 +25,7 @@ import com.microsoft.rest.v3.http.ContextData;
 import com.microsoft.rest.v3.http.HttpHeader;
 import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpMethod;
-import com.microsoft.rest.v3.protocol.SerializerAdapter;
+import com.microsoft.rest.v3.serializer.SerializerAdapter;
 import com.microsoft.rest.v3.util.TypeUtil;
 import com.microsoft.rest.v3.util.escapers.PercentEscaper;
 import com.microsoft.rest.v3.util.escapers.UrlEscapers;

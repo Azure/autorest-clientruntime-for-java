@@ -8,7 +8,7 @@ package com.microsoft.rest.v3.util;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.microsoft.rest.v3.serializer.JsonFlatten;
+import com.microsoft.rest.v3.serializer.jackson.JsonFlatten;
 
 /**
  * Class for testing serialization.

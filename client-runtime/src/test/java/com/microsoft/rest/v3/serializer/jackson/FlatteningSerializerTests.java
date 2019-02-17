@@ -8,8 +8,7 @@ package com.microsoft.rest.v3.serializer.jackson;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.microsoft.rest.v3.serializer.SerializerEncoding;
-import com.microsoft.rest.v3.serializer.jackson.JacksonAdapter;
-import com.microsoft.rest.v3.serializer.jackson.JsonFlatten;
+import com.microsoft.rest.v3.serializer.JsonFlatten;
 import com.microsoft.rest.v3.util.Foo;
 import org.junit.Assert;
 import org.junit.Test;

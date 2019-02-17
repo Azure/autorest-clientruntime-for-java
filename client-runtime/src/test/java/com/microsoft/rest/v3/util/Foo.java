@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.microsoft.rest.v3.serializer.jackson.JsonFlatten;
+import com.microsoft.rest.v3.serializer.JsonFlatten;
 
 import java.util.List;
 import java.util.Map;

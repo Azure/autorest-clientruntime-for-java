@@ -8,6 +8,7 @@ package com.microsoft.rest.v3.serializer.jackson;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +17,7 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.rest.v3.CollectionFormat;
+import com.microsoft.rest.v3.serializer.MalformedValueException;
 import com.microsoft.rest.v3.serializer.SerializerAdapter;
 import com.microsoft.rest.v3.serializer.SerializerEncoding;
 
@@ -124,10 +126,14 @@ public class JacksonAdapter implements SerializerAdapter {
         }
 
         final JavaType javaType = createJavaType(type);
-        if (encoding == SerializerEncoding.XML) {
-            return (T) xmlMapper.readValue(value, javaType);
-        } else {
-            return (T) serializer().readValue(value, javaType);
+        try {
+            if (encoding == SerializerEncoding.XML) {
+                return (T) xmlMapper.readValue(value, javaType);
+            } else {
+                return (T) serializer().readValue(value, javaType);
+            }
+        } catch (JsonParseException jpe) {
+            throw new MalformedValueException(jpe.getMessage(), jpe);
         }
     }
 

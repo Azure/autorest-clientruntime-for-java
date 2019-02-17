@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.microsoft.rest.v3.serializer.JsonFlatten;
 import com.microsoft.rest.v3.util.TypeUtil;
 
 import java.io.IOException;

@@ -101,7 +101,7 @@ public final class HttpResponseDecoder {
                         Object body = null;
                         try {
                             body = deserializeBody(bodyString, decodeData.exceptionBodyType(), null, SerializerEncoding.fromHeaders(response.headers()));
-                        } catch (IOException ignored) {
+                        } catch (IOException | MalformedValueException ignored) {
                             // This translates in RestProxy as a RestException with no deserialized body.
                             // The response content will still be accessible via the .response() member.
                         }

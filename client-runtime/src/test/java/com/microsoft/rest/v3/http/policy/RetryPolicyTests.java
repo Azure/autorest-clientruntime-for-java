@@ -13,6 +13,7 @@ import org.junit.Test;
 import reactor.core.publisher.Mono;
 
 import java.net.URL;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
 public class RetryPolicyTests {
@@ -29,7 +30,7 @@ public class RetryPolicyTests {
            }
        },
        new HttpPipelineOptions(null),
-       new RetryPolicy(3, 0, ChronoUnit.MILLIS));
+       new RetryPolicy(3, Duration.of(0, ChronoUnit.MILLIS)));
 
         HttpResponse response = pipeline.send(new HttpRequest(HttpMethod.GET,
                         new URL("http://localhost/"))).block();
@@ -50,7 +51,7 @@ public class RetryPolicyTests {
             }
         },
         new HttpPipelineOptions(null),
-        new RetryPolicy(maxRetries, 0, ChronoUnit.MILLIS));
+        new RetryPolicy(maxRetries, Duration.of(0, ChronoUnit.MILLIS)));
 
 
         HttpResponse response = pipeline.send(new HttpRequest(HttpMethod.GET,

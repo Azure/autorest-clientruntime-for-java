@@ -20,6 +20,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.net.URL;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
 public class RequestIdPolicyTests {
@@ -104,7 +105,7 @@ public class RequestIdPolicyTests {
         },
         new HttpPipelineOptions(null),
         new RequestIdPolicy(),
-        new RetryPolicy(1, 0, ChronoUnit.SECONDS));
+        new RetryPolicy(1, Duration.of(0, ChronoUnit.SECONDS)));
 
         pipeline.send(new HttpRequest(HttpMethod.GET, new URL("http://localhost/"))).block();
     }

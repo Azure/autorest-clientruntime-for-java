@@ -148,7 +148,7 @@ public final class ReactorNettyClient extends HttpClient {
                     return reactorNettyConnection;
                 }
             };
-            return Mono.just(httpResponse);
+            return Mono.just(httpResponse.withRequest(restRequest));
         };
         return responseDelegate;
     }

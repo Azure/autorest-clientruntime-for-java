@@ -25,14 +25,14 @@ public class RetryPolicyTests {
 
            @Override
            public Mono<HttpResponse> send(HttpRequest request) {
-               return Mono.<HttpResponse>just(new MockHttpResponse(codes[count++]));
+               return Mono.<HttpResponse>just(new MockHttpResponse(request, codes[count++]));
            }
        },
        new HttpPipelineOptions(null),
        new RetryPolicy(3, 0, ChronoUnit.MILLIS));
 
         HttpResponse response = pipeline.send(new HttpRequest(HttpMethod.GET,
-                        new URL("http://localhost/"), null)).block();
+                        new URL("http://localhost/"))).block();
 
         Assert.assertEquals(501, response.statusCode());
     }
@@ -46,7 +46,7 @@ public class RetryPolicyTests {
             @Override
             public Mono<HttpResponse> send(HttpRequest request) {
                 Assert.assertTrue(count++ < maxRetries);
-                return Mono.<HttpResponse>just(new MockHttpResponse(500));
+                return Mono.<HttpResponse>just(new MockHttpResponse(request, 500));
             }
         },
         new HttpPipelineOptions(null),
@@ -54,7 +54,7 @@ public class RetryPolicyTests {
 
 
         HttpResponse response = pipeline.send(new HttpRequest(HttpMethod.GET,
-                        new URL("http://localhost/"), null)).block();
+                        new URL("http://localhost/"))).block();
 
         Assert.assertEquals(500, response.statusCode());
     }

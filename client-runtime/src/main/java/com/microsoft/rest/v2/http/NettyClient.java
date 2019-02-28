@@ -174,7 +174,7 @@ public final class NettyClient extends HttpClient {
         private NettyAdapter() {
             TransportConfig config = loadTransport(0);
             this.eventLoopGroup = config.eventLoopGroup;
-            this.channelPool = createChannelPool(new Bootstrap(), config, eventLoopGroup.executorCount() * 16, null);
+            this.channelPool = createChannelPool(new Bootstrap(), config, eventLoopGroup.executorCount() * 2, null);
         }
 
         private NettyAdapter(Bootstrap baseBootstrap, int eventLoopGroupSize, int channelPoolSize, SslContext sslContext) {

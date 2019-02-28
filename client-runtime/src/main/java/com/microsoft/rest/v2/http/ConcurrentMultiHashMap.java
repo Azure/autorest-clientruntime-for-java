@@ -9,9 +9,9 @@ package com.microsoft.rest.v2.http;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,7 +29,7 @@ public class ConcurrentMultiHashMap<K, V> {
      * Create a concurrent multi hash map.
      */
     public ConcurrentMultiHashMap() {
-        this.data = Collections.synchronizedMap(new LinkedHashMap<K, ConcurrentLinkedQueue<V>>(16, 0.75f, true));
+        this.data = Collections.synchronizedMap(new ConcurrentHashMap<K, ConcurrentLinkedQueue<V>>(16, 0.75f));
         this.size = new AtomicInteger(0);
     }
 

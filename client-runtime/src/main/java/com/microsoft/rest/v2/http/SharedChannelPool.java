@@ -160,6 +160,7 @@ class SharedChannelPool implements ChannelPool {
                             } else {
                                 logger.debug("Channel disposed from pool due to timeout or half closure: {}", channel.id());
                                 closeChannel(channel);
+                                channelCount.decrementAndGet();
                             }
                         }
                         if (!foundHealthyChannelInPool) {
@@ -168,6 +169,7 @@ class SharedChannelPool implements ChannelPool {
                                 Channel nextAvailable = available.poll();
                                 logger.debug("Channel disposed due to overflow: {}", nextAvailable.id());
                                 closeChannel(nextAvailable);
+                                channelCount.decrementAndGet();
                             }
                             int port;
                             if (request.destinationURI.getPort() < 0) {
@@ -197,6 +199,7 @@ class SharedChannelPool implements ChannelPool {
                                     request.promise.setSuccess(channel);
                                 } else {
                                     request.promise.setFailure(f.cause());
+                                    channelCount.decrementAndGet();
                                 }
                             });
                         }

@@ -18,6 +18,7 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.HttpClientResponse;
 
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -131,6 +132,15 @@ class ReactorNettyClient extends HttpClient {
                 @Override
                 public Mono<String> bodyAsString() {
                     return bodyIntern().aggregate().asString().doFinally(s -> {
+                        if (!reactorNettyConnection.isDisposed()) {
+                            reactorNettyConnection.channel().eventLoop().execute(reactorNettyConnection::dispose);
+                        }
+                    });
+                }
+
+                @Override
+                public Mono<String> bodyAsString(Charset charset) {
+                    return bodyIntern().aggregate().asString(charset).doFinally(s -> {
                         if (!reactorNettyConnection.isDisposed()) {
                             reactorNettyConnection.channel().eventLoop().execute(reactorNettyConnection::dispose);
                         }

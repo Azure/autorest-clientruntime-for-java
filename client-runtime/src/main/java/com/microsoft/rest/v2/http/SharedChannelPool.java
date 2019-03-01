@@ -165,7 +165,7 @@ class SharedChannelPool implements ChannelPool {
                         }
                         if (!foundHealthyChannelInPool) {
                             // Not found a healthy channel in pool. Create a new channel - remove an available one if size overflows
-                            while (available.size() > 0 && channelCount.get() >= poolSize) {
+                            if (available.size() > 0) {
                                 Channel nextAvailable = available.poll();
                                 logger.debug("Channel disposed due to overflow: {}", nextAvailable.id());
                                 closeChannel(nextAvailable);

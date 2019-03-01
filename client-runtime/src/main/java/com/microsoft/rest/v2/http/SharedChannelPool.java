@@ -33,12 +33,9 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -59,14 +56,14 @@ class SharedChannelPool implements ChannelPool {
     private final int poolSize;
     private final AtomicInteger channelCount = new AtomicInteger(0);
     private final SharedChannelPoolOptions poolOptions;
-    private final Queue<ChannelRequest> requests;
+    private final ConcurrentMultiHashMap<URI, ChannelRequest> requests;
     private final ConcurrentMultiHashMap<URI, Channel> available;
     private final ConcurrentMultiHashMap<URI, Channel> leased;
     private final Object sync = new Object();
     private final SslContext sslContext;
-    private final ExecutorService executor;
     private volatile boolean closed = false;
     private final Logger logger = LoggerFactory.getLogger(SharedChannelPool.class);
+    AtomicBoolean wip = new AtomicBoolean(false);
 
     private boolean isChannelHealthy(Channel channel) {
         try {
@@ -92,6 +89,16 @@ class SharedChannelPool implements ChannelPool {
      * @param bootstrap the bootstrap to create channels
      * @param handler the handler to apply to the channels on creation, acquisition and release
      * @param size the upper limit of total number of channels
+     */
+    SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size) {
+        this(bootstrap, handler, size, new SharedChannelPoolOptions(), null);
+    }
+
+    /**
+     * Creates an instance of the shared channel pool.
+     * @param bootstrap the bootstrap to create channels
+     * @param handler the handler to apply to the channels on creation, acquisition and release
+     * @param size the upper limit of total number of channels
      * @param options optional settings for the pool
      */
     SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size, SharedChannelPoolOptions options, SslContext sslContext) {
@@ -105,7 +112,7 @@ class SharedChannelPool implements ChannelPool {
         });
         this.handler = handler;
         this.poolSize = size;
-        this.requests = new ConcurrentLinkedDeque<>();
+        this.requests = new ConcurrentMultiHashMap<>();
         this.available = new ConcurrentMultiHashMap<>();
         this.leased = new ConcurrentMultiHashMap<>();
         try {
@@ -117,109 +124,91 @@ class SharedChannelPool implements ChannelPool {
         } catch (SSLException e) {
             throw new RuntimeException(e);
         }
-        this.executor = Executors.newSingleThreadExecutor(runnable -> {
-            Thread thread = new Thread(runnable, "SharedChannelPool-worker");
-            thread.setDaemon(true);
-            return thread;
-        });
-
-        executor.submit(() -> {
-            while (!closed) {
-                try {
-                    final ChannelRequest request;
-                    // Synchronizing just to be notified when requests is non-empty
-                    synchronized (requests) {
-                        while (requests.isEmpty() && !closed) {
-                            requests.wait();
-                        }
-                    }
-                    // requests must be non-empty based on the above condition
-                    request = requests.remove();
-
-                    synchronized (sync) {
-                        while (channelCount.get() >= poolSize && available.size() == 0 && !closed) {
-                            sync.wait();
-                        }
-
-                        if (closed) {
-                            break;
-                        }
-
-                        // Try to retrieve a healthy channel from pool
-                        boolean foundHealthyChannelInPool = false;
-                        while (available.containsKey(request.channelURI)) {
-                            Channel channel = available.poll(request.channelURI);
-                            if (isChannelHealthy(channel)) {
-                                handler.channelAcquired(channel);
-                                request.promise.setSuccess(channel);
-                                leased.put(request.channelURI, channel);
-                                foundHealthyChannelInPool = true;
-                                channel.attr(CHANNEL_LEASED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
-                                logger.debug("Channel picked up from pool: {}", channel.id());
-                                break;
-                            } else {
-                                logger.debug("Channel disposed from pool due to timeout or half closure: {}", channel.id());
-                                closeChannel(channel);
-                                channelCount.decrementAndGet();
-                            }
-                        }
-                        if (!foundHealthyChannelInPool) {
-                            // Not found a healthy channel in pool. Create a new channel - remove an available one if size overflows
-                            if (available.size() > 0) {
-                                Channel nextAvailable = available.poll();
-                                logger.debug("Channel disposed due to overflow: {}", nextAvailable.id());
-                                closeChannel(nextAvailable);
-                                channelCount.decrementAndGet();
-                            }
-                            int port;
-                            if (request.destinationURI.getPort() < 0) {
-                                port = "https".equals(request.destinationURI.getScheme()) ? 443 : 80;
-                            } else {
-                                port = request.destinationURI.getPort();
-                            }
-                            channelCount.incrementAndGet();
-                            SharedChannelPool.this.bootstrap.clone().connect(request.destinationURI.getHost(), port).addListener((ChannelFuture f) -> {
-                                if (f.isSuccess()) {
-                                    Channel channel = f.channel();
-                                    channel.attr(CHANNEL_URI).set(request.channelURI);
-
-                                    // Apply SSL handler for https connections
-                                    if ("https".equalsIgnoreCase(request.destinationURI.getScheme())) {
-                                        channel.pipeline().addFirst(this.sslContext.newHandler(channel.alloc(), request.destinationURI.getHost(), port));
-                                    }
-                                    if (request.proxy != null) {
-                                        channel.pipeline().addFirst("HttpProxyHandler", new HttpProxyHandler(request.proxy.address()));
-                                    }
-
-                                    leased.put(request.channelURI, channel);
-                                    channel.attr(CHANNEL_CREATED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
-                                    channel.attr(CHANNEL_LEASED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
-                                    logger.debug("Channel created: {}", channel.id());
-                                    handler.channelAcquired(channel);
-                                    request.promise.setSuccess(channel);
-                                } else {
-                                    request.promise.setFailure(f.cause());
-                                    channelCount.decrementAndGet();
-                                }
-                            });
-                        }
-                    }
-                } catch (Exception e) {
-                    throw Exceptions.propagate(e);
-                }
-            }
-        });
     }
 
-    /**
-     * Creates an instance of the shared channel pool.
-     * @param bootstrap the bootstrap to create channels
-     * @param handler the handler to apply to the channels on creation, acquisition and release
-     * @param size the upper limit of total number of channels
-     */
-    SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size) {
-        this(bootstrap, handler, size, new SharedChannelPoolOptions(), null);
-    } 
+    private void drain(URI preferredUri) {
+        if (!wip.compareAndSet(false, true)) {
+            return;
+        }
+        while (!closed && requests.size() != 0) {
+            synchronized (sync) {
+                if (channelCount.get() >= poolSize && available.size() == 0) {
+                    break;
+                }
+                // requests must be non-empty based on the above condition
+                ChannelRequest request;
+                if (requests.containsKey(preferredUri)) {
+                    request = requests.poll(preferredUri);
+                } else {
+                    request = requests.poll();
+                }
+
+                boolean foundHealthyChannelInPool = false;
+                // Try to retrieve a healthy channel from pool
+                while (available.containsKey(request.channelURI)) {
+                    Channel channel = available.poll(request.channelURI);
+                    if (isChannelHealthy(channel)) {
+                        logger.debug("Channel picked up from pool: {}", channel.id());
+                        leased.put(request.channelURI, channel);
+                        foundHealthyChannelInPool = true;
+                        channel.attr(CHANNEL_LEASED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
+                        request.promise.setSuccess(channel);
+                        try {
+                            handler.channelAcquired(channel);
+                        } catch (Exception e) {
+                            throw Exceptions.propagate(e);
+                        }
+                        break;
+                    } else {
+                        logger.debug("Channel disposed from pool due to timeout or half closure: {}", channel.id());
+                        closeChannel(channel);
+                        channelCount.decrementAndGet();
+                    }
+                }
+                if (!foundHealthyChannelInPool) {
+                    // Not found a healthy channel in pool. Create a new channel - remove an available one if size overflows
+                    if (available.size() > 0) {
+                        Channel nextAvailable = available.poll();
+                        logger.debug("Channel disposed due to overflow: {}", nextAvailable.id());
+                        closeChannel(nextAvailable);
+                        channelCount.decrementAndGet();
+                    }
+                    int port;
+                    if (request.destinationURI.getPort() < 0) {
+                        port = "https".equals(request.destinationURI.getScheme()) ? 443 : 80;
+                    } else {
+                        port = request.destinationURI.getPort();
+                    }
+                    channelCount.incrementAndGet();
+                    SharedChannelPool.this.bootstrap.clone().connect(request.destinationURI.getHost(), port).addListener((ChannelFuture f) -> {
+                        if (f.isSuccess()) {
+                            Channel channel = f.channel();
+                            channel.attr(CHANNEL_URI).set(request.channelURI);
+
+                            // Apply SSL handler for https connections
+                            if ("https".equalsIgnoreCase(request.destinationURI.getScheme())) {
+                                channel.pipeline().addFirst(this.sslContext.newHandler(channel.alloc(), request.destinationURI.getHost(), port));
+                            }
+                            if (request.proxy != null) {
+                                channel.pipeline().addFirst("HttpProxyHandler", new HttpProxyHandler(request.proxy.address()));
+                            }
+
+                            leased.put(request.channelURI, channel);
+                            channel.attr(CHANNEL_CREATED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
+                            channel.attr(CHANNEL_LEASED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
+                            logger.debug("Channel created: {}", channel.id());
+                            handler.channelAcquired(channel);
+                            request.promise.setSuccess(channel);
+                        } else {
+                            request.promise.setFailure(f.cause());
+                            channelCount.decrementAndGet();
+                        }
+                    });
+                }
+            }
+        }
+        wip.set(false);
+    }
 
     /**
      * Acquire a channel for a URI.
@@ -260,10 +249,8 @@ class SharedChannelPool implements ChannelPool {
                 channelRequest.channelURI = new URI(String.format("%s://%s:%d", uri.getScheme(), address.getHostString(), address.getPort()));
             }
 
-            requests.add(channelRequest);
-            synchronized (requests) {
-                requests.notify();
-            }
+            requests.put(channelRequest.channelURI, channelRequest);
+            drain(channelRequest.channelURI);
         } catch (URISyntaxException e) {
             promise.setFailure(e);
         }
@@ -298,12 +285,13 @@ class SharedChannelPool implements ChannelPool {
      */
     public Future<Void> closeAndRelease(final Channel channel) {
         return closeChannel(channel).addListener(future -> {
+            URI channelUri = channel.attr(CHANNEL_URI).get();
             synchronized (sync) {
-                leased.remove(channel.attr(CHANNEL_URI).get(), channel);
+                leased.remove(channelUri, channel);
                 channelCount.decrementAndGet();
                 logger.debug("Channel closed and released out of pool: " + channel.id());
-                sync.notify();
             }
+            drain(channelUri);
         });
     }
 
@@ -311,18 +299,19 @@ class SharedChannelPool implements ChannelPool {
     public Future<Void> release(final Channel channel) {
         try {
             handler.channelReleased(channel);
+            URI channelUri = channel.attr(CHANNEL_URI).get();
             synchronized (sync) {
-                leased.remove(channel.attr(CHANNEL_URI).get(), channel);
+                leased.remove(channelUri, channel);
                 if (isChannelHealthy(channel)) {
-                    available.put(channel.attr(CHANNEL_URI).get(), channel);
+                    available.put(channelUri, channel);
                     channel.attr(CHANNEL_AVAILABLE_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
                     logger.debug("Channel released to pool: " + channel.id());
                 } else {
                     channelCount.decrementAndGet();
                     logger.debug("Channel broken on release, dispose: " + channel.id());
                 }
-                sync.notify();
             }
+            drain(channelUri);
         } catch (Exception e) {
             return bootstrap.config().group().next().newFailedFuture(e);
         }
@@ -343,11 +332,9 @@ class SharedChannelPool implements ChannelPool {
     @Override
     public void close() {
         closed = true;
-        executor.shutdownNow();
-        synchronized (requests) {
-            while (!requests.isEmpty()) {
-                requests.remove().promise.setFailure(new CancellationException("Channel pool was closed"));
-            }
+//        executor.shutdownNow();
+        while (requests.size() == 0) {
+            requests.poll().promise.setFailure(new CancellationException("Channel pool was closed"));
         }
     }
 

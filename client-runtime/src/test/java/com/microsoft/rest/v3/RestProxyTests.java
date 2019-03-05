@@ -34,6 +34,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
@@ -43,6 +44,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import static org.junit.Assert.*;
 
@@ -1137,6 +1139,9 @@ public abstract class RestProxyTests {
         RestResponse<Map<String, String>,Void> getBytes100OnlyRawHeaders();
 
         @GET("bytes/100")
+        Mono<RestResponse<Map<String, String>,Void>> getBytes100OnlyRawHeadersAsync();
+
+        @GET("bytes/100")
         RestResponse<HttpBinHeaders,byte[]> getBytes100BodyAndHeaders();
 
         @PUT("put")
@@ -1144,6 +1149,15 @@ public abstract class RestProxyTests {
 
         @PUT("put")
         RestResponse<HttpBinHeaders,HttpBinJSON> putBodyAndHeaders(@BodyParam(ContentType.APPLICATION_OCTET_STREAM) String body);
+
+        @PUT("put")
+        Mono<RestResponse<HttpBinHeaders,HttpBinJSON>> putBodyAndHeadersAsync(@BodyParam(ContentType.APPLICATION_OCTET_STREAM) String body);
+
+        @PUT("put")
+        Mono<RestResponse<HttpBinHeaders,Mono<HttpBinJSON>>> putBodyAndHeadersAsyncContentAsync(@BodyParam(ContentType.APPLICATION_OCTET_STREAM) String body);
+
+        @PUT("put")
+        RestResponse<HttpBinHeaders,Mono<HttpBinJSON>> putBodyAndHeadersContentAsync(@BodyParam(ContentType.APPLICATION_OCTET_STREAM) String body);
 
         @GET("bytes/100")
         RestResponse<Void, Void> getBytesOnlyStatus();
@@ -1206,6 +1220,21 @@ public abstract class RestProxyTests {
     }
 
     @Test
+    public void service20GetBytesOnlyHeadersAsync() {
+        final Mono<RestResponse<Map<String, String>, Void>> asyncResponse = createService(Service20.class)
+                .getBytes100OnlyRawHeadersAsync();
+
+        asyncResponse.doOnNext(response -> {
+            assertNotNull(response);
+            assertEquals(200, response.statusCode());
+            assertNotNull(response.headers());
+            assertNotEquals(0, response.headers().size());
+        })
+        .switchIfEmpty(Mono.error(new RuntimeException("asyncResponse should emit the response but it didn't.")))
+        .block();
+    }
+
+    @Test
     public void service20PutOnlyHeaders() {
         final RestResponse<HttpBinHeaders,Void> response = createService(Service20.class)
                 .putOnlyHeaders("body string");
@@ -1234,6 +1263,90 @@ public abstract class RestProxyTests {
         assertNotNull(body);
         assertMatchWithHttpOrHttps("httpbin.org/put", body.url);
         assertEquals("body string", body.data);
+
+        final HttpBinHeaders headers = response.headers();
+        assertNotNull(headers);
+        assertEquals(true, headers.accessControlAllowCredentials);
+        assertEquals("keep-alive", headers.connection.toLowerCase());
+        assertNotNull(headers.date);
+        // assertEquals("1.1 vegur", headers.via);
+        assertNotEquals(0, headers.xProcessedTime);
+    }
+
+    @Test
+    public void service20PutBodyAndHeadersAsync() {
+        final Mono<RestResponse<HttpBinHeaders,HttpBinJSON>> asyncResponse = createService(Service20.class)
+                .putBodyAndHeadersAsync("body string");
+        //
+        asyncResponse.doOnNext(response -> {
+            assertNotNull(response);
+
+            assertEquals(200, response.statusCode());
+
+            final HttpBinJSON body = response.body();
+            assertNotNull(body);
+            assertMatchWithHttpOrHttps("httpbin.org/put", body.url);
+            assertEquals("body string", body.data);
+
+            final HttpBinHeaders headers = response.headers();
+            assertNotNull(headers);
+            assertEquals(true, headers.accessControlAllowCredentials);
+            assertEquals("keep-alive", headers.connection.toLowerCase());
+            assertNotNull(headers.date);
+            // assertEquals("1.1 vegur", headers.via);
+            assertNotEquals(0, headers.xProcessedTime);
+        })
+        .switchIfEmpty(Mono.error(new RuntimeException("asyncResponse should emit the response but it didn't.")))
+        .block();
+    }
+
+    @Test
+    public void service20PutBodyAndHeadersAsyncContentAsync() {
+        final Mono<RestResponse<HttpBinHeaders, Mono<HttpBinJSON>>> asyncResponse = createService(Service20.class)
+                .putBodyAndHeadersAsyncContentAsync("body string");
+        //
+        asyncResponse.flatMap(response -> {
+            assertNotNull(response);
+            assertEquals(200, response.statusCode());
+            //
+            final Mono<HttpBinJSON> asyncBody = response.body();
+            return asyncBody.flatMap(body -> {
+                assertNotNull(body);
+                assertMatchWithHttpOrHttps("httpbin.org/put", body.url);
+                assertEquals("body string", body.data);
+                return Mono.just(response.headers());
+            })
+            .switchIfEmpty(Mono.error(new RuntimeException("asyncResponse.body should emit the content but it didn't.")));
+        })
+        .switchIfEmpty(Mono.error(new RuntimeException("asyncResponse should emit the response but it didn't.")))
+        .doOnNext(hdrs -> {
+            final HttpBinHeaders headers = hdrs;
+            assertNotNull(headers);
+            assertEquals(true, headers.accessControlAllowCredentials);
+            assertEquals("keep-alive", headers.connection.toLowerCase());
+            assertNotNull(headers.date);
+            // assertEquals("1.1 vegur", headers.via);
+            assertNotEquals(0, headers.xProcessedTime);
+        })
+        .block();
+    }
+
+    @Test
+    public void service20PutBodyAndHeadersContentAsync() {
+        final RestResponse<HttpBinHeaders, Mono<HttpBinJSON>> response = createService(Service20.class)
+                .putBodyAndHeadersContentAsync("body string");
+
+        assertNotNull(response);
+        assertEquals(200, response.statusCode());
+
+        final Mono<HttpBinJSON> asyncBody = response.body();
+        asyncBody.doOnNext(body -> {
+            assertNotNull(body);
+            assertMatchWithHttpOrHttps("httpbin.org/put", body.url);
+            assertEquals("body string", body.data);
+        })
+        .switchIfEmpty(Mono.error(new RuntimeException("response.body should emit the content but it didn't.")))
+        .block();
 
         final HttpBinHeaders headers = response.headers();
         assertNotNull(headers);

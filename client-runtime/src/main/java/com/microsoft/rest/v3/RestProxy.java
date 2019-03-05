@@ -445,13 +445,13 @@ public class RestProxy implements InvocationHandler {
                 // entityType = ? extends RestResponse<THeaders, TBody>
                 Constructor<? extends RestResponse<?, ?>> responseConstructor = getRestResponseConstructor(entityType);
 
-                Type[] deserializedTypes = TypeUtil.getTypeArguments(TypeUtil.getSuperType(entityType, RestResponse.class));
+                Type[] genericArgTypes = TypeUtil.getTypeArguments(TypeUtil.getSuperType(entityType, RestResponse.class));
 
                 HttpHeaders responseHeaders = response.sourceResponse().headers();
                 Object deserializedHeaders = response.decodedHeaders().block();
 
-                Type bodyType = deserializedTypes[1];
-                if (TypeUtil.isTypeOrSubTypeOf(bodyType, Void.class)) {
+                Type genericArg2Type = genericArgTypes[1];
+                if (TypeUtil.isTypeOrSubTypeOf(genericArg2Type, Void.class)) {
                     // entityType = ? extends RestResponse<THeaders, Void>
                     asyncResult = response.sourceResponse().body().ignoreElements()
                             .then(Mono.just(responseConstructor.newInstance(response.sourceResponse().request(), responseStatusCode, deserializedHeaders, responseHeaders.toMap(), null)));
@@ -462,7 +462,7 @@ public class RestProxy implements InvocationHandler {
                     // entityType = ? extends RestResponse<THeaders, Flux<ByteBuf>>
                     // entityType = ? extends RestResponse<THeaders, Boolean>
                     // entityType = ? extends RestResponse<THeaders, VirtualMachine>
-                    asyncResult = handleBodyReturnType(response, methodParser, bodyType)
+                    asyncResult = handleBodyReturnType(response, methodParser, genericArg2Type)
                             .map((Function<Object, RestResponse<?, ?>>) bodyAsObject -> {
                                 try {
                                     return responseConstructor.newInstance(response.sourceResponse().request(), responseStatusCode, deserializedHeaders, rawHeaders, bodyAsObject);
@@ -506,6 +506,7 @@ public class RestProxy implements InvocationHandler {
         if (httpMethod == HttpMethod.HEAD
                 && (TypeUtil.isTypeOrSubTypeOf(entityType, Boolean.TYPE) || TypeUtil.isTypeOrSubTypeOf(entityType, Boolean.class))) {
             boolean isSuccess = (responseStatusCode / 100) == 2;
+            // Mono<Boolean>
             asyncResult = Mono.just(isSuccess);
         } else if (TypeUtil.isTypeOrSubTypeOf(entityType, byte[].class)) {
             // Mono<byte[]>
@@ -518,6 +519,9 @@ public class RestProxy implements InvocationHandler {
         } else if (FluxUtil.isFluxByteBuf(entityType)) {
             // Mono<Flux<ByteBuf>>
             asyncResult = Mono.just(response.sourceResponse().body());
+        } else if (TypeUtil.isTypeOrSubTypeOf(entityType, Mono.class)) {
+            // Mono<Mono<Object>>
+            asyncResult = Mono.just(response.decodedBody());
         } else {
             // Mono<Object>
             asyncResult = response.decodedBody();
@@ -551,7 +555,7 @@ public class RestProxy implements InvocationHandler {
                 // ProxyMethod ReturnType: Mono<Void>
                 result = asyncExpectedResponse.then();
             } else {
-                // ProxyMethod ReturnType: Mono<? extends RestResponse<?, ?>>
+                // ProxyMethod ReturnType: Mono<? extends RestResponse<?, ?>> or Mono<Object>
                 result = asyncExpectedResponse.flatMap(response ->
                         handleRestResponseReturnType(response, methodParser, monoTypeParam));
             }

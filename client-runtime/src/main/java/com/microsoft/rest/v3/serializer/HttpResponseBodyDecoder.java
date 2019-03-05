@@ -289,56 +289,123 @@ final class HttpResponseBodyDecoder {
     }
 
     /**
-     * Get the {@link Type} of the REST API 'returned entity'.
+     * Process {@link HttpResponseDecodeData#returnType()} and return the {@link Type} of the REST API 'returned entity'.
      *
      * In the declaration of a java proxy method corresponding to the REST API, the 'returned entity' can be:
      *
-     *      1. emission value of the reactor publisher returned by proxy method
+     *      0. type of the model value returned by proxy method
      *
-     *          e.g. {@code Mono<Foo> getFoo(args);}
-     *               {@code Flux<Foo> getFoos(args);}
+     *          e.g. {@code Foo getFoo(args);}
      *          where Foo is the REST API 'returned entity'.
      *
-     *      2. OR content (body) of {@link RestResponse} emitted by the reactor publisher returned from proxy method
+     *      1. OR type of the model value emitted from Mono returned by proxy method
+     *
+     *          e.g. {@code Mono<Foo> getFoo(args);}
+     *          where Foo is the REST API 'returned entity'.
+     *
+     *      2. OR content model type of {@link RestResponse} emitted by the Mono returned from proxy method
      *
      *          e.g. {@code Mono<RestResponse<headers, Foo>> getFoo(args);}
-     *               {@code Flux<RestResponse<headers, Foo>> getFoos(args);}
      *          where Foo is the REST API return entity.
+     *
+     *      3. OR type of content model value of body publisher of {@link RestResponse} emitted from Mono returned by proxy method
+     *
+     *          e.g. {@code Mono<RestResponse<headers, Mono<Foo>>> getFoo(args);}
+     *          where Foo is the REST API 'return entity'.
+     *
+     *      4. OR content model type of {@link RestResponse} returned from proxy method
+     *
+     *          e.g. {@code RestResponse<headers, Foo> getFoo(args);}
+     *          where Foo is the REST API return entity.
+     *
+     *      5. OR type of content model value of body publisher of {@link RestResponse} returned by proxy method
+     *
+     *          e.g. {@code RestResponse<headers, Mono<Foo>> getFoo(args);}
+     *          where Foo is the REST API 'return entity'.
+     *
+     *      6. OR type of the model value of OperationStatus returned by proxy method
+     *
+     *          e.g. {@code OperationStatus<Foo> createFoo(args);}
+     *          where Foo is the REST API 'returned entity'.
+     *
+     *      7. OR type of the model value of OperationStatus emitted from Mono returned by proxy method
+     *
+     *          e.g. {@code Mono<OperationStatus<Foo>> createFoo(args);}
+     *          where Foo is the REST API 'returned entity'.
+     *
+     *      8. OR type of the model value of OperationStatus emitted from Flux returned by proxy method
+     *
+     *          e.g. {@code Flux<OperationStatus<Foo>> createFoo(args);}
+     *          where Foo is the REST API 'returned entity'.
+     *
+     *      9. For all other cases {@link Type} returned from {@link HttpResponseDecodeData#returnType()} will returned
+     *
+     *  TODO: anuchan case 6, 7 and 8 shouldn't be here
      *
      * @return the entity type.
      */
     private static Type extractEntityTypeFromReturnType(HttpResponseDecodeData decodeData) {
         Type token = decodeData.returnType();
-        if (token != null) {
+        if (token == null) {
+            return null;
+        } else {
             if (TypeUtil.isTypeOrSubTypeOf(token, Mono.class)) {
-                token = TypeUtil.getTypeArgument(token);
+                return extractEntityTypeFromMonoReturnType(token);
             } else if (TypeUtil.isTypeOrSubTypeOf(token, Flux.class)) {
-                Type t = TypeUtil.getTypeArgument(token);
-                try {
-                    // TODO: anuchan - unwrap OperationStatus a different way
-                    // Check for OperationStatus<?>
-                    if (TypeUtil.isTypeOrSubTypeOf(t, Class.forName("com.microsoft.azure.v3.OperationStatus"))) {
-                        token = t;
-                    }
-                } catch (ClassNotFoundException ignored) {
-                }
-            }
-
-            if (TypeUtil.isTypeOrSubTypeOf(token, RestResponse.class)) {
-                token = TypeUtil.getSuperType(token, RestResponse.class);
-                token = TypeUtil.getTypeArguments(token)[1];
-            }
-
-            try {
-                // TODO: anuchan - unwrap OperationStatus a different way
-                if (TypeUtil.isTypeOrSubTypeOf(token, Class.forName("com.microsoft.azure.v3.OperationStatus"))) {
-                    // Get Type of 'T' from OperationStatus<T>
-                    token = TypeUtil.getTypeArgument(token);
-                }
-            } catch (Exception ignored) {
+                return extractEntityTypeFromFluxReturnType(token);
+            } else if (TypeUtil.isTypeOrSubTypeOf(token, RestResponse.class)) {
+                return extractEntityTypeFromRestResponseReturnType(token);
+            } else if (isOperationStatusType(token)) {
+                return TypeUtil.getTypeArgument(token);
+            } else {
+                return token;
             }
         }
-        return token;
+    }
+
+    private static Type extractEntityTypeFromMonoReturnType(Type token) {
+        token = TypeUtil.getTypeArgument(token);
+        if (TypeUtil.isTypeOrSubTypeOf(token, RestResponse.class)) {
+            return extractEntityTypeFromRestResponseReturnType(token);
+        } else if (isOperationStatusType(token)) {
+            return TypeUtil.getTypeArgument(token);
+        } else {
+            return token;
+        }
+    }
+
+    private static Type extractEntityTypeFromRestResponseReturnType(Type token) {
+        token = TypeUtil.getSuperType(token, RestResponse.class);
+        token = TypeUtil.getTypeArguments(token)[1];
+        if (TypeUtil.isTypeOrSubTypeOf(token, Mono.class)) {
+            token = TypeUtil.getTypeArgument(token);
+            if (isOperationStatusType(token)) {
+                return TypeUtil.getTypeArgument(token);
+            } else {
+                return token;
+            }
+        } else if (isOperationStatusType(token)) {
+            return TypeUtil.getTypeArgument(token);
+        } else {
+            return token;
+        }
+    }
+
+    private static Type extractEntityTypeFromFluxReturnType(Type token) {
+        Type t = TypeUtil.getTypeArgument(token);
+        if (isOperationStatusType(t)) {
+            return TypeUtil.getTypeArgument(t);
+        } else {
+            return token;
+        }
+    }
+
+    private static boolean isOperationStatusType(Type token) {
+        try {
+            return TypeUtil.isTypeOrSubTypeOf(token, Class.forName("com.microsoft.azure.v3.OperationStatus"));
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     /**

@@ -13,15 +13,15 @@ import java.util.Map;
 /**
  * The response of a REST request.
  *
- * @param <THeaders> The deserialized type of the response headers.
- * @param <TBody> The deserialized type of the response body.
+ * @param <H> The deserialized type of the response headers.
+ * @param <T> The deserialized type of the response body.
  */
-public class RestResponseBase<THeaders, TBody> {
+public class RestResponseBase<H, T> {
     private final HttpRequest request;
     private final int statusCode;
-    private final THeaders headers;
+    private final H headers;
     private final Map<String, String> rawHeaders;
-    private final TBody body;
+    private final T body;
 
     /**
      * Create RestResponseBase.
@@ -32,7 +32,7 @@ public class RestResponseBase<THeaders, TBody> {
      * @param rawHeaders the raw headers of the HTTP response
      * @param body the deserialized body
      */
-    public RestResponseBase(HttpRequest request, int statusCode, THeaders headers, Map<String, String> rawHeaders, TBody body) {
+    public RestResponseBase(HttpRequest request, int statusCode, H headers, Map<String, String> rawHeaders, T body) {
         this.request = request;
         this.statusCode = statusCode;
         this.headers = headers;
@@ -57,7 +57,7 @@ public class RestResponseBase<THeaders, TBody> {
     /**
      * @return the deserialized headers of the HTTP response.
      */
-    public THeaders headers() {
+    public H headers() {
         return headers;
     }
 
@@ -71,7 +71,7 @@ public class RestResponseBase<THeaders, TBody> {
     /**
      * @return the deserialized body of the HTTP response.
      */
-    public TBody body() {
+    public T body() {
         return body;
     }
 }

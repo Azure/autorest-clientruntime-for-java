@@ -15,7 +15,7 @@ import java.util.Map;
  *
  * @param <TBody> The deserialized type of the response content.
  */
-public final class RestContentResponse<TBody> extends RestResponse<Void, TBody> {
+public final class RestContentResponse<TBody> extends RestResponseBase<Void, TBody> {
     /**
      * Creates RestContentResponse.
      *

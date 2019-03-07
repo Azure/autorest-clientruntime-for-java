@@ -1131,27 +1131,27 @@ public abstract class RestProxyTests {
     @Host("http://httpbin.org")
     private interface Service20 {
         @GET("bytes/100")
-        RestResponse<HttpBinHeaders,Void> getBytes100OnlyHeaders();
+        RestResponseBase<HttpBinHeaders,Void> getBytes100OnlyHeaders();
 
         @GET("bytes/100")
-        RestResponse<Map<String, String>,Void> getBytes100OnlyRawHeaders();
+        RestResponseBase<Map<String, String>,Void> getBytes100OnlyRawHeaders();
 
         @GET("bytes/100")
-        RestResponse<HttpBinHeaders,byte[]> getBytes100BodyAndHeaders();
+        RestResponseBase<HttpBinHeaders,byte[]> getBytes100BodyAndHeaders();
 
         @PUT("put")
-        RestResponse<HttpBinHeaders,Void> putOnlyHeaders(@BodyParam(ContentType.APPLICATION_OCTET_STREAM) String body);
+        RestResponseBase<HttpBinHeaders,Void> putOnlyHeaders(@BodyParam(ContentType.APPLICATION_OCTET_STREAM) String body);
 
         @PUT("put")
-        RestResponse<HttpBinHeaders,HttpBinJSON> putBodyAndHeaders(@BodyParam(ContentType.APPLICATION_OCTET_STREAM) String body);
+        RestResponseBase<HttpBinHeaders,HttpBinJSON> putBodyAndHeaders(@BodyParam(ContentType.APPLICATION_OCTET_STREAM) String body);
 
         @GET("bytes/100")
-        RestResponse<Void, Void> getBytesOnlyStatus();
+        RestResponseBase<Void, Void> getBytesOnlyStatus();
     }
 
     @Test
     public void service20GetBytes100OnlyHeaders() {
-        final RestResponse<HttpBinHeaders,Void> response = createService(Service20.class)
+        final RestResponseBase<HttpBinHeaders,Void> response = createService(Service20.class)
                 .getBytes100OnlyHeaders();
         assertNotNull(response);
 
@@ -1168,7 +1168,7 @@ public abstract class RestProxyTests {
 
     @Test
     public void service20GetBytes100BodyAndHeaders() {
-        final RestResponse<HttpBinHeaders,byte[]> response = createService(Service20.class)
+        final RestResponseBase<HttpBinHeaders,byte[]> response = createService(Service20.class)
                 .getBytes100BodyAndHeaders();
         assertNotNull(response);
 
@@ -1188,7 +1188,7 @@ public abstract class RestProxyTests {
 
     @Test
     public void service20GetBytesOnlyStatus() {
-        final RestResponse<Void,Void> response = createService(Service20.class)
+        final RestResponseBase<Void,Void> response = createService(Service20.class)
                 .getBytesOnlyStatus();
         assertNotNull(response);
         assertEquals(200, response.statusCode());
@@ -1196,7 +1196,7 @@ public abstract class RestProxyTests {
 
     @Test
     public void service20GetBytesOnlyHeaders() {
-        final RestResponse<Map<String, String>, Void> response = createService(Service20.class)
+        final RestResponseBase<Map<String, String>, Void> response = createService(Service20.class)
                 .getBytes100OnlyRawHeaders();
 
         assertNotNull(response);
@@ -1207,7 +1207,7 @@ public abstract class RestProxyTests {
 
     @Test
     public void service20PutOnlyHeaders() {
-        final RestResponse<HttpBinHeaders,Void> response = createService(Service20.class)
+        final RestResponseBase<HttpBinHeaders,Void> response = createService(Service20.class)
                 .putOnlyHeaders("body string");
         assertNotNull(response);
 
@@ -1224,7 +1224,7 @@ public abstract class RestProxyTests {
 
     @Test
     public void service20PutBodyAndHeaders() {
-        final RestResponse<HttpBinHeaders,HttpBinJSON> response = createService(Service20.class)
+        final RestResponseBase<HttpBinHeaders,HttpBinJSON> response = createService(Service20.class)
                 .putBodyAndHeaders("body string");
         assertNotNull(response);
 
@@ -1329,7 +1329,7 @@ public abstract class RestProxyTests {
                 new HttpPipelineOptions(null),
                 new HttpLoggingPolicy(HttpLogDetailLevel.BODY_AND_HEADERS, true));
         //
-        RestResponse<Void, HttpBinJSON> response = RestProxy.create(FlowableUploadService.class, httpPipeline, serializer).put(stream, Files.size(filePath));
+        RestResponseBase<Void, HttpBinJSON> response = RestProxy.create(FlowableUploadService.class, httpPipeline, serializer).put(stream, Files.size(filePath));
 
         assertEquals("The quick brown fox jumps over the lazy dog", response.body().data);
     }

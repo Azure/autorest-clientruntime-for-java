@@ -1312,7 +1312,7 @@ public abstract class RestProxyTests {
     @Host("https://httpbin.org")
     interface FlowableUploadService {
         @PUT("/put")
-        RestContentResponse<HttpBinJSON> put(@BodyParam("text/plain") Flux<ByteBuf> content, @HeaderParam("Content-Length") long contentLength);
+        RestResponse<HttpBinJSON> put(@BodyParam("text/plain") Flux<ByteBuf> content, @HeaderParam("Content-Length") long contentLength);
     }
 
     @Test
@@ -1338,7 +1338,7 @@ public abstract class RestProxyTests {
     public void SegmentUploadTest() throws Exception {
         Path filePath = Paths.get(getClass().getClassLoader().getResource("upload.txt").toURI());
         AsynchronousFileChannel fileChannel = AsynchronousFileChannel.open(filePath, StandardOpenOption.READ);
-        RestContentResponse<HttpBinJSON> response = createService(FlowableUploadService.class)
+        RestResponse<HttpBinJSON> response = createService(FlowableUploadService.class)
                 .put(FluxUtil.byteBufStreamFromFile(fileChannel, 4, 15), 15);
 
         assertEquals("quick brown fox", response.body().data);
@@ -1399,7 +1399,7 @@ public abstract class RestProxyTests {
         Mono<HttpBinJSON> getAsync();
 
         @GET("anything")
-        Mono<RestContentResponse<HttpBinJSON>> getBodyResponseAsync();
+        Mono<RestResponse<HttpBinJSON>> getBodyResponseAsync();
     }
 
     @Test(expected = RestException.class)

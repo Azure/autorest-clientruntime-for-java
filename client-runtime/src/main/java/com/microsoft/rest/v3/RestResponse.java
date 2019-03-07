@@ -15,22 +15,22 @@ import java.util.Map;
  *
  * @param <TBody> The deserialized type of the response content.
  */
-public final class RestContentResponse<TBody> extends RestResponseBase<Void, TBody> {
+public final class RestResponse<TBody> extends RestResponseBase<Void, TBody> {
     /**
-     * Creates RestContentResponse.
+     * Creates RestResponse.
      *
      * @param request the request which resulted in this response
      * @param statusCode the status code of the HTTP response
      * @param rawHeaders the raw headers of the HTTP response
      * @param body the deserialized body
      */
-    public RestContentResponse(HttpRequest request, int statusCode, Map<String, String> rawHeaders, TBody body) {
+    public RestResponse(HttpRequest request, int statusCode, Map<String, String> rawHeaders, TBody body) {
         super(request, statusCode, null, rawHeaders, body);
     }
 
     // Used for uniform reflective creation in RestProxy.
     @SuppressWarnings("unused")
-    RestContentResponse(HttpRequest request, int statusCode, Void headers, Map<String, String> rawHeaders, TBody body) {
+    RestResponse(HttpRequest request, int statusCode, Void headers, Map<String, String> rawHeaders, TBody body) {
         super(request, statusCode, headers, rawHeaders, body);
     }
 

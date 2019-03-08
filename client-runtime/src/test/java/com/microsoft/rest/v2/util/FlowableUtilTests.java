@@ -81,8 +81,9 @@ public class FlowableUtilTests {
                     .collectInto(new ByteArrayOutputStream(), OutputStream::write) //
                     .blockingGet().toByteArray();
             assertEquals(0, bytes.length);
+        } finally {
+            file.deleteOnExit();
         }
-        assertTrue(file.delete());
     }
 
     @Test
@@ -100,8 +101,9 @@ public class FlowableUtilTests {
                     .blockingGet() //
                     .toByteArray();
             assertEquals("hello there", new String(bytes, StandardCharsets.UTF_8));
+        } finally {
+            file.deleteOnExit();
         }
-        assertTrue(file.delete());
     }
 
     private static final int NUM_CHUNKS_IN_LONG_INPUT = 10_000_000;

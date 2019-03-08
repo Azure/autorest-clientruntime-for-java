@@ -30,7 +30,7 @@ import java.util.Map;
 public class MockHttpClient extends HttpClient {
     private static final HttpHeaders responseHeaders = new HttpHeaders()
             .set("Date", "Fri, 13 Oct 2017 20:33:09 GMT")
-            .set("Via", "1.1 vegur")
+            .set("Via", null)
             .set("Connection", "keep-alive")
             .set("X-Processed-Time", "1.0")
             .set("Access-Control-Allow-Credentials", "true")
@@ -53,7 +53,8 @@ public class MockHttpClient extends HttpClient {
                         final HttpBinJSON json = new HttpBinJSON();
                         json.url = request.url().toString()
                                 // This is just to mimic the behavior we've seen with httpbin.org.
-                                .replace("%20", " ");
+                                .replace("%20", " ")
+                                .replace("http://", "https://");
                         json.headers = toMap(request.headers());
                         response = new MockHttpResponse(200, json);
                     }
@@ -139,7 +140,8 @@ public class MockHttpClient extends HttpClient {
                 }
                 else if (requestPathLower.equals("/get")) {
                     final HttpBinJSON json = new HttpBinJSON();
-                    json.url = request.url().toString();
+                    json.url = request.url().toString()
+                            .replace("http://", "https://");
                     json.headers = toMap(request.headers());
                     response = new MockHttpResponse(200, json);
                 }
@@ -158,7 +160,8 @@ public class MockHttpClient extends HttpClient {
                 }
                 else if (requestPathLower.equals("/put")) {
                     final HttpBinJSON json = new HttpBinJSON();
-                    json.url = request.url().toString();
+                    json.url = request.url().toString()
+                            .replace("http://", "https://");
                     json.data = bodyToString(request);
                     json.headers = toMap(request.headers());
                     response = new MockHttpResponse(200, responseHeaders, json);

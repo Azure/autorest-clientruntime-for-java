@@ -190,7 +190,7 @@ public final class NettyClient extends HttpClient {
             return Single.create((SingleEmitter<HttpResponse> responseEmitter) -> {
                 AcquisitionListener listener = new AcquisitionListener(channelPool, request, responseEmitter);
                 responseEmitter.setDisposable(listener);
-                channelPool.acquire(request.url().toURI(), configuration.proxy()).addListener(listener);
+                channelPool.acquire(request.url().toURI(), configuration.proxyScheme(), configuration.proxy()).addListener(listener);
             });
         }
     }

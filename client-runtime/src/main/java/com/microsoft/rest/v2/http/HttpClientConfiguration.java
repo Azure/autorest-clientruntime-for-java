@@ -15,6 +15,7 @@ import java.net.Proxy;
  */
 public class HttpClientConfiguration {
     private final Proxy proxy;
+    private final String proxyScheme;
     private SharedChannelPoolOptions poolOptions;
 
     /**
@@ -25,11 +26,34 @@ public class HttpClientConfiguration {
     }
 
     /**
+     * The scheme/protocol that will be used when sending the request to the proxy. If this is null, then the scheme
+     * will be determined by the port of the proxy (80 will use 'http' and 443 will use 'https'). If the port of the
+     * proxy isn't recognized (not 80 or 443), then the scheme of the final destination URI will be used.
+     * @return
+     */
+    public String proxyScheme() {
+        return proxyScheme;
+    }
+
+    /**
      * Creates an HttpClientConfiguration.
      * @param proxy The optional proxy to use.
      */
     public HttpClientConfiguration(Proxy proxy) {
+        this(proxy, null);
+    }
+
+    /**
+     * Creates an HttpClientConfiguration.
+     * @param proxy The optional proxy to use.
+     * @param proxyScheme The scheme/protocol that will be used when sending the request to the proxy. If this is null,
+     *                    then the scheme will be determined by the port of the proxy (80 will use 'http' and 443 will
+     *                    use 'https'). If the port of the proxy isn't 80 or 443, then the scheme of the final
+     *                    destination URI will be used.
+     */
+    public HttpClientConfiguration(Proxy proxy, String proxyScheme) {
         this.proxy = proxy;
+        this.proxyScheme = proxyScheme;
         this.poolOptions = new SharedChannelPoolOptions();
     }
 

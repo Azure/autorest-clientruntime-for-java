@@ -98,7 +98,7 @@ public class SharedChannelPoolTests {
         final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
         channelRequest.destinationURI = new URI("ftp://other.example.com");
         channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 80));
-        final URI expectedChannelUri = new URI("ftp://my.example.com:80");
+        final URI expectedChannelUri = new URI("http://my.example.com:80");
         assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
     }
 
@@ -116,7 +116,7 @@ public class SharedChannelPoolTests {
         final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
         channelRequest.destinationURI = new URI("https://other.example.com");
         channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 80));
-        final URI expectedChannelUri = new URI("https://my.example.com:80");
+        final URI expectedChannelUri = new URI("http://my.example.com:80");
         assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
     }
 
@@ -152,7 +152,7 @@ public class SharedChannelPoolTests {
         final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
         channelRequest.destinationURI = new URI("ftp://other.example.com");
         channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 443));
-        final URI expectedChannelUri = new URI("ftp://my.example.com:443");
+        final URI expectedChannelUri = new URI("https://my.example.com:443");
         assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
     }
 
@@ -161,7 +161,7 @@ public class SharedChannelPoolTests {
         final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
         channelRequest.destinationURI = new URI("http://other.example.com");
         channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 443));
-        final URI expectedChannelUri = new URI("http://my.example.com:443");
+        final URI expectedChannelUri = new URI("https://my.example.com:443");
         assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
     }
 
@@ -171,6 +171,96 @@ public class SharedChannelPoolTests {
         channelRequest.destinationURI = new URI("https://other.example.com");
         channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 443));
         final URI expectedChannelUri = new URI("https://my.example.com:443");
+        assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
+    }
+
+    @Test
+    public void testGetChannelRequestChannelURIWithProxyWithPort80AndProxySchemeSpamAndDestinationUriWithFtp() throws URISyntaxException {
+        final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
+        channelRequest.destinationURI = new URI("ftp://other.example.com");
+        channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 80));
+        channelRequest.proxyScheme = "spam";
+        final URI expectedChannelUri = new URI("spam://my.example.com:80");
+        assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
+    }
+
+    @Test
+    public void testGetChannelRequestChannelURIWithProxyWithPort80AndProxySchemeSpamAndDestinationUriWithHttp() throws URISyntaxException {
+        final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
+        channelRequest.destinationURI = new URI("http://other.example.com");
+        channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 80));
+        channelRequest.proxyScheme = "spam";
+        final URI expectedChannelUri = new URI("spam://my.example.com:80");
+        assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
+    }
+
+    @Test
+    public void testGetChannelRequestChannelURIWithProxyWithPort80AndProxySchemeSpamAndDestinationUriWithHttps() throws URISyntaxException {
+        final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
+        channelRequest.destinationURI = new URI("https://other.example.com");
+        channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 80));
+        channelRequest.proxyScheme = "spam";
+        final URI expectedChannelUri = new URI("spam://my.example.com:80");
+        assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
+    }
+
+    @Test
+    public void testGetChannelRequestChannelURIWithProxyWithPort100AndProxySchemeSpamAndDestinationUriWithFtp() throws URISyntaxException {
+        final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
+        channelRequest.destinationURI = new URI("ftp://other.example.com");
+        channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 100));
+        channelRequest.proxyScheme = "spam";
+        final URI expectedChannelUri = new URI("spam://my.example.com:100");
+        assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
+    }
+
+    @Test
+    public void testGetChannelRequestChannelURIWithProxyWithPort100AndProxySchemeSpamAndDestinationUriWithHttp() throws URISyntaxException {
+        final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
+        channelRequest.destinationURI = new URI("http://other.example.com");
+        channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 100));
+        channelRequest.proxyScheme = "spam";
+        final URI expectedChannelUri = new URI("spam://my.example.com:100");
+        assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
+    }
+
+    @Test
+    public void testGetChannelRequestChannelURIWithProxyWithPort100AndProxySchemeSpamAndDestinationUriWithHttps() throws URISyntaxException {
+        final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
+        channelRequest.destinationURI = new URI("https://other.example.com");
+        channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 100));
+        channelRequest.proxyScheme = "spam";
+        final URI expectedChannelUri = new URI("spam://my.example.com:100");
+        assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
+    }
+
+    @Test
+    public void testGetChannelRequestChannelURIWithProxyWithPort443AndProxySchemeSpamAndDestinationUriWithFtp() throws URISyntaxException {
+        final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
+        channelRequest.destinationURI = new URI("ftp://other.example.com");
+        channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 443));
+        channelRequest.proxyScheme = "spam";
+        final URI expectedChannelUri = new URI("spam://my.example.com:443");
+        assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
+    }
+
+    @Test
+    public void testGetChannelRequestChannelURIWithProxyWithPort443AndProxySchemeSpamAndDestinationUriWithHttp() throws URISyntaxException {
+        final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
+        channelRequest.destinationURI = new URI("http://other.example.com");
+        channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 443));
+        channelRequest.proxyScheme = "spam";
+        final URI expectedChannelUri = new URI("spam://my.example.com:443");
+        assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
+    }
+
+    @Test
+    public void testGetChannelRequestChannelURIWithProxyWithPort443AndProxySchemeSpamAndDestinationUriWithHttps() throws URISyntaxException {
+        final SharedChannelPool.ChannelRequest channelRequest = new SharedChannelPool.ChannelRequest();
+        channelRequest.destinationURI = new URI("https://other.example.com");
+        channelRequest.proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("my.example.com", 443));
+        channelRequest.proxyScheme = "spam";
+        final URI expectedChannelUri = new URI("spam://my.example.com:443");
         assertEquals(expectedChannelUri, SharedChannelPool.getChannelRequestChannelURI(channelRequest));
     }
 }

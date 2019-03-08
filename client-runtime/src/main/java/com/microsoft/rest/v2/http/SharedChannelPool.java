@@ -216,15 +216,15 @@ class SharedChannelPool implements ChannelPool {
      */
     SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size) {
         this(bootstrap, handler, size, new SharedChannelPoolOptions(), null);
-    } 
+    }
 
     /**
      * Acquire a channel for a URI.
      * @param uri the URI the channel acquired should be connected to
      * @return the future to a connected channel
      */
-    public Future<Channel> acquire(URI uri, @Nullable Proxy proxy) {
-        return this.acquire(uri, proxy, this.bootstrap.config().group().next().<Channel>newPromise());
+    public Future<Channel> acquire(URI uri, @Nullable String proxyScheme, @Nullable Proxy proxy) {
+        return this.acquire(uri, proxyScheme, proxy, this.bootstrap.config().group().next().<Channel>newPromise());
     }
 
     /**
@@ -233,7 +233,7 @@ class SharedChannelPool implements ChannelPool {
      * @param promise the writable future to a connected channel
      * @return the future to a connected channel
      */
-    public Future<Channel> acquire(URI uri, @Nullable Proxy proxy, final Promise<Channel> promise) {
+    public Future<Channel> acquire(URI uri, @Nullable String proxyScheme, @Nullable Proxy proxy, final Promise<Channel> promise) {
         if (closed) {
             throw new RejectedExecutionException("SharedChannelPool is closed");
         }
@@ -241,6 +241,7 @@ class SharedChannelPool implements ChannelPool {
         ChannelRequest channelRequest = new ChannelRequest();
         channelRequest.promise = promise;
         channelRequest.proxy = proxy;
+        channelRequest.proxyScheme = proxyScheme;
         int port = getChannelRequestPort(uri);
         try {
             channelRequest.destinationURI = getChannelRequestDestinationURI(uri, port);
@@ -276,7 +277,19 @@ class SharedChannelPool implements ChannelPool {
             channelURI = channelRequest.destinationURI;
         } else {
             InetSocketAddress address = (InetSocketAddress) channelRequest.proxy.address();
-            channelURI = new URI(String.format("%s://%s:%d", channelRequest.destinationURI.getScheme(), address.getHostString(), address.getPort()));
+            String host = address.getHostString();
+            String scheme = channelRequest.proxyScheme;
+            int port = address.getPort();
+            if (scheme == null || scheme.isEmpty()) {
+                if (port == 80) {
+                    scheme = "http";
+                } else if (port == 443) {
+                    scheme = "https";
+                } else {
+                    scheme = channelRequest.destinationURI.getScheme();
+                }
+            }
+            channelURI = new URI(String.format("%s://%s:%d", scheme, host, port));
         }
         return channelURI;
     }
@@ -365,6 +378,7 @@ class SharedChannelPool implements ChannelPool {
     static class ChannelRequest {
         URI destinationURI;
         private URI channelURI;
+        String proxyScheme;
         Proxy proxy;
         private Promise<Channel> promise;
     }

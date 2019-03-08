@@ -241,21 +241,10 @@ class SharedChannelPool implements ChannelPool {
         ChannelRequest channelRequest = new ChannelRequest();
         channelRequest.promise = promise;
         channelRequest.proxy = proxy;
-        int port;
-        if (uri.getPort() < 0) {
-            port = "https".equals(uri.getScheme()) ? 443 : 80;
-        } else {
-            port = uri.getPort();
-        }
+        int port = getChannelRequestPort(uri);
         try {
-            channelRequest.destinationURI = new URI(String.format("%s://%s:%d", uri.getScheme(), uri.getHost(), port));
-
-            if (proxy == null) {
-                channelRequest.channelURI = channelRequest.destinationURI;
-            } else {
-                InetSocketAddress address = (InetSocketAddress) proxy.address();
-                channelRequest.channelURI = new URI(String.format("%s://%s:%d", uri.getScheme(), address.getHostString(), address.getPort()));
-            }
+            channelRequest.destinationURI = getChannelRequestDestinationURI(uri, port);
+            channelRequest.channelURI = getChannelRequestChannelURI(channelRequest);
 
             requests.add(channelRequest);
             synchronized (requests) {
@@ -265,6 +254,31 @@ class SharedChannelPool implements ChannelPool {
             promise.setFailure(e);
         }
         return channelRequest.promise;
+    }
+
+    static int getChannelRequestPort(URI uri) {
+        int port;
+        if (uri.getPort() < 0) {
+            port = "https".equals(uri.getScheme()) ? 443 : 80;
+        } else {
+            port = uri.getPort();
+        }
+        return port;
+    }
+
+    static URI getChannelRequestDestinationURI(URI uri, int port) throws URISyntaxException {
+        return new URI(String.format("%s://%s:%d", uri.getScheme(), uri.getHost(), port));
+    }
+
+    static URI getChannelRequestChannelURI(ChannelRequest channelRequest) throws URISyntaxException {
+        URI channelURI;
+        if (channelRequest.proxy == null) {
+            channelURI = channelRequest.destinationURI;
+        } else {
+            InetSocketAddress address = (InetSocketAddress) channelRequest.proxy.address();
+            channelURI = new URI(String.format("%s://%s:%d", channelRequest.destinationURI.getScheme(), address.getHostString(), address.getPort()));
+        }
+        return channelURI;
     }
 
     @Override
@@ -348,10 +362,10 @@ class SharedChannelPool implements ChannelPool {
         }
     }
 
-    private static class ChannelRequest {
-        private URI destinationURI;
+    static class ChannelRequest {
+        URI destinationURI;
         private URI channelURI;
-        private Proxy proxy;
+        Proxy proxy;
         private Promise<Channel> promise;
     }
 

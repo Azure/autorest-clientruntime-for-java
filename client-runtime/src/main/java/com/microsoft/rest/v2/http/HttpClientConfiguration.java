@@ -29,7 +29,7 @@ public class HttpClientConfiguration {
      * The scheme/protocol that will be used when sending the request to the proxy. If this is null, then the scheme
      * will be determined by the port of the proxy (80 will use 'http' and 443 will use 'https'). If the port of the
      * proxy isn't recognized (not 80 or 443), then the scheme of the final destination URI will be used.
-     * @return
+     * @return The proxy scheme that has been configured.
      */
     public String proxyScheme() {
         return proxyScheme;

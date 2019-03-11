@@ -22,6 +22,7 @@ import com.microsoft.rest.v3.http.policy.CookiePolicy;
 import com.microsoft.rest.v3.http.policy.CredentialsPolicy;
 import com.microsoft.rest.v3.http.policy.RetryPolicy;
 import com.microsoft.rest.v3.http.policy.UserAgentPolicy;
+import com.microsoft.rest.v3.http.rest.RestResponseBase;
 import com.microsoft.rest.v3.serializer.HttpResponseDecoder;
 import com.microsoft.rest.v3.serializer.HttpResponseDecoder.HttpDecodedResponse;
 import com.microsoft.rest.v3.serializer.SerializerAdapter;

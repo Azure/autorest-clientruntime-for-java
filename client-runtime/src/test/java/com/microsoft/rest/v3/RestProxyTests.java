@@ -23,6 +23,10 @@ import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpPipeline;
 import com.microsoft.rest.v3.http.policy.HttpLogDetailLevel;
 import com.microsoft.rest.v3.http.policy.HttpLoggingPolicy;
+import com.microsoft.rest.v3.http.rest.RestResponse;
+import com.microsoft.rest.v3.http.rest.RestResponseBase;
+import com.microsoft.rest.v3.http.rest.RestStreamResponse;
+import com.microsoft.rest.v3.http.rest.RestVoidResponse;
 import com.microsoft.rest.v3.serializer.SerializerAdapter;
 import com.microsoft.rest.v3.serializer.jackson.JacksonAdapter;
 import com.microsoft.rest.v3.util.FluxUtil;
@@ -1156,7 +1160,7 @@ public abstract class RestProxyTests {
 
         assertEquals(200, response.statusCode());
 
-        final HttpBinHeaders headers = response.headers();
+        final HttpBinHeaders headers = response.customHeaders();
         assertNotNull(headers);
         assertEquals(true, headers.accessControlAllowCredentials);
         assertEquals("keep-alive", headers.connection.toLowerCase());
@@ -1177,7 +1181,7 @@ public abstract class RestProxyTests {
         assertNotNull(body);
         assertEquals(100, body.length);
 
-        final HttpBinHeaders headers = response.headers();
+        final HttpBinHeaders headers = response.customHeaders();
         assertNotNull(headers);
         assertEquals(true, headers.accessControlAllowCredentials);
         assertNotNull(headers.date);
@@ -1212,7 +1216,7 @@ public abstract class RestProxyTests {
 
         assertEquals(200, response.statusCode());
 
-        final HttpBinHeaders headers = response.headers();
+        final HttpBinHeaders headers = response.customHeaders();
         assertNotNull(headers);
         assertEquals(true, headers.accessControlAllowCredentials);
         assertEquals("keep-alive", headers.connection.toLowerCase());
@@ -1234,7 +1238,7 @@ public abstract class RestProxyTests {
         assertMatchWithHttpOrHttps("httpbin.org/put", body.url);
         assertEquals("body string", body.data);
 
-        final HttpBinHeaders headers = response.headers();
+        final HttpBinHeaders headers = response.customHeaders();
         assertNotNull(headers);
         assertEquals(true, headers.accessControlAllowCredentials);
         assertEquals("keep-alive", headers.connection.toLowerCase());
@@ -1327,7 +1331,7 @@ public abstract class RestProxyTests {
         final HttpPipeline httpPipeline = new HttpPipeline(httpClient,
                 new HttpLoggingPolicy(HttpLogDetailLevel.BODY_AND_HEADERS, true));
         //
-        RestResponseBase<Void, HttpBinJSON> response = RestProxy.create(FlowableUploadService.class, httpPipeline, serializer).put(stream, Files.size(filePath));
+        RestResponse<HttpBinJSON> response = RestProxy.create(FlowableUploadService.class, httpPipeline, serializer).put(stream, Files.size(filePath));
 
         assertEquals("The quick brown fox jumps over the lazy dog", response.body().data);
     }

@@ -9,11 +9,13 @@ package com.microsoft.rest.v3.serializer;
 import com.microsoft.rest.v3.Base64Url;
 import com.microsoft.rest.v3.DateTimeRfc1123;
 import com.microsoft.rest.v3.RestException;
-import com.microsoft.rest.v3.RestResponseBase;
+import com.microsoft.rest.v3.http.rest.RestResponse;
+import com.microsoft.rest.v3.http.rest.RestResponseBase;
 import com.microsoft.rest.v3.UnixTime;
 import com.microsoft.rest.v3.annotations.ReturnValueWireType;
 import com.microsoft.rest.v3.http.HttpMethod;
 import com.microsoft.rest.v3.http.HttpResponse;
+import com.microsoft.rest.v3.http.rest.SimpleRestResponse;
 import com.microsoft.rest.v3.util.FluxUtil;
 import com.microsoft.rest.v3.util.TypeUtil;
 import reactor.core.publisher.Flux;
@@ -278,7 +280,18 @@ final class HttpResponseBodyDecoder {
                     // TODO: anuchan - RestProxy is always in charge of creating RestResponseBase--so this doesn't seem right
                     Object resultBody = convertToResultType(wireResponseBody, TypeUtil.getTypeArguments(resultType)[1], wireType);
                     if (wireResponseBody != resultBody) {
-                        result = new RestResponseBase<>(restResponseBase.request(), restResponseBase.statusCode(), restResponseBase.headers(), restResponseBase.rawHeaders(), resultBody);
+                        result = new RestResponseBase<>(restResponseBase.request(), restResponseBase.statusCode(), restResponseBase.customHeaders(), restResponseBase.headers(), resultBody);
+                    } else {
+                        result = restResponseBase;
+                    }
+                } else if (TypeUtil.isTypeOrSubTypeOf(resultType, RestResponse.class)) {
+                    RestResponse<?> restResponseBase = (RestResponse<?>) wireResponse;
+                    Object wireResponseBody = restResponseBase.body();
+
+                    // TODO: anuchan - RestProxy is always in charge of creating RestResponseBase--so this doesn't seem right
+                    Object resultBody = convertToResultType(wireResponseBody, TypeUtil.getTypeArguments(resultType)[1], wireType);
+                    if (wireResponseBody != resultBody) {
+                        result = new SimpleRestResponse<>(restResponseBase.request(), restResponseBase.statusCode(), restResponseBase.headers(), resultBody);
                     } else {
                         result = restResponseBase;
                     }

@@ -6,7 +6,7 @@
 
 package com.microsoft.rest.v3.serializer;
 
-import com.microsoft.rest.v3.RestResponseBase;
+import com.microsoft.rest.v3.http.rest.RestResponseBase;
 import com.microsoft.rest.v3.annotations.HeaderCollection;
 import com.microsoft.rest.v3.util.TypeUtil;
 import reactor.core.publisher.Mono;

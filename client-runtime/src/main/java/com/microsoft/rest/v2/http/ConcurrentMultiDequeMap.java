@@ -7,10 +7,13 @@
 package com.microsoft.rest.v2.http;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -26,6 +29,8 @@ public class ConcurrentMultiDequeMap<K, V> {
     private final Map<K, ConcurrentLinkedDeque<V>> data;
     // Size is the total number of elements in all ConcurrentLinkedQueues in the Map.
     private final AtomicInteger size;
+    // least recently updated keys
+    private final LinkedList<K> lru;
 
     /**
      * Create a concurrent multi hash map.
@@ -33,6 +38,7 @@ public class ConcurrentMultiDequeMap<K, V> {
     public ConcurrentMultiDequeMap() {
         this.data = Collections.synchronizedMap(new ConcurrentHashMap<K, ConcurrentLinkedDeque<V>>(16, 0.75f));
         this.size = new AtomicInteger(0);
+        this.lru = new LinkedList<>();
     }
 
     /**
@@ -43,9 +49,14 @@ public class ConcurrentMultiDequeMap<K, V> {
      * @return the added value
      */
     public V put(K key, V value) {
+        assert key != null;
         synchronized (size) {
             if (!data.containsKey(key)) {
                 data.put(key, new ConcurrentLinkedDeque<V>());
+                lru.addLast(key);
+            } else {
+                lru.remove(key);
+                lru.addLast(key);
             }
             data.get(key).add(value);
             size.incrementAndGet();
@@ -73,12 +84,23 @@ public class ConcurrentMultiDequeMap<K, V> {
             if (size.get() == 0) {
                 return null;
             } else {
-                K key;
-                synchronized (data) {
-                    Iterator<K> keys = data.keySet().iterator();
-                    key = keys.next();
-                }
+                K key = lru.getFirst();
                 return poll(key);
+            }
+        }
+    }
+    /**
+     * Retrieves and removes one item from the multi map. The item is from
+     * the most recently used key set.
+     * @return the item removed from the map
+     */
+    public V pop() {
+        synchronized (size) {
+            if (size.get() == 0) {
+                return null;
+            } else {
+                K key = lru.getLast();
+                return pop(key);
             }
         }
     }
@@ -104,6 +126,7 @@ public class ConcurrentMultiDequeMap<K, V> {
             }
             if (queue.isEmpty()) {
                 data.remove(key);
+                lru.remove(key);
             }
             return ret;
         }
@@ -130,6 +153,7 @@ public class ConcurrentMultiDequeMap<K, V> {
             }
             if (queue.isEmpty()) {
                 data.remove(key);
+                lru.remove(key);
             }
             return ret;
         }
@@ -199,6 +223,7 @@ public class ConcurrentMultiDequeMap<K, V> {
         }
         if (queue.isEmpty()) {
             data.remove(key);
+            lru.remove(key);
         }
         return removed;
     }

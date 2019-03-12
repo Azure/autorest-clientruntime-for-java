@@ -135,7 +135,7 @@ class SharedChannelPool implements ChannelPool {
                 }
                 // requests must be non-empty based on the above condition
                 ChannelRequest request;
-                if (requests.containsKey(preferredUri)) {
+                if (preferredUri != null && requests.containsKey(preferredUri)) {
                     request = requests.poll(preferredUri);
                 } else {
                     request = requests.poll();
@@ -158,14 +158,14 @@ class SharedChannelPool implements ChannelPool {
                         }
                     } else {
                         logger.debug("Channel disposed from pool due to timeout or half closure: {}", channel.id());
-                        channelCount.decrementAndGet();
                         closeChannel(channel);
+                        channelCount.decrementAndGet();
                         // Delete all channels created before this
                         while (available.containsKey(request.channelURI)) {
                             Channel broken = available.pop(request.channelURI);
                             logger.debug("Channel disposed from pool due to timeout or half closure: {}", broken.id());
-                            channelCount.decrementAndGet();
                             closeChannel(broken);
+                            channelCount.decrementAndGet();
                         }
                     }
                 }
@@ -174,8 +174,8 @@ class SharedChannelPool implements ChannelPool {
                     if (available.size() > 0) {
                         Channel nextAvailable = available.poll(); // Dispose least recently used
                         logger.debug("Channel disposed due to overflow: {}", nextAvailable.id());
-                        channelCount.decrementAndGet();
                         closeChannel(nextAvailable);
+                        channelCount.decrementAndGet();
                     }
                     int port;
                     if (request.destinationURI.getPort() < 0) {
@@ -255,7 +255,7 @@ class SharedChannelPool implements ChannelPool {
 
             requests.put(channelRequest.channelURI, channelRequest);
 //            System.out.println("Putting in request on thread " + Thread.currentThread().getName());
-            drain(channelRequest.channelURI);
+            drain(null);
         } catch (URISyntaxException e) {
             promise.setFailure(e);
         }
@@ -295,16 +295,15 @@ class SharedChannelPool implements ChannelPool {
      */
     public Future<Void> closeAndRelease(final Channel channel) {
         try {
-            handler.channelReleased(channel);
-            URI channelUri = channel.attr(CHANNEL_URI).get();
-            synchronized (sync) {
-                leased.remove(channelUri, channel);
-                channelCount.decrementAndGet();
-            }
             Future<Void> closeFuture = closeChannel(channel).addListener(future -> {
-                logger.debug("Channel closed and released out of pool: " + channel.id());
+                URI channelUri = channel.attr(CHANNEL_URI).get();
+                synchronized (sync) {
+                    leased.remove(channelUri, channel);
+                    channelCount.decrementAndGet();
+                    logger.debug("Channel closed and released out of pool: " + channel.id());
+                }
+                drain(channelUri);
             });
-            drain(channelUri);
             return closeFuture;
         } catch (Exception e) {
             return bootstrap.config().group().next().newFailedFuture(e);

@@ -17,7 +17,7 @@ import com.microsoft.rest.v3.http.HttpRequest;
 public class RestResponseBase<H, T> implements RestResponse<T> {
     private final HttpRequest request;
     private final int statusCode;
-    private final H customHeaders;
+    private final H deserializedHeaders;
     private final HttpHeaders headers;
     private final T body;
 
@@ -26,15 +26,15 @@ public class RestResponseBase<H, T> implements RestResponse<T> {
      *
      * @param request the request which resulted in this response
      * @param statusCode the status code of the HTTP response
-     * @param headers the deserialized headers of the HTTP response
-     * @param customHeaders the raw headers of the HTTP response
+     * @param headers the headers of the HTTP response
+     * @param deserializedHeaders the deserialized headers of the HTTP response
      * @param body the deserialized body
      */
-    public RestResponseBase(HttpRequest request, int statusCode, HttpHeaders headers, T body, H customHeaders) {
+    public RestResponseBase(HttpRequest request, int statusCode, HttpHeaders headers, T body, H deserializedHeaders) {
         this.request = request;
         this.statusCode = statusCode;
         this.headers = headers;
-        this.customHeaders = customHeaders;
+        this.deserializedHeaders = deserializedHeaders;
         this.body = body;
     }
 
@@ -67,8 +67,8 @@ public class RestResponseBase<H, T> implements RestResponse<T> {
      *
      * @return an instance of header type H, containing the HTTP response headers.
      */
-    public H customHeaders() {
-        return customHeaders;
+    public H deserializedHeaders() {
+        return deserializedHeaders;
     }
 
     /**

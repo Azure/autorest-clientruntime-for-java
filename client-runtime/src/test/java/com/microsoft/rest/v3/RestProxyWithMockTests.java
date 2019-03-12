@@ -340,7 +340,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
         assertNotNull(response);
         assertHeaderCollectionsRawHeaders(response);
 
-        final HeaderCollectionTypePublicFields responseHeaders = response.customHeaders();
+        final HeaderCollectionTypePublicFields responseHeaders = response.deserializedHeaders();
         assertNotNull(responseHeaders);
         assertEquals("Phillip", responseHeaders.name);
         assertHeaderCollections(responseHeaders.headerCollection);
@@ -353,7 +353,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
         assertNotNull(response);
         assertHeaderCollectionsRawHeaders(response);
 
-        final HeaderCollectionTypeProtectedFields responseHeaders = response.customHeaders();
+        final HeaderCollectionTypeProtectedFields responseHeaders = response.deserializedHeaders();
         assertNotNull(responseHeaders);
         assertEquals("Phillip", responseHeaders.name);
         assertHeaderCollections(responseHeaders.headerCollection);
@@ -366,7 +366,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
         assertNotNull(response);
         assertHeaderCollectionsRawHeaders(response);
 
-        final HeaderCollectionTypePrivateFields responseHeaders = response.customHeaders();
+        final HeaderCollectionTypePrivateFields responseHeaders = response.deserializedHeaders();
         assertNotNull(responseHeaders);
         assertEquals("Phillip", responseHeaders.name);
         assertHeaderCollections(responseHeaders.headerCollection);
@@ -379,7 +379,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
         assertNotNull(response);
         assertHeaderCollectionsRawHeaders(response);
 
-        final HeaderCollectionTypePackagePrivateFields responseHeaders = response.customHeaders();
+        final HeaderCollectionTypePackagePrivateFields responseHeaders = response.deserializedHeaders();
         assertNotNull(responseHeaders);
         assertEquals("Phillip", responseHeaders.name);
         assertHeaderCollections(responseHeaders.headerCollection);

@@ -1150,6 +1150,12 @@ public abstract class RestProxyTests {
 
         @GET("bytes/100")
         RestResponseBase<Void, Void> getBytesOnlyStatus();
+
+        @GET("bytes/100")
+        RestVoidResponse getVoidRestResponse();
+
+        @PUT("put")
+        RestResponse<HttpBinJSON> putBody(@BodyParam(ContentType.APPLICATION_OCTET_STREAM) String body);
     }
 
     @Test
@@ -1160,7 +1166,7 @@ public abstract class RestProxyTests {
 
         assertEquals(200, response.statusCode());
 
-        final HttpBinHeaders headers = response.customHeaders();
+        final HttpBinHeaders headers = response.deserializedHeaders();
         assertNotNull(headers);
         assertEquals(true, headers.accessControlAllowCredentials);
         assertEquals("keep-alive", headers.connection.toLowerCase());
@@ -1181,7 +1187,7 @@ public abstract class RestProxyTests {
         assertNotNull(body);
         assertEquals(100, body.length);
 
-        final HttpBinHeaders headers = response.customHeaders();
+        final HttpBinHeaders headers = response.deserializedHeaders();
         assertNotNull(headers);
         assertEquals(true, headers.accessControlAllowCredentials);
         assertNotNull(headers.date);
@@ -1216,7 +1222,7 @@ public abstract class RestProxyTests {
 
         assertEquals(200, response.statusCode());
 
-        final HttpBinHeaders headers = response.customHeaders();
+        final HttpBinHeaders headers = response.deserializedHeaders();
         assertNotNull(headers);
         assertEquals(true, headers.accessControlAllowCredentials);
         assertEquals("keep-alive", headers.connection.toLowerCase());
@@ -1238,13 +1244,35 @@ public abstract class RestProxyTests {
         assertMatchWithHttpOrHttps("httpbin.org/put", body.url);
         assertEquals("body string", body.data);
 
-        final HttpBinHeaders headers = response.customHeaders();
+        final HttpBinHeaders headers = response.deserializedHeaders();
         assertNotNull(headers);
         assertEquals(true, headers.accessControlAllowCredentials);
         assertEquals("keep-alive", headers.connection.toLowerCase());
         assertNotNull(headers.date);
         // assertEquals("1.1 vegur", headers.via);
         assertNotEquals(0, headers.xProcessedTime);
+    }
+
+    @Test
+    public void service20GetVoidRestResponse() {
+        final RestVoidResponse response = createService(Service20.class).getVoidRestResponse();
+        assertNotNull(response);
+        assertEquals(200, response.statusCode());
+    }
+
+    @Test
+    public void service20GetRestResponseBody() {
+        final RestResponse<HttpBinJSON> response = createService(Service20.class).putBody("body string");
+        assertNotNull(response);
+        assertEquals(200, response.statusCode());
+
+        final HttpBinJSON body = response.body();
+        assertNotNull(body);
+        assertMatchWithHttpOrHttps("httpbin.org/put", body.url);
+        assertEquals("body string", body.data);
+
+        final HttpHeaders headers = response.headers();
+        assertNotNull(headers);
     }
 
     @Host("http://httpbin.org")

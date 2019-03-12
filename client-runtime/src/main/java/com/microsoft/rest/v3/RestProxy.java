@@ -45,9 +45,12 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Type to create a proxy implementation for an interface describing REST API methods.
@@ -398,27 +401,47 @@ public class RestProxy implements InvocationHandler {
             cls = (Class<? extends RestResponse<?>>) (Object) RestResponseBase.class;
         }
 
-        // we assume there is a single constructor for each type, and just take the first
-        Constructor<? extends RestResponse<?>> ctor = (Constructor<? extends RestResponse<?>>) cls.getConstructors()[0];
+        // we try to find the most specific constructor, which we do in the following order:
+        // 1) (HttpRequest httpRequest, int statusCode, HttpHeaders headers, Object body, Object deserializedHeaders)
+        // 2) (HttpRequest httpRequest, int statusCode, HttpHeaders headers, Object body)
+        // 3) (HttpRequest httpRequest, int statusCode, HttpHeaders headers)
+        List<Constructor<?>> ctors = Arrays.stream(cls.getDeclaredConstructors())
+                                             .filter(ctor -> {
+                                                 int paramCount = ctor.getParameterCount();
+                                                 return paramCount >= 3 && paramCount <= 5;
+                                             })
+                                             .sorted(Comparator.comparingInt(Constructor::getParameterCount))
+                                             .collect(Collectors.toList());
 
-        // create the constructor args array
-        Object[] args = new Object[ctor.getParameterCount()];
-        args[0] = httpRequest;
-        args[1] = responseStatusCode;
-        args[2] = responseHeaders;
-
-        if (args.length > 3) {
-            args[3] = bodyAsObject;
-        }
-        if (args.length > 4) {
-            args[4] = response.decodedHeaders().block();
+        if (ctors.isEmpty()) {
+            throw new RuntimeException("Cannot find suitable constructor for class " + cls);
         }
 
-        try {
-            return ctor.newInstance(args);
-        } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
-            throw reactor.core.Exceptions.propagate(e);
+        // try to create an instance using our list of potential candidates
+        for (int i = 0; i < ctors.size(); i++) {
+            Constructor<? extends RestResponse<?>> ctor = (Constructor<? extends RestResponse<?>>) ctors.get(i);
+
+            try {
+                final int paramCount = ctor.getParameterCount();
+
+                switch (paramCount) {
+                    case 3: {
+                        return ctor.newInstance(httpRequest, responseStatusCode, responseHeaders);
+                    }
+                    case 4: {
+                        return ctor.newInstance(httpRequest, responseStatusCode, responseHeaders, bodyAsObject);
+                    }
+                    case 5: {
+                        return ctor.newInstance(httpRequest, responseStatusCode, responseHeaders, bodyAsObject, response.decodedHeaders().block());
+                    }
+                }
+            } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
+                throw reactor.core.Exceptions.propagate(e);
+            }
         }
+
+        // error
+        throw new RuntimeException("Cannot find suitable constructor for class " + cls);
     }
 
     protected final Mono<?> handleBodyReturnType(final HttpDecodedResponse response, final SwaggerMethodParser methodParser, final Type entityType) {

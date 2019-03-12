@@ -280,7 +280,7 @@ final class HttpResponseBodyDecoder {
                     // TODO: anuchan - RestProxy is always in charge of creating RestResponseBase--so this doesn't seem right
                     Object resultBody = convertToResultType(wireResponseBody, TypeUtil.getTypeArguments(resultType)[1], wireType);
                     if (wireResponseBody != resultBody) {
-                        result = new RestResponseBase<>(restResponseBase.request(), restResponseBase.statusCode(), restResponseBase.headers(), resultBody, restResponseBase.customHeaders());
+                        result = new RestResponseBase<>(restResponseBase.request(), restResponseBase.statusCode(), restResponseBase.headers(), resultBody, restResponseBase.deserializedHeaders());
                     } else {
                         result = restResponseBase;
                     }

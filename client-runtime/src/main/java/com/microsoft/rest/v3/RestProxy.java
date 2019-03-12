@@ -32,6 +32,7 @@ import com.microsoft.rest.v3.serializer.jackson.JacksonAdapter;
 import com.microsoft.rest.v3.util.FluxUtil;
 import com.microsoft.rest.v3.util.TypeUtil;
 import io.netty.buffer.ByteBuf;
+import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -390,14 +391,15 @@ public class RestProxy implements InvocationHandler {
         final HttpRequest httpRequest = httpResponse.request();
         final int responseStatusCode = httpResponse.statusCode();
         final HttpHeaders responseHeaders = httpResponse.headers();
-        final Object deserializedHeaders = response.decodedHeaders().block();
 
+        // determine the type of response class. If the type is the 'RestResponse' interface, we will use the
+        // 'RestResponseBase' class instead.
         Class<? extends RestResponse<?>> cls = (Class<? extends RestResponse<?>>) TypeUtil.getRawClass(entityType);
-        if (cls.isInterface()) {
+        if (cls.equals(RestResponse.class)) {
             cls = (Class<? extends RestResponse<?>>)(Object) RestResponseBase.class;
         }
 
-        // we assume there is a single constructor for each type
+        // we assume there is a single constructor for each type, and just take the first
         Constructor<? extends RestResponse<?>> ctor = (Constructor<? extends RestResponse<?>>) cls.getConstructors()[0];
 
         // create the constructor args array
@@ -410,7 +412,7 @@ public class RestProxy implements InvocationHandler {
             args[3] = bodyAsObject;
         }
         if (args.length > 4) {
-            args[4] = deserializedHeaders;
+            args[4] = response.decodedHeaders().block();;
         }
 
         try {

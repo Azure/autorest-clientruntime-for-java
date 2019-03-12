@@ -1,9 +1,5 @@
-/**
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for
- * license information.
- */
-
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 package com.microsoft.rest.v3.http.rest;
 
 import com.microsoft.rest.v3.http.HttpHeaders;
@@ -33,7 +29,7 @@ public class RestResponseBase<H, T> implements RestResponse<T> {
      * @param customHeaders the raw headers of the HTTP response
      * @param body the deserialized body
      */
-    public RestResponseBase(HttpRequest request, int statusCode, H customHeaders, HttpHeaders headers,  T body) {
+    public RestResponseBase(HttpRequest request, int statusCode, HttpHeaders headers, T body, H customHeaders) {
         this.request = request;
         this.statusCode = statusCode;
         this.headers = headers;
@@ -50,7 +46,7 @@ public class RestResponseBase<H, T> implements RestResponse<T> {
     }
 
     /**
-     * @return the status code of the HTTP response.
+     * {@inheritDoc}
      */
     @Override
     public int statusCode() {
@@ -58,7 +54,7 @@ public class RestResponseBase<H, T> implements RestResponse<T> {
     }
 
     /**
-     * @return the deserialized headers of the HTTP response.
+     * {@inheritDoc}
      */
     @Override
     public HttpHeaders headers() {
@@ -66,14 +62,16 @@ public class RestResponseBase<H, T> implements RestResponse<T> {
     }
 
     /**
-     * @return a Map containing the raw HTTP response headers.
+     * Get the headers from the HTTP response, transformed into the header type H.
+     *
+     * @return an instance of header type H, containing the HTTP response headers.
      */
     public H customHeaders() {
         return customHeaders;
     }
 
     /**
-     * @return the deserialized body of the HTTP response.
+     * {@inheritDoc}
      */
     @Override
     public T body() {

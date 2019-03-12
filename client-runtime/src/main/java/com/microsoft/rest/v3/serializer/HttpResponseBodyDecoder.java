@@ -207,7 +207,7 @@ final class HttpResponseBodyDecoder {
 
                 wireResponseType = TypeUtil.createParameterizedType(
                         (Class<?>) ((ParameterizedType) resultType).getRawType(), wireResponseElementType);
-            } else if (TypeUtil.isTypeOrSubTypeOf(resultType, Map.class) || TypeUtil.isTypeOrSubTypeOf(resultType, RestResponseBase.class)) {
+            } else if (TypeUtil.isTypeOrSubTypeOf(resultType, Map.class) || TypeUtil.isTypeOrSubTypeOf(resultType, RestResponse.class)) {
                 Type[] typeArguments = TypeUtil.getTypeArguments(resultType);
                 final Type resultValueType = typeArguments[1];
                 final Type wireResponseValueType = constructWireResponseType(resultValueType, wireType);
@@ -280,20 +280,20 @@ final class HttpResponseBodyDecoder {
                     // TODO: anuchan - RestProxy is always in charge of creating RestResponseBase--so this doesn't seem right
                     Object resultBody = convertToResultType(wireResponseBody, TypeUtil.getTypeArguments(resultType)[1], wireType);
                     if (wireResponseBody != resultBody) {
-                        result = new RestResponseBase<>(restResponseBase.request(), restResponseBase.statusCode(), restResponseBase.customHeaders(), restResponseBase.headers(), resultBody);
+                        result = new RestResponseBase<>(restResponseBase.request(), restResponseBase.statusCode(), restResponseBase.headers(), resultBody, restResponseBase.customHeaders());
                     } else {
                         result = restResponseBase;
                     }
                 } else if (TypeUtil.isTypeOrSubTypeOf(resultType, RestResponse.class)) {
-                    RestResponse<?> restResponseBase = (RestResponse<?>) wireResponse;
-                    Object wireResponseBody = restResponseBase.body();
+                    RestResponse<?> restResponse = (RestResponse<?>) wireResponse;
+                    Object wireResponseBody = restResponse.body();
 
                     // TODO: anuchan - RestProxy is always in charge of creating RestResponseBase--so this doesn't seem right
                     Object resultBody = convertToResultType(wireResponseBody, TypeUtil.getTypeArguments(resultType)[1], wireType);
                     if (wireResponseBody != resultBody) {
-                        result = new SimpleRestResponse<>(restResponseBase.request(), restResponseBase.statusCode(), restResponseBase.headers(), resultBody);
+                        result = new SimpleRestResponse<>(restResponse.request(), restResponse.statusCode(), restResponse.headers(), resultBody);
                     } else {
-                        result = restResponseBase;
+                        result = restResponse;
                     }
                 }
             }
@@ -335,20 +335,17 @@ final class HttpResponseBodyDecoder {
                     }
                 } catch (ClassNotFoundException ignored) {
                 }
-            }
-
-            if (TypeUtil.isTypeOrSubTypeOf(token, RestResponseBase.class)) {
-                token = TypeUtil.getSuperType(token, RestResponseBase.class);
-                token = TypeUtil.getTypeArguments(token)[1];
-            }
-
-            try {
-                // TODO: anuchan - unwrap OperationStatus a different way
-                if (TypeUtil.isTypeOrSubTypeOf(token, Class.forName("com.microsoft.azure.v3.OperationStatus"))) {
-                    // Get Type of 'T' from OperationStatus<T>
-                    token = TypeUtil.getTypeArgument(token);
+            } else if (TypeUtil.isTypeOrSubTypeOf(token, RestResponse.class)) {
+                return TypeUtil.getRestResponseBodyType(token);
+            } else {
+                try {
+                    // TODO: anuchan - unwrap OperationStatus a different way
+                    if (TypeUtil.isTypeOrSubTypeOf(token, Class.forName("com.microsoft.azure.v3.OperationStatus"))) {
+                        // Get Type of 'T' from OperationStatus<T>
+                        token = TypeUtil.getTypeArgument(token);
+                    }
+                } catch (Exception ignored) {
                 }
-            } catch (Exception ignored) {
             }
         }
         return token;

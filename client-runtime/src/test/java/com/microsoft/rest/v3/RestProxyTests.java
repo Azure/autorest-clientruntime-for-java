@@ -1137,7 +1137,7 @@ public abstract class RestProxyTests {
         RestResponseBase<HttpBinHeaders,Void> getBytes100OnlyHeaders();
 
         @GET("bytes/100")
-        RestResponseBase<Map<String, String>,Void> getBytes100OnlyRawHeaders();
+        RestResponseBase<HttpHeaders,Void> getBytes100OnlyRawHeaders();
 
         @GET("bytes/100")
         RestResponseBase<HttpBinHeaders,byte[]> getBytes100BodyAndHeaders();
@@ -1191,7 +1191,7 @@ public abstract class RestProxyTests {
 
     @Test
     public void service20GetBytesOnlyStatus() {
-        final RestResponseBase<Void,Void> response = createService(Service20.class)
+        final RestResponse<Void> response = createService(Service20.class)
                 .getBytesOnlyStatus();
         assertNotNull(response);
         assertEquals(200, response.statusCode());
@@ -1199,7 +1199,7 @@ public abstract class RestProxyTests {
 
     @Test
     public void service20GetBytesOnlyHeaders() {
-        final RestResponseBase<Map<String, String>, Void> response = createService(Service20.class)
+        final RestResponse<Void> response = createService(Service20.class)
                 .getBytes100OnlyRawHeaders();
 
         assertNotNull(response);

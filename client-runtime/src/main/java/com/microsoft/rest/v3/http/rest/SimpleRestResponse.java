@@ -1,9 +1,5 @@
-/**
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for
- * license information.
- */
-
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 package com.microsoft.rest.v3.http.rest;
 
 import com.microsoft.rest.v3.http.HttpHeaders;
@@ -38,7 +34,7 @@ public class SimpleRestResponse<T> implements RestResponse<T> {
     }
 
     /**
-     * @return the request which resulted in this RestResponseBase.
+     * @return the request which resulted in this RestResponse.
      */
     @Override
     public HttpRequest request() {

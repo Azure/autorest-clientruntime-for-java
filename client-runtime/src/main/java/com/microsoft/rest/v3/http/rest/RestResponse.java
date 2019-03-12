@@ -1,10 +1,19 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
 package com.microsoft.rest.v3.http.rest;
 
 import com.microsoft.rest.v3.http.HttpHeaders;
 import com.microsoft.rest.v3.http.HttpRequest;
 
+/**
+ * REST response with a strongly-typed content specified.
+ *
+ * @param <T> The deserialized type of the response content.
+ * @see RestResponseBase
+ */
 public interface RestResponse<T> {
 
     /**

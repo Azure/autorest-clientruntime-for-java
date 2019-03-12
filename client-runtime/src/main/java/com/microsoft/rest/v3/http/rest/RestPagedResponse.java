@@ -1,5 +1,8 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
 package com.microsoft.rest.v3.http.rest;
 
 import java.io.Closeable;
@@ -14,17 +17,22 @@ public interface RestPagedResponse<T> extends RestResponse<List<T>>, Closeable {
     /**
      * Gets the items in the page.
      *
-     * @return the items
+     * @return The items in the page.
      */
     List<T> items();
 
     /**
      * Get the link to retrieve RestPagedResponse containing next page.
      *
-     * @return the next page link
+     * @return the next page link.
      */
     String nextLink();
 
+    /**
+     * Returns the items in the page.
+     *
+     * @return The items in the page.
+     */
     default List<T> body() {
         return items();
     }

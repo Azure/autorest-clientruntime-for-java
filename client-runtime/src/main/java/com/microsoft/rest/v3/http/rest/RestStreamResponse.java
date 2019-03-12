@@ -1,5 +1,8 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
 package com.microsoft.rest.v3.http.rest;
 
 import com.microsoft.rest.v3.http.HttpHeaders;
@@ -8,7 +11,6 @@ import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 
 import java.io.Closeable;
-import java.util.Map;
 
 /**
  * REST response with a streaming content.

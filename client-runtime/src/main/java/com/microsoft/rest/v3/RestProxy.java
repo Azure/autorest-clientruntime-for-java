@@ -32,7 +32,6 @@ import com.microsoft.rest.v3.serializer.jackson.JacksonAdapter;
 import com.microsoft.rest.v3.util.FluxUtil;
 import com.microsoft.rest.v3.util.TypeUtil;
 import io.netty.buffer.ByteBuf;
-import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -396,7 +395,7 @@ public class RestProxy implements InvocationHandler {
         // 'RestResponseBase' class instead.
         Class<? extends RestResponse<?>> cls = (Class<? extends RestResponse<?>>) TypeUtil.getRawClass(entityType);
         if (cls.equals(RestResponse.class)) {
-            cls = (Class<? extends RestResponse<?>>)(Object) RestResponseBase.class;
+            cls = (Class<? extends RestResponse<?>>) (Object) RestResponseBase.class;
         }
 
         // we assume there is a single constructor for each type, and just take the first
@@ -412,7 +411,7 @@ public class RestProxy implements InvocationHandler {
             args[3] = bodyAsObject;
         }
         if (args.length > 4) {
-            args[4] = response.decodedHeaders().block();;
+            args[4] = response.decodedHeaders().block();
         }
 
         try {

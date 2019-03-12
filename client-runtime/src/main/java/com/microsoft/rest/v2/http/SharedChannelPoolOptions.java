@@ -9,15 +9,16 @@ package com.microsoft.rest.v2.http;
 /**
  * Optional configurations for http channel pool.
  */
-class SharedChannelPoolOptions {
+public class SharedChannelPoolOptions {
     // Default duration in sec to keep the connection alive in available pool before closing it.
-    private static final long DEFAULT_TTL_OF_IDLE_CHANNEL = 5 * 60;
+    private static final long DEFAULT_TTL_OF_IDLE_CHANNEL = 60;
     private long idleChannelKeepAliveDurationInSec;
+    private int poolSize;
 
     /**
      * Creates SharedChannelPoolOptions.
      */
-    SharedChannelPoolOptions() {
+    public SharedChannelPoolOptions() {
         this.idleChannelKeepAliveDurationInSec = DEFAULT_TTL_OF_IDLE_CHANNEL;
     }
 
@@ -27,7 +28,7 @@ class SharedChannelPoolOptions {
      * @param ttlDurationInSec the duration
      * @return SharedChannelPoolOptions
      */
-    SharedChannelPoolOptions withIdleChannelKeepAliveDurationInSec(long ttlDurationInSec) {
+    public SharedChannelPoolOptions withIdleChannelKeepAliveDurationInSec(long ttlDurationInSec) {
         this.idleChannelKeepAliveDurationInSec = ttlDurationInSec;
         return this;
     }
@@ -35,8 +36,25 @@ class SharedChannelPoolOptions {
     /**
      * @return gets duration in sec the connection alive in available pool before closing it.
      */
-    long idleChannelKeepAliveDurationInSec() {
+    public long idleChannelKeepAliveDurationInSec() {
         return this.idleChannelKeepAliveDurationInSec;
+    }
+
+    /**
+     * Sets the max number of connections allowed in the pool.
+     * @param poolSize the size of the pool
+     * @return SharedChannelPoolOptions
+     */
+    public SharedChannelPoolOptions withPoolSize(int poolSize) {
+        this.poolSize = poolSize;
+        return this;
+    }
+
+    /**
+     * @return the max number of connections allowed in the pool
+     */
+    public int poolSize() {
+        return poolSize;
     }
 
     @Override

@@ -10,12 +10,14 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.FailedFuture;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.reactivex.annotations.Nullable;
@@ -52,6 +54,7 @@ class SharedChannelPool implements ChannelPool {
     private static final AttributeKey<ZonedDateTime> CHANNEL_CREATED_SINCE = AttributeKey.newInstance("channel-created-since");
     private static final AttributeKey<ZonedDateTime> CHANNEL_CLOSED_SINCE = AttributeKey.newInstance("channel-closed-since");
     private final Bootstrap bootstrap;
+    private final EventLoopGroup eventLoopGroup;
     private final ChannelPoolHandler handler;
     private final int poolSize;
     private final AtomicInteger channelCount = new AtomicInteger(0);
@@ -88,20 +91,10 @@ class SharedChannelPool implements ChannelPool {
      * Creates an instance of the shared channel pool.
      * @param bootstrap the bootstrap to create channels
      * @param handler the handler to apply to the channels on creation, acquisition and release
-     * @param size the upper limit of total number of channels
-     */
-    SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size) {
-        this(bootstrap, handler, size, new SharedChannelPoolOptions(), null);
-    }
-
-    /**
-     * Creates an instance of the shared channel pool.
-     * @param bootstrap the bootstrap to create channels
-     * @param handler the handler to apply to the channels on creation, acquisition and release
-     * @param size the upper limit of total number of channels
      * @param options optional settings for the pool
+     * @param sslContext the SSL Context for the connections
      */
-    SharedChannelPool(final Bootstrap bootstrap, final ChannelPoolHandler handler, int size, SharedChannelPoolOptions options, SslContext sslContext) {
+    SharedChannelPool(final Bootstrap bootstrap, final EventLoopGroup eventLoopGroup, final ChannelPoolHandler handler, SharedChannelPoolOptions options, SslContext sslContext) {
         this.poolOptions = options.clone();
         this.bootstrap = bootstrap.clone().handler(new ChannelInitializer<Channel>() {
             @Override
@@ -110,8 +103,9 @@ class SharedChannelPool implements ChannelPool {
                 handler.channelCreated(ch);
             }
         });
+        this.eventLoopGroup = eventLoopGroup;
         this.handler = handler;
-        this.poolSize = size;
+        this.poolSize = options.poolSize();
         this.requests = new ConcurrentMultiHashMap<>();
         this.available = new ConcurrentMultiHashMap<>();
         this.leased = new ConcurrentMultiHashMap<>();
@@ -130,6 +124,10 @@ class SharedChannelPool implements ChannelPool {
         if (!wip.compareAndSet(false, true)) {
             return;
         }
+//        System.out.println("managing drain loop on thread " + Thread.currentThread().getName());
+//        if (requests.size() == 0) {
+//            System.out.println("Did not find a request on Thread " + Thread.currentThread().getName() + "!");
+//        }
         while (!closed && requests.size() != 0) {
             synchronized (sync) {
                 if (channelCount.get() >= poolSize && available.size() == 0) {
@@ -250,7 +248,8 @@ class SharedChannelPool implements ChannelPool {
             }
 
             requests.put(channelRequest.channelURI, channelRequest);
-            drain(channelRequest.channelURI);
+//            System.out.println("Putting in request on thread " + Thread.currentThread().getName());
+            eventLoopGroup.submit(() -> drain(channelRequest.channelURI));
         } catch (URISyntaxException e) {
             promise.setFailure(e);
         }
@@ -271,11 +270,16 @@ class SharedChannelPool implements ChannelPool {
         channel.attr(CHANNEL_CLOSED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
         logger.debug("Channel initiated to close: " + channel.id());
         // Closing a channel doesn't change the channel count
-        return channel.close().addListener(f -> {
-            if (!f.isSuccess()) {
-                logger.warn("Possible channel leak: failed to close " + channel.id(), f.cause());
-            }
-        });
+        try {
+            return channel.close().addListener(f -> {
+                if (!f.isSuccess()) {
+                    logger.warn("Possible channel leak: failed to close " + channel.id(), f.cause());
+                }
+            });
+        } catch (Exception e) {
+            logger.warn("Possible channel leak: failed to close " + channel.id(), e);
+            return new FailedFuture<>(eventLoopGroup.next(), e);
+        }
     }
 
     /**
@@ -288,6 +292,7 @@ class SharedChannelPool implements ChannelPool {
             URI channelUri = channel.attr(CHANNEL_URI).get();
             synchronized (sync) {
                 leased.remove(channelUri, channel);
+//                available.remove(channelUri, channel);
                 channelCount.decrementAndGet();
                 logger.debug("Channel closed and released out of pool: " + channel.id());
             }

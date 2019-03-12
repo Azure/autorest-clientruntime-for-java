@@ -161,8 +161,10 @@ public class ConcurrentMultiHashMap<K, V> {
         ConcurrentLinkedQueue<V> queue = data.get(key);
         boolean removed;
         synchronized (size) {
-            size.decrementAndGet();
             removed = queue.remove(value);
+            if (removed) {
+                size.decrementAndGet();
+            }
         }
         if (queue.isEmpty()) {
             data.remove(key);

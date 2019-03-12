@@ -15,6 +15,7 @@ import com.microsoft.rest.v3.http.MockHttpClient;
 import com.microsoft.rest.v3.http.MockHttpResponse;
 import com.microsoft.rest.v3.http.rest.RestResponse;
 import com.microsoft.rest.v3.http.rest.RestResponseBase;
+import com.microsoft.rest.v3.http.ProxyOptions;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 
@@ -25,6 +26,7 @@ import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -160,7 +162,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
     public void ServiceErrorWithResponseContentType() {
         ServiceErrorWithCharsetService service = RestProxy.create(
                 ServiceErrorWithCharsetService.class,
-                new HttpPipeline(new HttpClient() {
+                new HttpPipeline(new SimpleMockHttpClient() {
                     @Override
                     public Mono<HttpResponse> send(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
@@ -184,7 +186,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
     public void ServiceErrorWithResponseContentTypeBadJSON() {
         ServiceErrorWithCharsetService service = RestProxy.create(
                 ServiceErrorWithCharsetService.class,
-                new HttpPipeline(new HttpClient() {
+                new HttpPipeline(new SimpleMockHttpClient() {
                     @Override
                     public Mono<HttpResponse> send(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
@@ -208,7 +210,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
     public void ServiceErrorWithResponseContentTypeCharset() {
         ServiceErrorWithCharsetService service = RestProxy.create(
                 ServiceErrorWithCharsetService.class,
-                new HttpPipeline(new HttpClient() {
+                new HttpPipeline(new SimpleMockHttpClient() {
                     @Override
                     public Mono<HttpResponse> send(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
@@ -232,7 +234,7 @@ public class RestProxyWithMockTests extends RestProxyTests {
     public void ServiceErrorWithResponseContentTypeCharsetBadJSON() {
         ServiceErrorWithCharsetService service = RestProxy.create(
                 ServiceErrorWithCharsetService.class,
-                new HttpPipeline(new HttpClient() {
+                new HttpPipeline(new SimpleMockHttpClient() {
                     @Override
                     public Mono<HttpResponse> send(HttpRequest request) {
                         HttpHeaders headers = new HttpHeaders();
@@ -387,5 +389,27 @@ public class RestProxyWithMockTests extends RestProxyTests {
 
     private static void assertContains(String value, String expectedSubstring) {
         assertTrue("Expected \"" + value + "\" to contain \"" + expectedSubstring + "\".", value.contains(expectedSubstring));
+    }
+
+
+    private static abstract class SimpleMockHttpClient implements HttpClient {
+
+        @Override
+        public abstract Mono<HttpResponse> send(HttpRequest request);
+
+        @Override
+        public HttpClient proxy(Supplier<ProxyOptions> proxyOptions) {
+            throw new IllegalStateException("MockHttpClient.proxy not implemented.");
+        }
+
+        @Override
+        public HttpClient wiretap(boolean enableWiretap) {
+            throw new IllegalStateException("MockHttpClient.wiretap not implemented.");
+        }
+
+        @Override
+        public HttpClient port(int port) {
+            throw new IllegalStateException("MockHttpClient.port not implemented.");
+        }
     }
 }

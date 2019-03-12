@@ -59,9 +59,9 @@ class SharedChannelPool implements ChannelPool {
     private final int poolSize;
     private final AtomicInteger channelCount = new AtomicInteger(0);
     private final SharedChannelPoolOptions poolOptions;
-    private final ConcurrentMultiHashMap<URI, ChannelRequest> requests;
-    private final ConcurrentMultiHashMap<URI, Channel> available;
-    private final ConcurrentMultiHashMap<URI, Channel> leased;
+    private final ConcurrentMultiDequeMap<URI, ChannelRequest> requests;
+    private final ConcurrentMultiDequeMap<URI, Channel> available;
+    private final ConcurrentMultiDequeMap<URI, Channel> leased;
     private final Object sync = new Object();
     private final SslContext sslContext;
     private volatile boolean closed = false;
@@ -106,9 +106,9 @@ class SharedChannelPool implements ChannelPool {
         this.eventLoopGroup = eventLoopGroup;
         this.handler = handler;
         this.poolSize = options.poolSize();
-        this.requests = new ConcurrentMultiHashMap<>();
-        this.available = new ConcurrentMultiHashMap<>();
-        this.leased = new ConcurrentMultiHashMap<>();
+        this.requests = new ConcurrentMultiDequeMap<>();
+        this.available = new ConcurrentMultiDequeMap<>();
+        this.leased = new ConcurrentMultiDequeMap<>();
         try {
             if (sslContext == null) {
                 this.sslContext = SslContextBuilder.forClient().build();
@@ -143,8 +143,8 @@ class SharedChannelPool implements ChannelPool {
 
                 boolean foundHealthyChannelInPool = false;
                 // Try to retrieve a healthy channel from pool
-                while (available.containsKey(request.channelURI)) {
-                    Channel channel = available.poll(request.channelURI);
+                if (available.containsKey(request.channelURI)) {
+                    Channel channel = available.pop(request.channelURI); // try most recently used
                     if (isChannelHealthy(channel)) {
                         logger.debug("Channel picked up from pool: {}", channel.id());
                         leased.put(request.channelURI, channel);
@@ -156,17 +156,23 @@ class SharedChannelPool implements ChannelPool {
                         } catch (Exception e) {
                             throw Exceptions.propagate(e);
                         }
-                        break;
                     } else {
                         logger.debug("Channel disposed from pool due to timeout or half closure: {}", channel.id());
                         channelCount.decrementAndGet();
                         closeChannel(channel);
+                        // Delete all channels created before this
+                        while (available.containsKey(request.channelURI)) {
+                            Channel broken = available.pop(request.channelURI);
+                            logger.debug("Channel disposed from pool due to timeout or half closure: {}", broken.id());
+                            channelCount.decrementAndGet();
+                            closeChannel(broken);
+                        }
                     }
                 }
                 if (!foundHealthyChannelInPool) {
                     // Not found a healthy channel in pool. Create a new channel - remove an available one if size overflows
                     if (available.size() > 0) {
-                        Channel nextAvailable = available.poll();
+                        Channel nextAvailable = available.poll(); // Dispose least recently used
                         logger.debug("Channel disposed due to overflow: {}", nextAvailable.id());
                         channelCount.decrementAndGet();
                         closeChannel(nextAvailable);
@@ -249,7 +255,7 @@ class SharedChannelPool implements ChannelPool {
 
             requests.put(channelRequest.channelURI, channelRequest);
 //            System.out.println("Putting in request on thread " + Thread.currentThread().getName());
-            eventLoopGroup.submit(() -> drain(channelRequest.channelURI));
+            drain(channelRequest.channelURI);
         } catch (URISyntaxException e) {
             promise.setFailure(e);
         }
@@ -295,10 +301,11 @@ class SharedChannelPool implements ChannelPool {
                 leased.remove(channelUri, channel);
                 channelCount.decrementAndGet();
             }
-            return closeChannel(channel).addListener(future -> {
+            Future<Void> closeFuture = closeChannel(channel).addListener(future -> {
                 logger.debug("Channel closed and released out of pool: " + channel.id());
-                drain(channelUri);
             });
+            drain(channelUri);
+            return closeFuture;
         } catch (Exception e) {
             return bootstrap.config().group().next().newFailedFuture(e);
         }
@@ -341,7 +348,6 @@ class SharedChannelPool implements ChannelPool {
     @Override
     public void close() {
         closed = true;
-//        executor.shutdownNow();
         while (requests.size() == 0) {
             requests.poll().promise.setFailure(new CancellationException("Channel pool was closed"));
         }

@@ -10,8 +10,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -20,17 +22,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @param <K> the key type
  * @param <V> the value type
  */
-@Deprecated
-public class ConcurrentMultiHashMap<K, V> {
-    private final Map<K, ConcurrentLinkedQueue<V>> data;
+public class ConcurrentMultiDequeMap<K, V> {
+    private final Map<K, ConcurrentLinkedDeque<V>> data;
     // Size is the total number of elements in all ConcurrentLinkedQueues in the Map.
     private final AtomicInteger size;
 
     /**
      * Create a concurrent multi hash map.
      */
-    public ConcurrentMultiHashMap() {
-        this.data = Collections.synchronizedMap(new ConcurrentHashMap<K, ConcurrentLinkedQueue<V>>(16, 0.75f));
+    public ConcurrentMultiDequeMap() {
+        this.data = Collections.synchronizedMap(new ConcurrentHashMap<K, ConcurrentLinkedDeque<V>>(16, 0.75f));
         this.size = new AtomicInteger(0);
     }
 
@@ -44,7 +45,7 @@ public class ConcurrentMultiHashMap<K, V> {
     public V put(K key, V value) {
         synchronized (size) {
             if (!data.containsKey(key)) {
-                data.put(key, new ConcurrentLinkedQueue<V>());
+                data.put(key, new ConcurrentLinkedDeque<V>());
             }
             data.get(key).add(value);
             size.incrementAndGet();
@@ -58,7 +59,7 @@ public class ConcurrentMultiHashMap<K, V> {
      * @param key the key to query
      * @return the queue associated with the key
      */
-    public ConcurrentLinkedQueue<V> get(K key) {
+    public ConcurrentLinkedDeque<V> get(K key) {
         return data.get(key);
     }
 
@@ -83,7 +84,7 @@ public class ConcurrentMultiHashMap<K, V> {
     }
 
     /**
-     * Retrieves the least recently used item in the queue for the given key.
+     * Retrieves the least recently used item in the deque for the given key.
      *
      * @param key the key to poll an item
      * @return the least recently used item for the key
@@ -92,11 +93,40 @@ public class ConcurrentMultiHashMap<K, V> {
         if (!data.containsKey(key)) {
             return null;
         } else {
-            ConcurrentLinkedQueue<V> queue = data.get(key);
+            ConcurrentLinkedDeque<V> queue = data.get(key);
             V ret;
             synchronized (size) {
+                if (queue.isEmpty()) {
+                    throw new NoSuchElementException("no items under key " + key);
+                }
                 size.decrementAndGet();
                 ret = queue.poll();
+            }
+            if (queue.isEmpty()) {
+                data.remove(key);
+            }
+            return ret;
+        }
+    }
+
+    /**
+     * Retrieves the most recently used item in the deque for the given key.
+     *
+     * @param key the key to poll an item
+     * @return the most recently used item for the key
+     */
+    public V pop(K key) {
+        if (!data.containsKey(key)) {
+            return null;
+        } else {
+            ConcurrentLinkedDeque<V> queue = data.get(key);
+            V ret;
+            synchronized (size) {
+                if (queue.isEmpty()) {
+                    throw new NoSuchElementException("no items under key " + key);
+                }
+                size.decrementAndGet();
+                ret = queue.pop();
             }
             if (queue.isEmpty()) {
                 data.remove(key);
@@ -159,7 +189,7 @@ public class ConcurrentMultiHashMap<K, V> {
         if (!data.containsKey(key)) {
             return false;
         }
-        ConcurrentLinkedQueue<V> queue = data.get(key);
+        ConcurrentLinkedDeque<V> queue = data.get(key);
         boolean removed;
         synchronized (size) {
             removed = queue.remove(value);

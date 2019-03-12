@@ -159,8 +159,8 @@ class SharedChannelPool implements ChannelPool {
                         break;
                     } else {
                         logger.debug("Channel disposed from pool due to timeout or half closure: {}", channel.id());
-                        closeChannel(channel);
                         channelCount.decrementAndGet();
+                        closeChannel(channel);
                     }
                 }
                 if (!foundHealthyChannelInPool) {
@@ -168,8 +168,8 @@ class SharedChannelPool implements ChannelPool {
                     if (available.size() > 0) {
                         Channel nextAvailable = available.poll();
                         logger.debug("Channel disposed due to overflow: {}", nextAvailable.id());
-                        closeChannel(nextAvailable);
                         channelCount.decrementAndGet();
+                        closeChannel(nextAvailable);
                     }
                     int port;
                     if (request.destinationURI.getPort() < 0) {
@@ -288,16 +288,20 @@ class SharedChannelPool implements ChannelPool {
      * @return a Future representing the operation.
      */
     public Future<Void> closeAndRelease(final Channel channel) {
-        return closeChannel(channel).addListener(future -> {
+        try {
+            handler.channelReleased(channel);
             URI channelUri = channel.attr(CHANNEL_URI).get();
             synchronized (sync) {
                 leased.remove(channelUri, channel);
-//                available.remove(channelUri, channel);
                 channelCount.decrementAndGet();
-                logger.debug("Channel closed and released out of pool: " + channel.id());
             }
-            drain(channelUri);
-        });
+            return closeChannel(channel).addListener(future -> {
+                logger.debug("Channel closed and released out of pool: " + channel.id());
+                drain(channelUri);
+            });
+        } catch (Exception e) {
+            return bootstrap.config().group().next().newFailedFuture(e);
+        }
     }
 
     @Override
@@ -382,7 +386,7 @@ class SharedChannelPool implements ChannelPool {
                 long age = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_CREATED_SINCE).get(), now);
                 logger.info(String.format("%s\tCLOSE\t%ds\t%ds\t%s", channel.id(), stateFor, age, channel.attr(CHANNEL_URI).get()));
             }
-            logger.info("Active channels: " + channelCount.get() + " Leaked channels: " + (channelCount.get() - leased.size() - available.size()));
+            logger.info("Active channels: " + channelCount.get() + " Leaked or being initialized channels: " + (channelCount.get() - leased.size() - available.size()));
         }
     }
 }

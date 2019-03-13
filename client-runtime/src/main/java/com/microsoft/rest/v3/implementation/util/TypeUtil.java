@@ -35,7 +35,7 @@ public final class TypeUtil {
      * Get the generic arguments for a type.
      *
      * @param type the type to get arguments
-     * @return the generic arguments, empty if type is not parametrized
+     * @return the generic arguments, empty if type is not parameterized
      */
     public static Type[] getTypeArguments(Type type) {
         if (!(type instanceof ParameterizedType)) {
@@ -48,7 +48,7 @@ public final class TypeUtil {
      * Get the generic argument, or the first if the type has more than one.
      *
      * @param type the type to get arguments
-     * @return the generic argument, null if type is not parametrized
+     * @return the generic argument, null if type is not parameterized
      */
     public static Type getTypeArgument(Type type) {
         if (!(type instanceof ParameterizedType)) {
@@ -84,7 +84,7 @@ public final class TypeUtil {
             if (genericSuperClass instanceof ParameterizedType) {
                 /*
                  * Find erased generic types for the super class and replace
-                 * with actual type arguments from the parametrized type
+                 * with actual type arguments from the parameterized type
                  */
                 Type[] superTypeArguments = getTypeArguments(genericSuperClass);
                 List<Type> typeParameters = Arrays.asList(((Class<?>) parameterizedType.getRawType()).getTypeParameters());
@@ -148,11 +148,11 @@ public final class TypeUtil {
     }
 
     /**
-     * Create a parametrized type from a raw class and its type arguments.
+     * Create a parameterized type from a raw class and its type arguments.
      *
-     * @param rawClass the raw class to construct the parametrized type
+     * @param rawClass the raw class to construct the parameterized type
      * @param genericTypes the generic arguments
-     * @return the parametrized type
+     * @return the parameterized type
      */
     public static ParameterizedType createParameterizedType(Class<?> rawClass, Type... genericTypes) {
         return new ParameterizedType() {

@@ -13,10 +13,10 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Annotation to annotate replacement of parametrized segments in a dynamic {@link Host}.
+ * Annotation to annotate replacement of parameterized segments in a dynamic {@link Host}.
  *
- * <p>You provide the value, which should be the same (case sensitive) with the parametrized segments in '{}' in the
- * host, unless there's only one parametrized segment, then you can leave the value empty. This is extremely
+ * <p>You provide the value, which should be the same (case sensitive) with the parameterized segments in '{}' in the
+ * host, unless there's only one parameterized segment, then you can leave the value empty. This is extremely
  * useful when the designer of the API interface doesn't know about the named parameters in the host.</p>
  *
  * <p><strong>Example 1: Named parameters</strong></p>

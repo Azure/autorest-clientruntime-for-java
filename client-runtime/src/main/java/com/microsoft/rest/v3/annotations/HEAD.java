@@ -12,10 +12,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * HTTP HEAD method annotation describing the parametrized relative path to a REST endpoint.
+ * HTTP HEAD method annotation describing the parameterized relative path to a REST endpoint.
  *
  * <p>The required value can be either a relative path or an absolute path. When it's an absolute path, it must start
- * with a protocol or a parametrized segment (otherwise the parse cannot tell if it's absolute or relative)</p>
+ * with a protocol or a parameterized segment (otherwise the parse cannot tell if it's absolute or relative)</p>
  *
  * <p><strong>Example 1: Relative path segments</strong></p>
  *

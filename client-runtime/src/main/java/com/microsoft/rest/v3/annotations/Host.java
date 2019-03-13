@@ -13,13 +13,13 @@ import java.lang.annotation.Target;
 import static java.lang.annotation.ElementType.TYPE;
 
 /**
- * Annotation for parametrized host name targeting a REST service.
+ * Annotation for parameterized host name targeting a REST service.
  *
  * <p>This is the 'host' field or 'x-ms-parameterized-host.hostTemplate' field in a Swagger document. parameters are
- * enclosed in {}s, e.g. {accountName}. An HTTP client must accept the parametrized host as the base URL for the request,
+ * enclosed in {}s, e.g. {accountName}. An HTTP client must accept the parameterized host as the base URL for the request,
  * replacing the parameters during runtime with the actual values users provide.</p>
  *
- * <p>For parametrized hosts, parameters annotated with {@link HostParam} must be provided. See Java docs in
+ * <p>For parameterized hosts, parameters annotated with {@link HostParam} must be provided. See Java docs in
  * {@link HostParam} for directions for host parameters.</p>
  *
  * <p>The host's value must contain the scheme/protocol and the host. The host's value may contain the

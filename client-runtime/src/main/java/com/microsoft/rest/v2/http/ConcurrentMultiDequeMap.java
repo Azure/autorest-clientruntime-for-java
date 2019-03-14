@@ -80,14 +80,15 @@ public class ConcurrentMultiDequeMap<K, V> {
      * @return the item removed from the map
      */
     public V poll() {
+        K key;
         synchronized (size) {
             if (size.get() == 0) {
                 return null;
             } else {
-                K key = lru.getFirst();
-                return poll(key);
+                key = lru.getFirst();
             }
         }
+        return poll(key);
     }
     /**
      * Retrieves and removes one item from the multi map. The item is from
@@ -95,14 +96,15 @@ public class ConcurrentMultiDequeMap<K, V> {
      * @return the item removed from the map
      */
     public V pop() {
+        K key;
         synchronized (size) {
             if (size.get() == 0) {
                 return null;
             } else {
-                K key = lru.getLast();
-                return pop(key);
+                key = lru.getLast();
             }
         }
+        return pop(key);
     }
 
     /**

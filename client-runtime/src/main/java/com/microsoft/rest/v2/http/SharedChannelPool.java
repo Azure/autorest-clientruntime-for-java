@@ -125,95 +125,93 @@ class SharedChannelPool implements ChannelPool {
 //        }
         while (!closed && wip.updateAndGet(x -> requests.size()) != 0) {
             System.out.println("@@@ Staying in drain loop with wip " + wip.get());
-            synchronized (sync) {
-                if (channelCount.get() >= poolSize && available.size() == 0) {
-                    System.out.println("@@@ Abandoning as all channels are leased");
-                    wip.set(0);
-                    break;
-                }
-                // requests must be non-empty based on the above condition
-                ChannelRequest request;
-                if (preferredUri != null && requests.containsKey(preferredUri)) {
-                    request = requests.poll(preferredUri);
+            if (channelCount.get() >= poolSize && available.size() == 0) {
+                System.out.println("@@@ Abandoning as all channels are leased");
+                wip.set(0);
+                break;
+            }
+            // requests must be non-empty based on the above condition
+            ChannelRequest request;
+            if (preferredUri != null && requests.containsKey(preferredUri)) {
+                request = requests.poll(preferredUri);
+            } else {
+                request = requests.poll();
+            }
+
+            System.out.println("@@@ Processing request for " + request.destinationURI);
+
+            boolean foundHealthyChannelInPool = false;
+            // Try to retrieve a healthy channel from pool
+            if (available.containsKey(request.channelURI)) {
+                Channel channel = available.pop(request.channelURI); // try most recently used
+                if (isChannelHealthy(channel)) {
+                    logger.debug("Channel picked up from pool: {}", channel.id());
+                    leased.put(request.channelURI, channel);
+                    foundHealthyChannelInPool = true;
+                    channel.attr(CHANNEL_LEASED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
+                    request.promise.setSuccess(channel);
+                    try {
+                        handler.channelAcquired(channel);
+                    } catch (Exception e) {
+                        throw Exceptions.propagate(e);
+                    }
                 } else {
-                    request = requests.poll();
+                    logger.debug("Channel disposed from pool due to timeout or half closure: {}", channel.id());
+                    closeChannel(channel);
+                    channelCount.decrementAndGet();
+                    // Delete all channels created before this
+                    while (available.containsKey(request.channelURI)) {
+                        Channel broken = available.pop(request.channelURI);
+                        logger.debug("Channel disposed from pool due to timeout or half closure: {}", broken.id());
+                        closeChannel(broken);
+                        channelCount.decrementAndGet();
+                    }
                 }
+            }
+            if (!foundHealthyChannelInPool) {
+                // Not found a healthy channel in pool. Create a new channel - remove an available one if size overflows
+                if (available.size() > 0) {
+                    Channel nextAvailable = available.poll(); // Dispose least recently used
+                    logger.debug("Channel disposed due to overflow: {}", nextAvailable.id());
+                    closeChannel(nextAvailable);
+                    channelCount.decrementAndGet();
+                }
+                int port;
+                if (request.destinationURI.getPort() < 0) {
+                    port = "https".equals(request.destinationURI.getScheme()) ? 443 : 80;
+                } else {
+                    port = request.destinationURI.getPort();
+                }
+                channelCount.incrementAndGet();
+                SharedChannelPool.this.bootstrap.clone().handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) throws Exception {
+                        assert ch.eventLoop().inEventLoop();
+                        if (request.proxy != null) {
+                            ch.pipeline().addFirst("HttpProxyHandler", new HttpProxyHandler(request.proxy.address()));
+                        }
+                        handler.channelCreated(ch);
+                    }
+                }).connect(request.destinationURI.getHost(), port).addListener((ChannelFuture f) -> {
+                    if (f.isSuccess()) {
+                        Channel channel = f.channel();
+                        channel.attr(CHANNEL_URI).set(request.channelURI);
 
-                System.out.println("@@@ Processing request for " + request.destinationURI);
-
-                boolean foundHealthyChannelInPool = false;
-                // Try to retrieve a healthy channel from pool
-                if (available.containsKey(request.channelURI)) {
-                    Channel channel = available.pop(request.channelURI); // try most recently used
-                    if (isChannelHealthy(channel)) {
-                        logger.debug("Channel picked up from pool: {}", channel.id());
+                        // Apply SSL handler for https connections
+                        if ("https".equalsIgnoreCase(request.destinationURI.getScheme())) {
+                            channel.pipeline().addBefore("HttpClientCodec", "SslHandler", this.sslContext.newHandler(channel.alloc(), request.destinationURI.getHost(), port));
+                        }
                         leased.put(request.channelURI, channel);
-                        foundHealthyChannelInPool = true;
+                        channel.attr(CHANNEL_CREATED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
                         channel.attr(CHANNEL_LEASED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
+                        logger.debug("Channel created: {}", channel.id());
+                        handler.channelAcquired(channel);
                         request.promise.setSuccess(channel);
-                        try {
-                            handler.channelAcquired(channel);
-                        } catch (Exception e) {
-                            throw Exceptions.propagate(e);
-                        }
                     } else {
-                        logger.debug("Channel disposed from pool due to timeout or half closure: {}", channel.id());
-                        closeChannel(channel);
-                        channelCount.decrementAndGet();
-                        // Delete all channels created before this
-                        while (available.containsKey(request.channelURI)) {
-                            Channel broken = available.pop(request.channelURI);
-                            logger.debug("Channel disposed from pool due to timeout or half closure: {}", broken.id());
-                            closeChannel(broken);
-                            channelCount.decrementAndGet();
-                        }
-                    }
-                }
-                if (!foundHealthyChannelInPool) {
-                    // Not found a healthy channel in pool. Create a new channel - remove an available one if size overflows
-                    if (available.size() > 0) {
-                        Channel nextAvailable = available.poll(); // Dispose least recently used
-                        logger.debug("Channel disposed due to overflow: {}", nextAvailable.id());
-                        closeChannel(nextAvailable);
+                        request.promise.setFailure(f.cause());
                         channelCount.decrementAndGet();
                     }
-                    int port;
-                    if (request.destinationURI.getPort() < 0) {
-                        port = "https".equals(request.destinationURI.getScheme()) ? 443 : 80;
-                    } else {
-                        port = request.destinationURI.getPort();
-                    }
-                    channelCount.incrementAndGet();
-                    SharedChannelPool.this.bootstrap.clone().handler(new ChannelInitializer<Channel>() {
-                        @Override
-                        protected void initChannel(Channel ch) throws Exception {
-                            assert ch.eventLoop().inEventLoop();
-                            if (request.proxy != null) {
-                                ch.pipeline().addFirst("HttpProxyHandler", new HttpProxyHandler(request.proxy.address()));
-                            }
-                            handler.channelCreated(ch);
-                        }
-                    }).connect(request.destinationURI.getHost(), port).addListener((ChannelFuture f) -> {
-                        if (f.isSuccess()) {
-                            Channel channel = f.channel();
-                            channel.attr(CHANNEL_URI).set(request.channelURI);
-
-                            // Apply SSL handler for https connections
-                            if ("https".equalsIgnoreCase(request.destinationURI.getScheme())) {
-                                channel.pipeline().addBefore("HttpClientCodec", "SslHandler", this.sslContext.newHandler(channel.alloc(), request.destinationURI.getHost(), port));
-                            }
-                            leased.put(request.channelURI, channel);
-                            channel.attr(CHANNEL_CREATED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
-                            channel.attr(CHANNEL_LEASED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
-                            logger.debug("Channel created: {}", channel.id());
-                            handler.channelAcquired(channel);
-                            request.promise.setSuccess(channel);
-                        } else {
-                            request.promise.setFailure(f.cause());
-                            channelCount.decrementAndGet();
-                        }
-                    });
-                }
+                });
             }
         }
         System.out.println("@@@ Exiting drain loop with wip " + wip.get());
@@ -305,11 +303,9 @@ class SharedChannelPool implements ChannelPool {
             Future<Void> closeFuture = closeChannel(channel).addListener(future -> {
                 URI channelUri = channel.attr(CHANNEL_URI).get();
                 System.out.println("@@@ Closing and releasing channel for " + channelUri);
-                synchronized (sync) {
-                    leased.remove(channelUri, channel);
-                    channelCount.decrementAndGet();
-                    logger.debug("Channel closed and released out of pool: " + channel.id());
-                }
+                leased.remove(channelUri, channel);
+                channelCount.decrementAndGet();
+                logger.debug("Channel closed and released out of pool: " + channel.id());
                 drain(channelUri);
             });
             return closeFuture;
@@ -324,16 +320,14 @@ class SharedChannelPool implements ChannelPool {
             handler.channelReleased(channel);
             URI channelUri = channel.attr(CHANNEL_URI).get();
             System.out.println("@@@ Releasing channel for " + channelUri);
-            synchronized (sync) {
-                leased.remove(channelUri, channel);
-                if (isChannelHealthy(channel)) {
-                    available.put(channelUri, channel);
-                    channel.attr(CHANNEL_AVAILABLE_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
-                    logger.debug("Channel released to pool: " + channel.id());
-                } else {
-                    channelCount.decrementAndGet();
-                    logger.debug("Channel broken on release, dispose: " + channel.id());
-                }
+            leased.remove(channelUri, channel);
+            if (isChannelHealthy(channel)) {
+                available.put(channelUri, channel);
+                channel.attr(CHANNEL_AVAILABLE_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
+                logger.debug("Channel released to pool: " + channel.id());
+            } else {
+                channelCount.decrementAndGet();
+                logger.debug("Channel broken on release, dispose: " + channel.id());
             }
             drain(channelUri);
         } catch (Exception e) {
@@ -372,35 +366,33 @@ class SharedChannelPool implements ChannelPool {
      * Used to print a current overview of the channels in this pool.
      */
     public void dump() {
-        synchronized (sync) {
-            logger.info(String.format("---- %s: size %d, keep alive (sec) %d ----", toString(), poolSize, poolOptions.idleChannelKeepAliveDurationInSec()));
-            logger.info("Channel\tState\tFor\tAge\tURL");
-            List<Channel> closed = new ArrayList<>();
-            ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-            for (Channel channel : leased.values()) {
-                if (channel.hasAttr(CHANNEL_CLOSED_SINCE)) {
-                    closed.add(channel);
-                    continue;
-                }
-                long stateFor = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_LEASED_SINCE).get(), now);
-                long age = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_CREATED_SINCE).get(), now);
-                logger.info(String.format("%s\tLEASE\t%ds\t%ds\t%s", channel.id(), stateFor, age, channel.attr(CHANNEL_URI).get()));
+        logger.info(String.format("---- %s: size %d, keep alive (sec) %d ----", toString(), poolSize, poolOptions.idleChannelKeepAliveDurationInSec()));
+        logger.info("Channel\tState\tFor\tAge\tURL");
+        List<Channel> closed = new ArrayList<>();
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+        for (Channel channel : leased.values()) {
+            if (channel.hasAttr(CHANNEL_CLOSED_SINCE)) {
+                closed.add(channel);
+                continue;
             }
-            for (Channel channel : available.values()) {
-                if (channel.hasAttr(CHANNEL_CLOSED_SINCE)) {
-                    closed.add(channel);
-                    continue;
-                }
-                long stateFor = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_AVAILABLE_SINCE).get(), now);
-                long age = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_CREATED_SINCE).get(), now);
-                logger.info(String.format("%s\tAVAIL\t%ds\t%ds\t%s", channel.id(), stateFor, age, channel.attr(CHANNEL_URI).get()));
-            }
-            for (Channel channel : closed) {
-                long stateFor = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_CLOSED_SINCE).get(), now);
-                long age = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_CREATED_SINCE).get(), now);
-                logger.info(String.format("%s\tCLOSE\t%ds\t%ds\t%s", channel.id(), stateFor, age, channel.attr(CHANNEL_URI).get()));
-            }
-            logger.info("Active channels: " + channelCount.get() + " Leaked or being initialized channels: " + (channelCount.get() - leased.size() - available.size()));
+            long stateFor = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_LEASED_SINCE).get(), now);
+            long age = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_CREATED_SINCE).get(), now);
+            logger.info(String.format("%s\tLEASE\t%ds\t%ds\t%s", channel.id(), stateFor, age, channel.attr(CHANNEL_URI).get()));
         }
+        for (Channel channel : available.values()) {
+            if (channel.hasAttr(CHANNEL_CLOSED_SINCE)) {
+                closed.add(channel);
+                continue;
+            }
+            long stateFor = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_AVAILABLE_SINCE).get(), now);
+            long age = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_CREATED_SINCE).get(), now);
+            logger.info(String.format("%s\tAVAIL\t%ds\t%ds\t%s", channel.id(), stateFor, age, channel.attr(CHANNEL_URI).get()));
+        }
+        for (Channel channel : closed) {
+            long stateFor = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_CLOSED_SINCE).get(), now);
+            long age = ChronoUnit.SECONDS.between(channel.attr(CHANNEL_CREATED_SINCE).get(), now);
+            logger.info(String.format("%s\tCLOSE\t%ds\t%ds\t%s", channel.id(), stateFor, age, channel.attr(CHANNEL_URI).get()));
+        }
+        logger.info("Active channels: " + channelCount.get() + " Leaked or being initialized channels: " + (channelCount.get() - leased.size() - available.size()));
     }
 }

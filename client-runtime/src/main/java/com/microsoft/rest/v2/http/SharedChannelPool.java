@@ -115,18 +115,10 @@ class SharedChannelPool implements ChannelPool {
 
     private void drain(URI preferredUri) {
         if (!wip.compareAndSet(0, 1)) {
-            System.out.println("@@@ Couldn't enter drain loop");
             return;
         }
-        System.out.println("@@@ Entering drain loop");
-//        System.out.println("managing drain loop on thread " + Thread.currentThread().getName());
-//        if (requests.size() == 0) {
-//            System.out.println("Did not find a request on Thread " + Thread.currentThread().getName() + "!");
-//        }
         while (!closed && wip.updateAndGet(x -> requests.size()) != 0) {
-            System.out.println("@@@ Staying in drain loop with wip " + wip.get());
             if (channelCount.get() >= poolSize && available.size() == 0) {
-                System.out.println("@@@ Abandoning as all channels are leased");
                 wip.set(0);
                 break;
             }
@@ -137,8 +129,6 @@ class SharedChannelPool implements ChannelPool {
             } else {
                 request = requests.poll();
             }
-
-            System.out.println("@@@ Processing request for " + request.destinationURI);
 
             boolean foundHealthyChannelInPool = false;
             // Try to retrieve a healthy channel from pool
@@ -214,7 +204,6 @@ class SharedChannelPool implements ChannelPool {
                 });
             }
         }
-        System.out.println("@@@ Exiting drain loop with wip " + wip.get());
     }
 
     /**
@@ -237,8 +226,6 @@ class SharedChannelPool implements ChannelPool {
             throw new RejectedExecutionException("SharedChannelPool is closed");
         }
 
-        System.out.println("@@@ Acquiring channel for " + uri);
-
         ChannelRequest channelRequest = new ChannelRequest();
         channelRequest.promise = promise;
         channelRequest.proxy = proxy;
@@ -259,7 +246,6 @@ class SharedChannelPool implements ChannelPool {
             }
 
             requests.put(channelRequest.channelURI, channelRequest);
-//            System.out.println("Putting in request on thread " + Thread.currentThread().getName());
             drain(null);
         } catch (URISyntaxException e) {
             promise.setFailure(e);
@@ -302,7 +288,6 @@ class SharedChannelPool implements ChannelPool {
         try {
             Future<Void> closeFuture = closeChannel(channel).addListener(future -> {
                 URI channelUri = channel.attr(CHANNEL_URI).get();
-                System.out.println("@@@ Closing and releasing channel for " + channelUri);
                 leased.remove(channelUri, channel);
                 channelCount.decrementAndGet();
                 logger.debug("Channel closed and released out of pool: " + channel.id());
@@ -319,7 +304,6 @@ class SharedChannelPool implements ChannelPool {
         try {
             handler.channelReleased(channel);
             URI channelUri = channel.attr(CHANNEL_URI).get();
-            System.out.println("@@@ Releasing channel for " + channelUri);
             leased.remove(channelUri, channel);
             if (isChannelHealthy(channel)) {
                 available.put(channelUri, channel);

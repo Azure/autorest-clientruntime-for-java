@@ -120,15 +120,15 @@ public class ConcurrentMultiDequeMap<K, V> {
             ConcurrentLinkedDeque<V> queue = data.get(key);
             V ret;
             synchronized (size) {
-                if (queue.isEmpty()) {
+                if (queue == null || queue.isEmpty()) {
                     throw new NoSuchElementException("no items under key " + key);
                 }
                 size.decrementAndGet();
                 ret = queue.poll();
-            }
-            if (queue.isEmpty()) {
-                data.remove(key);
-                lru.remove(key);
+                if (queue.isEmpty()) {
+                    data.remove(key);
+                    lru.remove(key);
+                }
             }
             return ret;
         }
@@ -147,15 +147,15 @@ public class ConcurrentMultiDequeMap<K, V> {
             ConcurrentLinkedDeque<V> queue = data.get(key);
             V ret;
             synchronized (size) {
-                if (queue.isEmpty()) {
+                if (queue == null || queue.isEmpty()) {
                     throw new NoSuchElementException("no items under key " + key);
                 }
                 size.decrementAndGet();
                 ret = queue.pop();
-            }
-            if (queue.isEmpty()) {
-                data.remove(key);
-                lru.remove(key);
+                if (queue.isEmpty()) {
+                    data.remove(key);
+                    lru.remove(key);
+                }
             }
             return ret;
         }
@@ -222,10 +222,10 @@ public class ConcurrentMultiDequeMap<K, V> {
             if (removed) {
                 size.decrementAndGet();
             }
-        }
-        if (queue.isEmpty()) {
-            data.remove(key);
-            lru.remove(key);
+            if (queue.isEmpty()) {
+                data.remove(key);
+                lru.remove(key);
+            }
         }
         return removed;
     }

@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -96,13 +95,7 @@ class SharedChannelPool implements ChannelPool {
      */
     SharedChannelPool(final Bootstrap bootstrap, final EventLoopGroup eventLoopGroup, final ChannelPoolHandler handler, SharedChannelPoolOptions options, SslContext sslContext) {
         this.poolOptions = options.clone();
-        this.bootstrap = bootstrap.clone().handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                assert ch.eventLoop().inEventLoop();
-                handler.channelCreated(ch);
-            }
-        });
+        this.bootstrap = bootstrap.clone();
         this.eventLoopGroup = eventLoopGroup;
         this.handler = handler;
         this.poolSize = options.poolSize();
@@ -191,19 +184,24 @@ class SharedChannelPool implements ChannelPool {
                         port = request.destinationURI.getPort();
                     }
                     channelCount.incrementAndGet();
-                    SharedChannelPool.this.bootstrap.clone().connect(request.destinationURI.getHost(), port).addListener((ChannelFuture f) -> {
+                    SharedChannelPool.this.bootstrap.clone().handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            assert ch.eventLoop().inEventLoop();
+                            if (request.proxy != null) {
+                                ch.pipeline().addFirst("HttpProxyHandler", new HttpProxyHandler(request.proxy.address()));
+                            }
+                            handler.channelCreated(ch);
+                        }
+                    }).connect(request.destinationURI.getHost(), port).addListener((ChannelFuture f) -> {
                         if (f.isSuccess()) {
                             Channel channel = f.channel();
                             channel.attr(CHANNEL_URI).set(request.channelURI);
 
                             // Apply SSL handler for https connections
                             if ("https".equalsIgnoreCase(request.destinationURI.getScheme())) {
-                                channel.pipeline().addFirst(this.sslContext.newHandler(channel.alloc(), request.destinationURI.getHost(), port));
+                                channel.pipeline().addBefore("HttpClientCodec", "SslHandler", this.sslContext.newHandler(channel.alloc(), request.destinationURI.getHost(), port));
                             }
-                            if (request.proxy != null) {
-                                channel.pipeline().addFirst("HttpProxyHandler", new HttpProxyHandler(request.proxy.address()));
-                            }
-
                             leased.put(request.channelURI, channel);
                             channel.attr(CHANNEL_CREATED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
                             channel.attr(CHANNEL_LEASED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));

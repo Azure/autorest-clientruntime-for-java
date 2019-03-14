@@ -66,7 +66,7 @@ class SharedChannelPool implements ChannelPool {
     private final SslContext sslContext;
     private volatile boolean closed = false;
     private final Logger logger = LoggerFactory.getLogger(SharedChannelPool.class);
-    AtomicBoolean wip = new AtomicBoolean(false);
+    AtomicInteger wip = new AtomicInteger(0);
 
     private boolean isChannelHealthy(Channel channel) {
         try {
@@ -121,16 +121,21 @@ class SharedChannelPool implements ChannelPool {
     }
 
     private void drain(URI preferredUri) {
-        if (!wip.compareAndSet(false, true)) {
+        if (!wip.compareAndSet(0, 1)) {
+            System.out.println("@@@ Couldn't enter drain loop");
             return;
         }
+        System.out.println("@@@ Entering drain loop");
 //        System.out.println("managing drain loop on thread " + Thread.currentThread().getName());
 //        if (requests.size() == 0) {
 //            System.out.println("Did not find a request on Thread " + Thread.currentThread().getName() + "!");
 //        }
-        while (!closed && requests.size() != 0) {
+        while (!closed && wip.updateAndGet(x -> requests.size()) != 0) {
+            System.out.println("@@@ Staying in drain loop with wip " + wip.get());
             synchronized (sync) {
                 if (channelCount.get() >= poolSize && available.size() == 0) {
+                    System.out.println("@@@ Abandoning as all channels are leased");
+                    wip.set(0);
                     break;
                 }
                 // requests must be non-empty based on the above condition
@@ -140,6 +145,8 @@ class SharedChannelPool implements ChannelPool {
                 } else {
                     request = requests.poll();
                 }
+
+                System.out.println("@@@ Processing request for " + request.destinationURI);
 
                 boolean foundHealthyChannelInPool = false;
                 // Try to retrieve a healthy channel from pool
@@ -211,7 +218,7 @@ class SharedChannelPool implements ChannelPool {
                 }
             }
         }
-        wip.set(false);
+        System.out.println("@@@ Exiting drain loop with wip " + wip.get());
     }
 
     /**
@@ -233,6 +240,8 @@ class SharedChannelPool implements ChannelPool {
         if (closed) {
             throw new RejectedExecutionException("SharedChannelPool is closed");
         }
+
+        System.out.println("@@@ Acquiring channel for " + uri);
 
         ChannelRequest channelRequest = new ChannelRequest();
         channelRequest.promise = promise;
@@ -297,6 +306,7 @@ class SharedChannelPool implements ChannelPool {
         try {
             Future<Void> closeFuture = closeChannel(channel).addListener(future -> {
                 URI channelUri = channel.attr(CHANNEL_URI).get();
+                System.out.println("@@@ Closing and releasing channel for " + channelUri);
                 synchronized (sync) {
                     leased.remove(channelUri, channel);
                     channelCount.decrementAndGet();
@@ -315,6 +325,7 @@ class SharedChannelPool implements ChannelPool {
         try {
             handler.channelReleased(channel);
             URI channelUri = channel.attr(CHANNEL_URI).get();
+            System.out.println("@@@ Releasing channel for " + channelUri);
             synchronized (sync) {
                 leased.remove(channelUri, channel);
                 if (isChannelHealthy(channel)) {

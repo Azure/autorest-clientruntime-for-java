@@ -7,14 +7,14 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.azure</groupId>
-    <artifactId>azure-common-for-java</artifactId>
-    <version>3.0.0-SNAPSHOT</version>
+    <artifactId>azure-common-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <groupId>com.azure</groupId>
   <artifactId>azure-common-mgmt</artifactId>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>1.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Azure Management Java Common Library</name>
@@ -51,7 +51,7 @@
     <dependency>
       <groupId>com.azure</groupId>
       <artifactId>azure-common</artifactId>
-      <version>3.0.0-SNAPSHOT</version>
+      <version>1.0.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

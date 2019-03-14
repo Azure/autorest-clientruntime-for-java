@@ -7,13 +7,13 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.azure</groupId>
-    <artifactId>azure-common-for-java</artifactId>
-    <version>3.0.0-SNAPSHOT</version>
+    <artifactId>azure-common-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>azure-common-build-tools</artifactId>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>1.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Build tools for Azure common Java libraries</name>

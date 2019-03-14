@@ -7,15 +7,15 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.azure</groupId>
-    <artifactId>azure-common-for-java</artifactId>
-    <version>3.0.0-SNAPSHOT</version>
+    <artifactId>azure-common-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <groupId>com.azure</groupId>
   <artifactId>azure-common-auth</artifactId>
   <packaging>jar</packaging>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>1.0.0-SNAPSHOT</version>
 
   <name>Azure Authentication Java Common Library</name>
   <description>This package contains the authentication connectors to Active Directory for Azure Java Clients.</description>
@@ -51,7 +51,7 @@
     <dependency>
       <groupId>com.azure</groupId>
       <artifactId>azure-common</artifactId>
-      <version>3.0.0-SNAPSHOT</version>
+      <version>1.0.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>com.microsoft.azure</groupId>

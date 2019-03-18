@@ -6,6 +6,8 @@
 
 package com.azure.common.implementation.serializer;
 
+import com.azure.common.http.rest.RestPagedResponse;
+import com.azure.common.http.rest.RestPagedResponseBase;
 import com.azure.common.implementation.Base64Url;
 import com.azure.common.implementation.DateTimeRfc1123;
 import com.azure.common.http.rest.RestException;
@@ -273,6 +275,9 @@ final class HttpResponseBodyDecoder {
                     }
                     //
                     result = wireResponseMap;
+                } else if (TypeUtil.isTypeOrSubTypeOf(resultType, RestPagedResponseBase.class)) {
+                    RestPagedResponseBase<?, ?> restResponse = (RestPagedResponseBase<?, ?>) wireResponse;
+                    result = new RestPagedResponseBase<>(restResponse.request(), restResponse.statusCode(), restResponse.headers(), restResponse.items(), restResponse.nextLink(), restResponse.deserializedHeaders());
                 } else if (TypeUtil.isTypeOrSubTypeOf(resultType, RestResponseBase.class)) {
                     RestResponseBase<?, ?> restResponseBase = (RestResponseBase<?, ?>) wireResponse;
                     Object wireResponseBody = restResponseBase.body();

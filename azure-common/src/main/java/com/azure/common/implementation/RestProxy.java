@@ -10,6 +10,8 @@ import com.azure.common.http.rest.RestException;
 import com.azure.common.ServiceClient;
 import com.azure.common.annotations.ResumeOperation;
 import com.azure.common.credentials.ServiceClientCredentials;
+import com.azure.common.http.rest.RestPagedResponse;
+import com.azure.common.http.rest.RestPagedResponseBase;
 import com.azure.common.implementation.http.ContentType;
 import com.azure.common.http.ContextData;
 import com.azure.common.http.HttpHeader;
@@ -401,6 +403,8 @@ public class RestProxy implements InvocationHandler {
         Class<? extends RestResponse<?>> cls = (Class<? extends RestResponse<?>>) TypeUtil.getRawClass(entityType);
         if (cls.equals(RestResponse.class)) {
             cls = (Class<? extends RestResponse<?>>) (Object) RestResponseBase.class;
+        } else if (cls.equals(RestPagedResponse.class)) {
+            cls = (Class<? extends RestResponse<?>>) (Object) RestPagedResponseBase.class;
         }
 
         // we try to find the most specific constructor, which we do in the following order:

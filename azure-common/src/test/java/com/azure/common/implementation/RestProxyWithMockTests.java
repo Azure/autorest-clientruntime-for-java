@@ -25,6 +25,7 @@ import com.azure.common.implementation.http.ContentType;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import wiremock.com.fasterxml.jackson.annotation.JsonGetter;
 import wiremock.com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.nio.charset.StandardCharsets;
@@ -158,7 +159,6 @@ public class RestProxyWithMockTests extends RestProxyTests {
         assertNotNull(dateTime);
         assertEquals(OffsetDateTime.ofInstant(Instant.ofEpochMilli(0), ZoneOffset.UTC), dateTime);
     }
-
 
     @Host("http://httpbin.org")
     interface ServiceErrorWithCharsetService {
@@ -311,19 +311,68 @@ public class RestProxyWithMockTests extends RestProxyTests {
         }
     }
 
+    static class ConformingPage<T> implements Page<T> {
+        private List<T> items;
+        private String nextLink;
+
+        ConformingPage(List<T> items, String nextLink) {
+            this.items = items;
+            this.nextLink = nextLink;
+        }
+
+        @Override
+        public List<T> items() {
+            return items;
+        }
+
+        @Override
+        public String nextLink() {
+            return nextLink;
+        }
+    }
+
+    static class NonComformingPage<T> {
+        private List<T> badItems;
+        private String nextLink;
+
+        NonComformingPage(List<T> items, String nextLink) {
+            this.badItems = items;
+            this.nextLink = nextLink;
+        }
+
+        @JsonGetter()
+        public List<T> badItems() {
+            return badItems;
+        }
+
+        public String nextLink() {
+            return nextLink;
+        }
+    }
+
     @Host("http://echo.org")
-    interface Service26 {
+    interface Service2 {
         @POST("anything/json")
         @ExpectedResponses({200})
+        @ReturnValueWireType(KeyValuePage.class)
         RestPagedResponse<KeyValue> getPage(@BodyParam(ContentType.APPLICATION_JSON) Page<KeyValue> values);
 
         @POST("anything/json")
         @ExpectedResponses({200})
+        @ReturnValueWireType(Page.class)
         Mono<RestPagedResponse<KeyValue>> getPageAsync(@BodyParam(ContentType.APPLICATION_JSON) Page<KeyValue> values);
+
+        @POST("anything/json")
+        @ExpectedResponses({200})
+        @ReturnValueWireType(Page.class)
+        Mono<RestPagedResponse<KeyValue>> getPageAsyncThrows(@BodyParam(ContentType.APPLICATION_JSON) NonComformingPage<KeyValue> values);
     }
 
+    /**
+     * Verifies that we can get a RestPagedResponse when the user has implemented their own class from {@link Page}.
+     */
     @Test
-    public void service26getPage() {
+    public void service2getPage() {
         List<KeyValue> array = new ArrayList<>();
         KeyValue key1 = new KeyValue(1, "Foo");
         KeyValue key2 = new KeyValue(2, "Bar");
@@ -334,13 +383,17 @@ public class RestProxyWithMockTests extends RestProxyTests {
         array.add(key3);
         KeyValuePage page = new KeyValuePage(array, "SomeNextLink");
 
-        RestPagedResponse<KeyValue> response = createService(Service26.class).getPage(page);
+        RestPagedResponse<KeyValue> response = createService(Service2.class).getPage(page);
         assertNotNull(response);
         assertEquals(array.size(), response.body().size());
     }
 
+    /**
+     * Verifies that if we pass in a {@link ReturnValueWireType} of {@link Page}, the service can return a
+     * representation of that data.
+     */
     @Test
-    public void service26getPageAsync() {
+    public void service2getPageAsync() {
         List<KeyValue> array = new ArrayList<>();
         KeyValue key1 = new KeyValue(1, "Foo");
         KeyValue key2 = new KeyValue(2, "Bar");
@@ -349,10 +402,12 @@ public class RestProxyWithMockTests extends RestProxyTests {
         array.add(key1);
         array.add(key2);
         array.add(key3);
-        KeyValuePage page = new KeyValuePage(array, "SomeNextLink");
+        ConformingPage<KeyValue> page = new ConformingPage<>(array, "MyNextLink");
 
-        StepVerifier.create(createService(Service26.class).getPageAsync(page))
+        StepVerifier.create(createService(Service2.class).getPageAsync(page))
                 .assertNext(r -> {
+                    assertEquals(page.nextLink, r.nextLink());
+
                     assertEquals(r.items().size(), 3);
                     for (KeyValue keyValue : r.body()) {
                         assertTrue(array.removeIf(kv -> kv.key == keyValue.key && kv.value().equals(keyValue.value())));
@@ -360,6 +415,28 @@ public class RestProxyWithMockTests extends RestProxyTests {
                     assertTrue(array.isEmpty());
                 })
                 .verifyComplete();
+    }
+
+    /**
+     */
+    @Test
+    public void service2getPageThrowsError() {
+        List<KeyValue> array = new ArrayList<>();
+        KeyValue key1 = new KeyValue(1, "Foo");
+        KeyValue key2 = new KeyValue(2, "Bar");
+        KeyValue key3 = new KeyValue(10, "Baz");
+
+        array.add(key1);
+        array.add(key2);
+        array.add(key3);
+        NonComformingPage<KeyValue> page = new NonComformingPage<>(array, "A next link!");
+
+        StepVerifier.create(createService(Service2.class).getPageAsyncThrows(page))
+                .expectErrorMatches(error -> {
+                    assertNotNull(error);
+                    return true;
+                })
+                .verify();
     }
 
     private static class HeaderCollectionTypePublicFields {

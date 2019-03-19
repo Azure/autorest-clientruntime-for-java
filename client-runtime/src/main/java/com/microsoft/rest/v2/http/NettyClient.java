@@ -160,7 +160,6 @@ public final class NettyClient extends HttpClient {
             bootstrap.option(ChannelOption.AUTO_READ, false);
             bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
             bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) TimeUnit.MINUTES.toMillis(3L));
-            bootstrap.option(ChannelOption.SO_TIMEOUT, (int) TimeUnit.MINUTES.toMillis(3L));
             return new SharedChannelPool(bootstrap, config.eventLoopGroup, new AbstractChannelPoolHandler() {
                 @Override
                 public synchronized void channelCreated(Channel ch) throws Exception {

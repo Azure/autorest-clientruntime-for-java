@@ -119,10 +119,10 @@ public class SwaggerMethodParser implements HttpResponseDecodeData {
             if (returnValueWireType == Base64Url.class || returnValueWireType == UnixTime.class || returnValueWireType == DateTimeRfc1123.class) {
                 this.returnValueWireType = returnValueWireType;
             }
-            else {
-                if (TypeUtil.isTypeOrSubTypeOf(returnValueWireType, List.class)) {
-                    this.returnValueWireType = returnValueWireType.getGenericInterfaces()[0];
-                }
+            else if (TypeUtil.isTypeOrSubTypeOf(returnValueWireType, List.class)) {
+                this.returnValueWireType = returnValueWireType.getGenericInterfaces()[0];
+            } else {
+                this.returnValueWireType = returnValueWireType;
             }
         }
 

@@ -6,6 +6,7 @@
 
 package com.azure.common.implementation;
 
+import com.azure.common.http.rest.Page;
 import com.azure.common.implementation.exception.MissingRequiredAnnotationException;
 import com.azure.common.http.rest.RestException;
 import com.azure.common.annotations.BodyParam;
@@ -118,10 +119,9 @@ public class SwaggerMethodParser implements HttpResponseDecodeData {
             Class<?> returnValueWireType = returnValueWireTypeAnnotation.value();
             if (returnValueWireType == Base64Url.class || returnValueWireType == UnixTime.class || returnValueWireType == DateTimeRfc1123.class) {
                 this.returnValueWireType = returnValueWireType;
-            }
-            else if (TypeUtil.isTypeOrSubTypeOf(returnValueWireType, List.class)) {
+            } else if (TypeUtil.isTypeOrSubTypeOf(returnValueWireType, List.class)) {
                 this.returnValueWireType = returnValueWireType.getGenericInterfaces()[0];
-            } else {
+            } else if (TypeUtil.isTypeOrSubTypeOf(returnValueWireType, Page.class)){
                 this.returnValueWireType = returnValueWireType;
             }
         }

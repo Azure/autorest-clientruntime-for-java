@@ -5,7 +5,7 @@ import com.azure.common.http.HttpRequest;
 
 import java.util.List;
 
-public class RestPagedResponseBase<H, T extends Page<T>> implements RestPagedResponse<T> {
+public class RestPagedResponseBase<H, T> implements RestPagedResponse<T> {
     private final HttpRequest request;
     private final int statusCode;
     private final H deserializedHeaders;
@@ -13,21 +13,12 @@ public class RestPagedResponseBase<H, T extends Page<T>> implements RestPagedRes
     private final List<T> items;
     private final String nextLink;
 
-    public RestPagedResponseBase(HttpRequest request, int statusCode, HttpHeaders headers, T body, H deserializedHeaders) {
+    public RestPagedResponseBase(HttpRequest request, int statusCode, HttpHeaders headers, Page<T> page, H deserializedHeaders) {
         this.request = request;
         this.statusCode = statusCode;
         this.headers = headers;
-        this.items = body.items();
-        this.nextLink = body.nextLink();
-        this.deserializedHeaders = deserializedHeaders;
-    }
-
-    public RestPagedResponseBase(HttpRequest request, int statusCode, HttpHeaders headers, List<T> items, String nextLink, H deserializedHeaders) {
-        this.request = request;
-        this.statusCode = statusCode;
-        this.headers = headers;
-        this.items = items;
-        this.nextLink = nextLink;
+        this.items = page.items();
+        this.nextLink = page.nextLink();
         this.deserializedHeaders = deserializedHeaders;
     }
 

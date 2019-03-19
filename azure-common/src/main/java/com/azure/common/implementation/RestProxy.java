@@ -6,6 +6,7 @@
 
 package com.azure.common.implementation;
 
+import com.azure.common.http.rest.Page;
 import com.azure.common.http.rest.RestException;
 import com.azure.common.ServiceClient;
 import com.azure.common.annotations.ResumeOperation;
@@ -405,6 +406,10 @@ public class RestProxy implements InvocationHandler {
             cls = (Class<? extends RestResponse<?>>) (Object) RestResponseBase.class;
         } else if (cls.equals(RestPagedResponse.class)) {
             cls = (Class<? extends RestResponse<?>>) (Object) RestPagedResponseBase.class;
+
+            if (bodyAsObject != null && !TypeUtil.isTypeOrSubTypeOf(bodyAsObject.getClass(), Page.class)) {
+                throw new RuntimeException("Unable to create RestPagedResponse<T>. Body must be of a type that implements: " + Page.class);
+            }
         }
 
         // we try to find the most specific constructor, which we do in the following order:
@@ -470,9 +475,10 @@ public class RestProxy implements InvocationHandler {
             // Mono<Flux<ByteBuf>>
             asyncResult = Mono.just(response.sourceResponse().body());
         } else {
-            // Mono<Object>
+            // Mono<Object> or Mono<Page<T>>
             asyncResult = response.decodedBody();
         }
+
         return asyncResult;
     }
 

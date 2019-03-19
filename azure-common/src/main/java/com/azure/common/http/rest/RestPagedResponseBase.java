@@ -14,11 +14,15 @@ public class RestPagedResponseBase<H, T> implements RestPagedResponse<T> {
     private final String nextLink;
 
     public RestPagedResponseBase(HttpRequest request, int statusCode, HttpHeaders headers, Page<T> page, H deserializedHeaders) {
+        this(request, statusCode, headers, page.items(), page.nextLink(), deserializedHeaders);
+    }
+
+    public RestPagedResponseBase(HttpRequest request, int statusCode, HttpHeaders headers, List<T> items, String nextLink, H deserializedHeaders) {
         this.request = request;
         this.statusCode = statusCode;
         this.headers = headers;
-        this.items = page.items();
-        this.nextLink = page.nextLink();
+        this.items = items;
+        this.nextLink = nextLink;
         this.deserializedHeaders = deserializedHeaders;
     }
 

@@ -24,6 +24,7 @@ import com.azure.common.http.ProxyOptions;
 import com.azure.common.implementation.http.ContentType;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 import wiremock.com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.nio.charset.StandardCharsets;
@@ -262,53 +263,51 @@ public class RestProxyWithMockTests extends RestProxyTests {
         }
     }
 
-    public static class KeyValue {
+    static class KeyValue {
         @JsonProperty("key")
         private int key;
 
         @JsonProperty("value")
         private String value;
 
-        int key() {
-            return this.key;
+        KeyValue() { }
+        KeyValue(int key, String value) {
+            this.key = key;
+            this.value = value;
         }
 
-        void setKey(int key) {
-            this.key = key;
+        int key() {
+            return this.key;
         }
 
         String value() {
             return this.value;
         }
-
-        void setValue(String value) {
-            this.value = value;
-        }
     }
 
-    public static class TestPage implements Page<KeyValue> {
+    static class KeyValuePage implements Page<KeyValue> {
         @JsonProperty()
         private List<KeyValue> items;
 
         @JsonProperty("nextLink")
         private String nextLink;
 
+        KeyValuePage() {
+        }
+
+        KeyValuePage(List<KeyValue> items, String nextLink) {
+            this.items = items;
+            this.nextLink = nextLink;
+        }
+
         @Override
         public List<KeyValue> items() {
             return items;
         }
 
-        void setItems(List<KeyValue> items) {
-            this.items = items;
-        }
-
         @Override
         public String nextLink() {
             return nextLink;
-        }
-
-        void setNextLink(String nextLink) {
-            this.nextLink = nextLink;
         }
     }
 
@@ -316,37 +315,51 @@ public class RestProxyWithMockTests extends RestProxyTests {
     interface Service26 {
         @POST("anything/json")
         @ExpectedResponses({200})
-        RestPagedResponse<TestPage> getPage(@BodyParam(ContentType.APPLICATION_JSON) Page<KeyValue> values);
+        RestPagedResponse<KeyValue> getPage(@BodyParam(ContentType.APPLICATION_JSON) Page<KeyValue> values);
 
         @POST("anything/json")
         @ExpectedResponses({200})
-        Mono<RestPagedResponse<TestPage>> getPageAsync(@BodyParam(ContentType.APPLICATION_JSON) Page<KeyValue> values);
+        Mono<RestPagedResponse<KeyValue>> getPageAsync(@BodyParam(ContentType.APPLICATION_JSON) Page<KeyValue> values);
     }
 
     @Test
     public void service26getPage() {
         List<KeyValue> array = new ArrayList<>();
-        KeyValue key1 = new KeyValue();
-        key1.setKey(1);
-        key1.setValue("Foo");
-
-        KeyValue key2 = new KeyValue();
-        key2.setKey(2);
-        key2.setValue("Bar");
-
-        KeyValue key3 = new KeyValue();
-        key3.setKey(10);
-        key3.setValue("Baz");
+        KeyValue key1 = new KeyValue(1, "Foo");
+        KeyValue key2 = new KeyValue(2, "Bar");
+        KeyValue key3 = new KeyValue(10, "Baz");
 
         array.add(key1);
         array.add(key2);
         array.add(key3);
-        TestPage page = new TestPage();
-        page.setItems(array);
-        page.setNextLink("SomeNextLink");
+        KeyValuePage page = new KeyValuePage(array, "SomeNextLink");
 
-        RestPagedResponse<TestPage> response = createService(Service26.class).getPage(page);
+        RestPagedResponse<KeyValue> response = createService(Service26.class).getPage(page);
         assertNotNull(response);
+        assertEquals(array.size(), response.body().size());
+    }
+
+    @Test
+    public void service26getPageAsync() {
+        List<KeyValue> array = new ArrayList<>();
+        KeyValue key1 = new KeyValue(1, "Foo");
+        KeyValue key2 = new KeyValue(2, "Bar");
+        KeyValue key3 = new KeyValue(10, "Baz");
+
+        array.add(key1);
+        array.add(key2);
+        array.add(key3);
+        KeyValuePage page = new KeyValuePage(array, "SomeNextLink");
+
+        StepVerifier.create(createService(Service26.class).getPageAsync(page))
+                .assertNext(r -> {
+                    assertEquals(r.items().size(), 3);
+                    for (KeyValue keyValue : r.body()) {
+                        assertTrue(array.removeIf(kv -> kv.key == keyValue.key && kv.value().equals(keyValue.value())));
+                    }
+                    assertTrue(array.isEmpty());
+                })
+                .verifyComplete();
     }
 
     private static class HeaderCollectionTypePublicFields {

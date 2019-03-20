@@ -1,6 +1,6 @@
 package com.azure.common;
 
-import com.azure.common.configuration.ConfigurationSettings;
+import com.azure.common.configuration.ClientConfiguration;
 import com.azure.common.credentials.ServiceClientCredentials;
 import com.azure.common.exceptions.InvalidConfigurationException;
 import com.azure.common.http.policy.HttpPipelinePolicy;
@@ -9,15 +9,15 @@ import com.azure.common.http.policy.RetryPolicy;
 import java.util.Objects;
 
 public abstract class ServiceClientBuilder<T extends ServiceClient> {
-    private ConfigurationSettings configurationSettings;
+    private ClientConfiguration clientConfiguration;
 
     protected ServiceClientBuilder() {
-        this.configurationSettings = new ConfigurationSettings();
+        this.clientConfiguration = new ClientConfiguration();
     }
 
     public ServiceClientBuilder withUserAgent(String userAgent) {
         Objects.requireNonNull(userAgent);
-        this.configurationSettings.setUserAgent(userAgent);
+        this.clientConfiguration.setUserAgent(userAgent);
         return this;
     }
 
@@ -28,26 +28,26 @@ public abstract class ServiceClientBuilder<T extends ServiceClient> {
 
     public ServiceClientBuilder withCredentials(ServiceClientCredentials credentials) {
         Objects.requireNonNull(credentials);
-        this.configurationSettings.setCredentials(credentials);
+        this.clientConfiguration.setCredentials(credentials);
         return this;
     }
 
     public ServiceClientBuilder withPolicy(HttpPipelinePolicy policy) {
         Objects.requireNonNull(policy);
-        this.configurationSettings.addPolicy(policy);
+        this.clientConfiguration.addPolicy(policy);
         return this;
     }
 
     public T build() {
-        validateConfiguration(configurationSettings);
-        return onBuild(configurationSettings);
+        validateConfiguration(clientConfiguration);
+        return onBuild(clientConfiguration);
     }
 
-    public ConfigurationSettings defaultConfig() {
-        return new ConfigurationSettings();
+    public ClientConfiguration defaultConfig() {
+        return new ClientConfiguration();
     }
 
-    protected abstract T onBuild(ConfigurationSettings configuration);
+    protected abstract T onBuild(ClientConfiguration configuration);
 
-    protected abstract void validateConfiguration(ConfigurationSettings configuration) throws InvalidConfigurationException;
+    protected abstract void validateConfiguration(ClientConfiguration configuration) throws InvalidConfigurationException;
 }

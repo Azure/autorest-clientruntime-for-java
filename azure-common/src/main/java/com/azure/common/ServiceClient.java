@@ -6,19 +6,14 @@
 
 package com.azure.common;
 
-import com.azure.common.credentials.ServiceClientCredentials;
 import com.azure.common.http.HttpPipeline;
-import com.azure.common.http.policy.HttpPipelinePolicy;
-import com.azure.common.http.policy.RetryPolicy;
 import com.azure.common.implementation.RestProxy;
 import com.azure.common.implementation.serializer.SerializerAdapter;
-
-import java.util.Objects;
 
 /**
  * The base class for REST service clients.
  */
-public abstract class ServiceClient<T extends ServiceClient> {
+public abstract class ServiceClient {
     /**
      * The HTTP pipeline to send requests through.
      */
@@ -54,15 +49,6 @@ public abstract class ServiceClient<T extends ServiceClient> {
         }
         return this.serializerAdapter;
     }
-
-    /**
-     * @return An instance of this service client with its default configuration settings.
-     */
-    public T create(ServiceClientCredentials credentials) {
-        return builder(credentials).build();
-    }
-
-    public abstract ServiceClientBuilder<T> builder(ServiceClientCredentials credentials);
 
     protected SerializerAdapter createSerializerAdapter() {
         return RestProxy.createDefaultSerializer();

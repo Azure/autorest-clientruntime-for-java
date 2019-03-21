@@ -1,6 +1,6 @@
 package com.azure.common.configuration;
 
-import com.azure.common.credentials.ServiceClientCredentials;
+import com.azure.common.credentials.AsyncServiceClientCredentials;
 import com.azure.common.http.HttpClient;
 import com.azure.common.http.policy.HttpLogDetailLevel;
 import com.azure.common.http.policy.HttpPipelinePolicy;
@@ -14,7 +14,7 @@ import java.util.Objects;
 
 public class ClientConfiguration {
     private HttpClient client;
-    private ServiceClientCredentials credentials;
+    private AsyncServiceClientCredentials credentials;
     private String userAgent;
     private RetryPolicy retryPolicy;
     private List<HttpPipelinePolicy> policies;
@@ -31,11 +31,11 @@ public class ClientConfiguration {
         this.loggerFactory = LoggerFactory.getILoggerFactory();
     }
 
-    public ServiceClientCredentials getCredentials() {
+    public AsyncServiceClientCredentials getCredentials() {
         return credentials;
     }
 
-    public ClientConfiguration withCredentials(ServiceClientCredentials credentials) {
+    public ClientConfiguration withCredentials(AsyncServiceClientCredentials credentials) {
         Objects.requireNonNull(credentials);
         this.credentials = credentials;
         return this;

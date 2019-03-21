@@ -1,7 +1,7 @@
 package com.azure.common;
 
 import com.azure.common.configuration.ClientConfiguration;
-import com.azure.common.credentials.ServiceClientCredentials;
+import com.azure.common.credentials.AsyncServiceClientCredentials;
 import com.azure.common.http.policy.HttpLogDetailLevel;
 import com.azure.common.http.policy.HttpPipelinePolicy;
 import com.azure.common.http.policy.RetryPolicy;
@@ -27,7 +27,7 @@ public abstract class ServiceClientBuilder<T extends ServiceClient> {
         return this;
     }
 
-    public ServiceClientBuilder withCredentials(ServiceClientCredentials credentials) {
+    public ServiceClientBuilder withCredentials(AsyncServiceClientCredentials credentials) {
         Objects.requireNonNull(credentials);
         clientConfiguration.withCredentials(credentials);
         return this;

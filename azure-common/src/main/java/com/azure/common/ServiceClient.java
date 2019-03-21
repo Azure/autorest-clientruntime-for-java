@@ -7,7 +7,7 @@
 package com.azure.common;
 
 import com.azure.common.configuration.ClientConfiguration;
-import com.azure.common.credentials.ServiceClientCredentials;
+import com.azure.common.credentials.AsyncServiceClientCredentials;
 import com.azure.common.http.HttpPipeline;
 import com.azure.common.implementation.RestProxy;
 import com.azure.common.implementation.serializer.SerializerAdapter;
@@ -61,7 +61,7 @@ public abstract class ServiceClient {
      * @param credentials Credentials to authorize service with Azure.
      * @return A {@link ClientConfiguration} ServiceClients can use.
      */
-    protected static ClientConfiguration getDefaultConfiguration(ServiceClientCredentials credentials) {
+    protected static ClientConfiguration getDefaultConfiguration(AsyncServiceClientCredentials credentials) {
         return new ClientConfiguration().withCredentials(credentials);
     }
 

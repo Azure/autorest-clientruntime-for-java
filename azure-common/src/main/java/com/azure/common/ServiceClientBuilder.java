@@ -2,6 +2,7 @@ package com.azure.common;
 
 import com.azure.common.configuration.ClientConfiguration;
 import com.azure.common.credentials.ServiceClientCredentials;
+import com.azure.common.http.policy.HttpLogDetailLevel;
 import com.azure.common.http.policy.HttpPipelinePolicy;
 import com.azure.common.http.policy.RetryPolicy;
 
@@ -28,6 +29,11 @@ public abstract class ServiceClientBuilder<T extends ServiceClient> {
     public ServiceClientBuilder withCredentials(ServiceClientCredentials credentials) {
         Objects.requireNonNull(credentials);
         this.clientConfiguration.withCredentials(credentials);
+        return this;
+    }
+
+    public ServiceClientBuilder withHttpLogLevel(HttpLogDetailLevel logLevel) {
+        this.clientConfiguration.withHttpLogLevel(logLevel);
         return this;
     }
 

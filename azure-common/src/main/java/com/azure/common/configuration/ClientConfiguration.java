@@ -2,6 +2,7 @@ package com.azure.common.configuration;
 
 import com.azure.common.credentials.ServiceClientCredentials;
 import com.azure.common.http.HttpClient;
+import com.azure.common.http.policy.HttpLogDetailLevel;
 import com.azure.common.http.policy.HttpPipelinePolicy;
 import com.azure.common.http.policy.RetryPolicy;
 
@@ -15,6 +16,7 @@ public class ClientConfiguration {
     private String userAgent;
     private RetryPolicy retryPolicy;
     private List<HttpPipelinePolicy> policies;
+    private HttpLogDetailLevel httpLogDetailLevel;
 
     /**
      * Gets the default configuration settings
@@ -22,6 +24,7 @@ public class ClientConfiguration {
     public ClientConfiguration() {
         this.retryPolicy = new RetryPolicy();
         this.policies = new ArrayList<>();
+        this.httpLogDetailLevel = HttpLogDetailLevel.NONE;
     }
 
     public ServiceClientCredentials getCredentials() {
@@ -71,6 +74,13 @@ public class ClientConfiguration {
     public ClientConfiguration setHttpClient(HttpClient client) {
         Objects.requireNonNull(client);
         this.client = client;
+        return this;
+    }
+
+    public HttpLogDetailLevel httpLogDetailLevel() { return httpLogDetailLevel; }
+
+    public ClientConfiguration withHttpLogLevel(HttpLogDetailLevel logLevel) {
+        this.httpLogDetailLevel = logLevel;
         return this;
     }
 }

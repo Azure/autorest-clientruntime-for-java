@@ -5,6 +5,8 @@ import com.azure.common.http.HttpClient;
 import com.azure.common.http.policy.HttpLogDetailLevel;
 import com.azure.common.http.policy.HttpPipelinePolicy;
 import com.azure.common.http.policy.RetryPolicy;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +19,7 @@ public class ClientConfiguration {
     private RetryPolicy retryPolicy;
     private List<HttpPipelinePolicy> policies;
     private HttpLogDetailLevel httpLogDetailLevel;
+    private ILoggerFactory loggerFactory;
 
     /**
      * Gets the default configuration settings
@@ -25,6 +28,7 @@ public class ClientConfiguration {
         this.retryPolicy = new RetryPolicy();
         this.policies = new ArrayList<>();
         this.httpLogDetailLevel = HttpLogDetailLevel.NONE;
+        this.loggerFactory = LoggerFactory.getILoggerFactory();
     }
 
     public ServiceClientCredentials getCredentials() {
@@ -81,6 +85,14 @@ public class ClientConfiguration {
 
     public ClientConfiguration withHttpLogLevel(HttpLogDetailLevel logLevel) {
         this.httpLogDetailLevel = logLevel;
+        return this;
+    }
+
+    public ILoggerFactory loggerFactory() { return loggerFactory; }
+
+    public ClientConfiguration withLoggerFactory(ILoggerFactory loggerFactory) {
+        Objects.requireNonNull(loggerFactory);
+        this.loggerFactory = loggerFactory;
         return this;
     }
 }

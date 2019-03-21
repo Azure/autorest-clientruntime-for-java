@@ -5,6 +5,7 @@ import com.azure.common.credentials.ServiceClientCredentials;
 import com.azure.common.http.policy.HttpLogDetailLevel;
 import com.azure.common.http.policy.HttpPipelinePolicy;
 import com.azure.common.http.policy.RetryPolicy;
+import org.slf4j.ILoggerFactory;
 
 import java.util.Objects;
 
@@ -12,12 +13,12 @@ public abstract class ServiceClientBuilder<T extends ServiceClient> {
     private final ClientConfiguration clientConfiguration;
 
     protected ServiceClientBuilder(ClientConfiguration configuration) {
-        this.clientConfiguration = configuration;
+        clientConfiguration = configuration;
     }
 
     public ServiceClientBuilder withUserAgent(String userAgent) {
         Objects.requireNonNull(userAgent);
-        this.clientConfiguration.withUserAgent(userAgent);
+        clientConfiguration.withUserAgent(userAgent);
         return this;
     }
 
@@ -28,18 +29,24 @@ public abstract class ServiceClientBuilder<T extends ServiceClient> {
 
     public ServiceClientBuilder withCredentials(ServiceClientCredentials credentials) {
         Objects.requireNonNull(credentials);
-        this.clientConfiguration.withCredentials(credentials);
+        clientConfiguration.withCredentials(credentials);
         return this;
     }
 
     public ServiceClientBuilder withHttpLogLevel(HttpLogDetailLevel logLevel) {
-        this.clientConfiguration.withHttpLogLevel(logLevel);
+        clientConfiguration.withHttpLogLevel(logLevel);
         return this;
     }
 
     public ServiceClientBuilder withPolicy(HttpPipelinePolicy policy) {
         Objects.requireNonNull(policy);
-        this.clientConfiguration.addPolicy(policy);
+        clientConfiguration.addPolicy(policy);
+        return this;
+    }
+
+    public ServiceClientBuilder withLoggerFactory(ILoggerFactory loggerFactory) {
+        Objects.requireNonNull(loggerFactory);
+        clientConfiguration.withLoggerFactory(loggerFactory);
         return this;
     }
 

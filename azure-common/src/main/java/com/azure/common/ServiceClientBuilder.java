@@ -2,7 +2,6 @@ package com.azure.common;
 
 import com.azure.common.configuration.ClientConfiguration;
 import com.azure.common.credentials.ServiceClientCredentials;
-import com.azure.common.exceptions.InvalidConfigurationException;
 import com.azure.common.http.policy.HttpPipelinePolicy;
 import com.azure.common.http.policy.RetryPolicy;
 
@@ -38,16 +37,9 @@ public abstract class ServiceClientBuilder<T extends ServiceClient> {
         return this;
     }
 
-    public T build() {
-        validateConfiguration(clientConfiguration);
+    public final T build() {
         return onBuild(clientConfiguration);
     }
 
-    public ClientConfiguration defaultConfig() {
-        return new ClientConfiguration();
-    }
-
     protected abstract T onBuild(ClientConfiguration configuration);
-
-    protected abstract void validateConfiguration(ClientConfiguration configuration) throws InvalidConfigurationException;
 }

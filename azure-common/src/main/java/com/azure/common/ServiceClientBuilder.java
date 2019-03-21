@@ -17,7 +17,7 @@ public abstract class ServiceClientBuilder<T extends ServiceClient> {
 
     public ServiceClientBuilder withUserAgent(String userAgent) {
         Objects.requireNonNull(userAgent);
-        this.clientConfiguration.setUserAgent(userAgent);
+        this.clientConfiguration.withUserAgent(userAgent);
         return this;
     }
 
@@ -28,7 +28,7 @@ public abstract class ServiceClientBuilder<T extends ServiceClient> {
 
     public ServiceClientBuilder withCredentials(ServiceClientCredentials credentials) {
         Objects.requireNonNull(credentials);
-        this.clientConfiguration.setCredentials(credentials);
+        this.clientConfiguration.withCredentials(credentials);
         return this;
     }
 

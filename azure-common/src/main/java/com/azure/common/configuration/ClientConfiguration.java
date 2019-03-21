@@ -15,7 +15,7 @@ public class ClientConfiguration {
     private List<HttpPipelinePolicy> policies;
 
     /**
-     * Gets the default configuration settings.
+     * Gets the default configuration settings
      */
     public ClientConfiguration() {
         this.retryPolicy = new RetryPolicy();
@@ -26,36 +26,39 @@ public class ClientConfiguration {
         return credentials;
     }
 
-    public void setCredentials(ServiceClientCredentials credentials) {
+    public ClientConfiguration withCredentials(ServiceClientCredentials credentials) {
         Objects.requireNonNull(credentials);
         this.credentials = credentials;
+        return this;
     }
 
-    public String getUserAgent() {
+    public String userAgent() {
         return userAgent;
     }
 
-    public void setUserAgent(String userAgent) {
+    public ClientConfiguration withUserAgent(String userAgent) {
         Objects.requireNonNull(userAgent);
         this.userAgent = userAgent;
+        return this;
     }
 
-    public RetryPolicy getRetryPolicy() {
+    public RetryPolicy retryPolicy() {
         return retryPolicy;
     }
 
-    public void setRetryPolicy(RetryPolicy retryPolicy) {
+    public ClientConfiguration withRetryPolicy(RetryPolicy retryPolicy) {
         Objects.requireNonNull(retryPolicy);
         this.retryPolicy = retryPolicy;
+        return this;
     }
 
     public List<HttpPipelinePolicy> getPolicies() {
         return policies;
     }
 
-    public void addPolicy(HttpPipelinePolicy policy) {
+    public ClientConfiguration addPolicy(HttpPipelinePolicy policy) {
         Objects.requireNonNull(policy);
         this.policies.add(policy);
+        return this;
     }
-
 }

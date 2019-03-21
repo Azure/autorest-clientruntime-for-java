@@ -1,6 +1,7 @@
 package com.azure.common.configuration;
 
 import com.azure.common.credentials.ServiceClientCredentials;
+import com.azure.common.http.HttpClient;
 import com.azure.common.http.policy.HttpPipelinePolicy;
 import com.azure.common.http.policy.RetryPolicy;
 
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class ClientConfiguration {
+    private HttpClient client;
     private ServiceClientCredentials credentials;
     private String userAgent;
     private RetryPolicy retryPolicy;
@@ -59,6 +61,16 @@ public class ClientConfiguration {
     public ClientConfiguration addPolicy(HttpPipelinePolicy policy) {
         Objects.requireNonNull(policy);
         this.policies.add(policy);
+        return this;
+    }
+
+    public HttpClient getHttpClient() {
+        return client;
+    }
+
+    public ClientConfiguration setHttpClient(HttpClient client) {
+        Objects.requireNonNull(client);
+        this.client = client;
         return this;
     }
 }

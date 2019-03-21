@@ -61,7 +61,7 @@ public abstract class ServiceClient {
      * @param credentials Credentials to authorize service with Azure.
      * @return A {@link ClientConfiguration} ServiceClients can use.
      */
-    protected ClientConfiguration getDefaultConfiguration(ServiceClientCredentials credentials) {
+    protected static ClientConfiguration getDefaultConfiguration(ServiceClientCredentials credentials) {
         return new ClientConfiguration().withCredentials(credentials);
     }
 

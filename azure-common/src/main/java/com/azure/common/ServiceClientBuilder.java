@@ -8,10 +8,10 @@ import com.azure.common.http.policy.RetryPolicy;
 import java.util.Objects;
 
 public abstract class ServiceClientBuilder<T extends ServiceClient> {
-    private ClientConfiguration clientConfiguration;
+    private final ClientConfiguration clientConfiguration;
 
-    protected ServiceClientBuilder() {
-        this.clientConfiguration = new ClientConfiguration();
+    protected ServiceClientBuilder(ClientConfiguration configuration) {
+        this.clientConfiguration = configuration;
     }
 
     public ServiceClientBuilder withUserAgent(String userAgent) {

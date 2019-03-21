@@ -22,7 +22,7 @@ import java.util.Map;
  * Resource management.
  */
 public abstract class AzureTokenCredentials implements AsyncServiceClientCredentials {
-    private static final String SCHEME = "Beareer";
+    private static final String SCHEME = "Bearer";
     private final AzureEnvironment environment;
     private final String domain;
     private String defaultSubscription;

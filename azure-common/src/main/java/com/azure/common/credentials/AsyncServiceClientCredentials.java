@@ -6,6 +6,7 @@
 
 package com.azure.common.credentials;
 
+import com.azure.common.http.HttpRequest;
 import reactor.core.publisher.Mono;
 
 /**
@@ -13,8 +14,8 @@ import reactor.core.publisher.Mono;
  */
 public interface AsyncServiceClientCredentials {
     /**
-     * @param uri The URI to which the request is being made.
-     * @return The value containing currently valid credentials to put in the HTTP header.
+     * @param httpRequest The HTTP request that requires an authorization header.
+     * @return The value containing currently valid credentials to put in the HTTP header, 'Authorization'.
      */
-    Mono<String> authorizationHeaderValueAsync(String uri);
+    Mono<String> authorizationHeaderValueAsync(HttpRequest httpRequest);
 }

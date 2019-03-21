@@ -6,6 +6,8 @@
 
 package com.azure.common;
 
+import com.azure.common.configuration.ClientConfiguration;
+import com.azure.common.credentials.ServiceClientCredentials;
 import com.azure.common.http.HttpPipeline;
 import com.azure.common.implementation.RestProxy;
 import com.azure.common.implementation.serializer.SerializerAdapter;
@@ -48,6 +50,19 @@ public abstract class ServiceClient {
             this.serializerAdapter = createSerializerAdapter();
         }
         return this.serializerAdapter;
+    }
+
+    /**
+     * Gets a working {@link ClientConfiguration} with all of the default values.
+     *
+     * <b>Note</b>
+     * If services require additional configuration to work by default.
+     * They should override this and add additional configuration values.
+     * @param credentials Credentials to authorize service with Azure.
+     * @return A {@link ClientConfiguration} ServiceClients can use.
+     */
+    protected ClientConfiguration getDefaultConfiguration(ServiceClientCredentials credentials) {
+        return new ClientConfiguration().withCredentials(credentials);
     }
 
     protected SerializerAdapter createSerializerAdapter() {

@@ -8,6 +8,8 @@ import com.azure.common.http.policy.RetryPolicy;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -20,6 +22,7 @@ public class ClientConfiguration {
     private List<HttpPipelinePolicy> policies;
     private HttpLogDetailLevel httpLogDetailLevel;
     private ILoggerFactory loggerFactory;
+    private URL serviceEndpoint;
 
     /**
      * Gets the default configuration settings
@@ -93,6 +96,24 @@ public class ClientConfiguration {
     public ClientConfiguration withLoggerFactory(ILoggerFactory loggerFactory) {
         Objects.requireNonNull(loggerFactory);
         this.loggerFactory = loggerFactory;
+        return this;
+    }
+
+    public URL serviceEndpoint() { return serviceEndpoint; }
+
+    public ClientConfiguration withServiceEndpoint(String serviceEndpoint) {
+        Objects.requireNonNull(serviceEndpoint);
+
+        if (serviceEndpoint.equals("")) {
+            throw new IllegalArgumentException("'serviceEndpoint' cannot be empty.");
+        }
+
+        try {
+            this.serviceEndpoint = new URL(serviceEndpoint);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("'serviceEndpoint' is not a valid URL.", e);
+        }
+
         return this;
     }
 }

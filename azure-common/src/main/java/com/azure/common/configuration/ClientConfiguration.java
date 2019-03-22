@@ -45,7 +45,7 @@ public class ClientConfiguration {
      *
      * @return Gets the credentials that will be used by ServiceClient to authenticate with.
      */
-    public AsyncServiceClientCredentials getCredentials() {
+    public AsyncServiceClientCredentials credentials() {
         return credentials;
     }
 

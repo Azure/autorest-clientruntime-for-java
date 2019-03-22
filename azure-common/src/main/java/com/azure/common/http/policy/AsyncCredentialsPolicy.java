@@ -15,14 +15,14 @@ import reactor.core.publisher.Mono;
 import java.util.Objects;
 
 /**
- * Creates a policy which adds credentials from {@link AsyncServiceClientCredentials} the 'Authorization' header of an
- * HTTP request.
+ * Creates a policy which adds credentials from {@link AsyncServiceClientCredentials} to the 'Authorization' header of
+ * each HTTP request.
  */
 public class AsyncCredentialsPolicy implements HttpPipelinePolicy {
     private final AsyncServiceClientCredentials credentials;
 
     /**
-     * Creates CredentialsPolicy.
+     * Creates an {@link AsyncCredentialsPolicy} that authenticates HTTP requests using the given {@param credentials}.
      *
      * @param credentials The credentials to use for authentication.
      */
@@ -31,6 +31,9 @@ public class AsyncCredentialsPolicy implements HttpPipelinePolicy {
         this.credentials = credentials;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Mono<HttpResponse> process(HttpPipelineCallContext context, HttpPipelineNextPolicy next) {
         return credentials.authorizationHeaderValueAsync(context.httpRequest())

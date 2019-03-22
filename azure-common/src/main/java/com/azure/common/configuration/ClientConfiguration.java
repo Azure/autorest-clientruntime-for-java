@@ -78,7 +78,7 @@ public class ClientConfiguration {
         return client;
     }
 
-    public ClientConfiguration setHttpClient(HttpClient client) {
+    public ClientConfiguration withHttpClient(HttpClient client) {
         Objects.requireNonNull(client);
         this.client = client;
         return this;

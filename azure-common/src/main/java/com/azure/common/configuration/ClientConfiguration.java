@@ -55,7 +55,7 @@ public class ClientConfiguration {
      * @param credentials The credentials to use for authenticating HTTP requests.
      * @return The updated ClientConfiguration object.
      */
-    public ClientConfiguration withCredentials(AsyncServiceClientCredentials credentials) {
+    public ClientConfiguration credentials(AsyncServiceClientCredentials credentials) {
         Objects.requireNonNull(credentials);
         this.credentials = credentials;
         return this;
@@ -76,7 +76,7 @@ public class ClientConfiguration {
      * @param userAgent The 'User-Agent' header value to send with requests.
      * @return The updated ClientConfiguration object.
      */
-    public ClientConfiguration withUserAgent(String userAgent) {
+    public ClientConfiguration userAgent(String userAgent) {
         Objects.requireNonNull(userAgent);
         this.userAgent = userAgent;
         return this;
@@ -97,7 +97,7 @@ public class ClientConfiguration {
      * @param retryPolicy The retry policy for service requests.
      * @return The updated ClientConfiguration object.
      */
-    public ClientConfiguration withRetryPolicy(RetryPolicy retryPolicy) {
+    public ClientConfiguration retryPolicy(RetryPolicy retryPolicy) {
         Objects.requireNonNull(retryPolicy);
         this.retryPolicy = retryPolicy;
         return this;
@@ -108,7 +108,7 @@ public class ClientConfiguration {
      *
      * @return The policies to execute for each service request.
      */
-    public List<HttpPipelinePolicy> getPolicies() {
+    public List<HttpPipelinePolicy> policies() {
         return policies;
     }
 
@@ -130,7 +130,7 @@ public class ClientConfiguration {
      *
      * @return The client to send and receive HTTP requests and responses.
      */
-    public HttpClient getHttpClient() {
+    public HttpClient httpClient() {
         return client;
     }
 
@@ -140,7 +140,7 @@ public class ClientConfiguration {
      * @param client The HTTP client to use for requests.
      * @return The updated ClientConfiguration object.
      */
-    public ClientConfiguration withHttpClient(HttpClient client) {
+    public ClientConfiguration httpClient(HttpClient client) {
         Objects.requireNonNull(client);
         this.client = client;
         return this;
@@ -159,7 +159,7 @@ public class ClientConfiguration {
      * @param logLevel The amount of logging output when sending and receiving HTTP requests/responses.
      * @return The updated ClientConfiguration object.
      */
-    public ClientConfiguration withHttpLogLevel(HttpLogDetailLevel logLevel) {
+    public ClientConfiguration httpLogDetailLevel(HttpLogDetailLevel logLevel) {
         this.httpLogDetailLevel = logLevel;
         return this;
     }
@@ -177,7 +177,7 @@ public class ClientConfiguration {
      * @param loggerFactory The LoggerFactory to use for generating Loggers.
      * @return The updated ClientConfiguration object.
      */
-    public ClientConfiguration withLoggerFactory(ILoggerFactory loggerFactory) {
+    public ClientConfiguration loggerFactory(ILoggerFactory loggerFactory) {
         Objects.requireNonNull(loggerFactory);
         this.loggerFactory = loggerFactory;
         return this;
@@ -196,7 +196,7 @@ public class ClientConfiguration {
      * @param serviceEndpoint The URL to the Azure service for making service calls.
      * @return The updated ClientConfiguration object.
      */
-    public ClientConfiguration withServiceEndpoint(String serviceEndpoint) {
+    public ClientConfiguration serviceEndpoint(String serviceEndpoint) {
         Objects.requireNonNull(serviceEndpoint);
 
         if (serviceEndpoint.equals("")) {

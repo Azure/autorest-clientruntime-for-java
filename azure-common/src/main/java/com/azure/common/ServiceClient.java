@@ -6,8 +6,6 @@
 
 package com.azure.common;
 
-import com.azure.common.configuration.ClientConfiguration;
-import com.azure.common.credentials.AsyncServiceClientCredentials;
 import com.azure.common.http.HttpPipeline;
 import com.azure.common.implementation.RestProxy;
 import com.azure.common.implementation.serializer.SerializerAdapter;

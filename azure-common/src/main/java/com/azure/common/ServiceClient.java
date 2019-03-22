@@ -52,19 +52,6 @@ public abstract class ServiceClient {
         return this.serializerAdapter;
     }
 
-    /**
-     * Gets a working {@link ClientConfiguration} with all of the default values.
-     *
-     * <b>Note</b>
-     * If services require additional configuration to work by default.
-     * They should override this and add additional configuration values.
-     * @param credentials Credentials to authorize service with Azure.
-     * @return A {@link ClientConfiguration} ServiceClients can use.
-     */
-    protected static ClientConfiguration getDefaultConfiguration(AsyncServiceClientCredentials credentials) {
-        return new ClientConfiguration().withCredentials(credentials);
-    }
-
     protected SerializerAdapter createSerializerAdapter() {
         return RestProxy.createDefaultSerializer();
     }

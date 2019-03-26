@@ -339,7 +339,7 @@ class SharedChannelPool implements ChannelPool {
     @Override
     public void close() {
         closed = true;
-        while (requests.size() == 0) {
+        while (requests.size() != 0) {
             requests.poll().promise.setFailure(new CancellationException("Channel pool was closed"));
         }
     }

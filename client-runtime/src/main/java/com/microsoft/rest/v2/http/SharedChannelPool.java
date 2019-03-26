@@ -16,10 +16,12 @@ import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.FailedFuture;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.SucceededFuture;
 import io.reactivex.annotations.Nullable;
 import io.reactivex.exceptions.Exceptions;
 import org.slf4j.Logger;
@@ -264,6 +266,9 @@ class SharedChannelPool implements ChannelPool {
     }
 
     private Future<Void> closeChannel(final Channel channel) {
+        if (!channel.isOpen()) {
+            return new SucceededFuture<>(eventLoopGroup.next(), null);
+        }
         channel.attr(CHANNEL_CLOSED_SINCE).set(ZonedDateTime.now(ZoneOffset.UTC));
         logger.debug("Channel initiated to close: " + channel.id());
         // Closing a channel doesn't change the channel count
@@ -288,9 +293,10 @@ class SharedChannelPool implements ChannelPool {
         try {
             Future<Void> closeFuture = closeChannel(channel).addListener(future -> {
                 URI channelUri = channel.attr(CHANNEL_URI).get();
-                leased.remove(channelUri, channel);
-                channelCount.decrementAndGet();
-                logger.debug("Channel closed and released out of pool: " + channel.id());
+                if (leased.remove(channelUri, channel) || available.remove(channelUri, channel)) {
+                    channelCount.decrementAndGet();
+                    logger.debug("Channel closed and released out of pool: " + channel.id());
+                }
                 drain(channelUri);
             });
             return closeFuture;

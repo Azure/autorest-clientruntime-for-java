@@ -462,6 +462,7 @@ public final class NettyClient extends HttpClient {
                     }
                 } else {
                     LOGGER.debug("Channel disposed at state {}", s);
+                    closeAndReleaseChannel();
                     break;
                 }
             }

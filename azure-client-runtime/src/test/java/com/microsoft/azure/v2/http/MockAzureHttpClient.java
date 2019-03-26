@@ -72,7 +72,8 @@ public class MockAzureHttpClient extends HttpClient {
                         final HttpBinJSON json = new HttpBinJSON();
                         json.url = request.url().toString()
                                 // This is just to mimic the behavior we've seen with httpbin.org.
-                                .replace("%20", " ");
+                                .replace("%20", " ")
+                                .replace("http://", "https://");
                         json.headers = toMap(request.headers());
                         response = new MockAzureHttpResponse(200, responseHeaders(), json);
                     }
@@ -90,7 +91,8 @@ public class MockAzureHttpClient extends HttpClient {
                 }
                 else if (requestPathLower.equals("/get")) {
                     final HttpBinJSON json = new HttpBinJSON();
-                    json.url = request.url().toString();
+                    json.url = request.url().toString()
+                            .replace("http://", "https://");
                     json.headers = toMap(request.headers());
                     response = new MockAzureHttpResponse(200, responseHeaders(), json);
                 }
@@ -108,7 +110,8 @@ public class MockAzureHttpClient extends HttpClient {
                 }
                 else if (requestPathLower.equals("/put")) {
                     final HttpBinJSON json = new HttpBinJSON();
-                    json.url = request.url().toString();
+                    json.url = request.url().toString()
+                            .replace("http://", "https://");
                     json.data = bodyToString(request);
                     response = new MockAzureHttpResponse(200, responseHeaders(), json);
                 }

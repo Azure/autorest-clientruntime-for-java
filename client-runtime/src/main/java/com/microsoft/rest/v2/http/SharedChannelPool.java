@@ -16,7 +16,6 @@ import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.FailedFuture;
 import io.netty.util.concurrent.Future;

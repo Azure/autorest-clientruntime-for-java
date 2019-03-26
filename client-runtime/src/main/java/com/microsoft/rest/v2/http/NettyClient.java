@@ -960,7 +960,7 @@ public final class NettyClient extends HttpClient {
         }
 
         /**
-         * Create a Netty client factory, specifying the channel pool options
+         * Create a Netty client factory, specifying the channel pool options.
          *
          * @param options the options to configure the channel pool
          */

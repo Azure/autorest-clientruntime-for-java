@@ -19,6 +19,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * A thread-safe multi map where the values for a certain key are FIFO organized.
  * @param <K> the key type
  * @param <V> the value type
+ *
+ * @deprecated Use {@link ConcurrentMultiDequeMap} instead
  */
 @Deprecated
 public class ConcurrentMultiHashMap<K, V> {

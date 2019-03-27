@@ -8,32 +8,33 @@ package com.microsoft.rest.v2.http;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A thread-safe multi map where the values for a certain key are FIFO organized.
  * @param <K> the key type
  * @param <V> the value type
- *
- * @deprecated Use {@link ConcurrentMultiDequeMap} instead
  */
-@Deprecated
-public class ConcurrentMultiHashMap<K, V> {
-    private final Map<K, ConcurrentLinkedQueue<V>> data;
+public class ConcurrentMultiDequeMap<K, V> {
+    private final Map<K, ConcurrentLinkedDeque<V>> data;
     // Size is the total number of elements in all ConcurrentLinkedQueues in the Map.
     private final AtomicInteger size;
+    // least recently updated keys
+    private final LinkedList<K> lru;
 
     /**
      * Create a concurrent multi hash map.
      */
-    public ConcurrentMultiHashMap() {
-        this.data = Collections.synchronizedMap(new LinkedHashMap<>(16, 0.75f, true));
+    public ConcurrentMultiDequeMap() {
+        this.data = Collections.synchronizedMap(new ConcurrentHashMap<K, ConcurrentLinkedDeque<V>>(16, 0.75f));
         this.size = new AtomicInteger(0);
+        this.lru = new LinkedList<>();
     }
 
     /**
@@ -44,9 +45,14 @@ public class ConcurrentMultiHashMap<K, V> {
      * @return the added value
      */
     public V put(K key, V value) {
+        assert key != null;
         synchronized (size) {
             if (!data.containsKey(key)) {
-                data.put(key, new ConcurrentLinkedQueue<V>());
+                data.put(key, new ConcurrentLinkedDeque<V>());
+                lru.addLast(key);
+            } else {
+                lru.remove(key);
+                lru.addLast(key);
             }
             data.get(key).add(value);
             size.incrementAndGet();
@@ -60,7 +66,7 @@ public class ConcurrentMultiHashMap<K, V> {
      * @param key the key to query
      * @return the queue associated with the key
      */
-    public ConcurrentLinkedQueue<V> get(K key) {
+    public ConcurrentLinkedDeque<V> get(K key) {
         return data.get(key);
     }
 
@@ -70,22 +76,35 @@ public class ConcurrentMultiHashMap<K, V> {
      * @return the item removed from the map
      */
     public V poll() {
+        K key;
         synchronized (size) {
             if (size.get() == 0) {
                 return null;
             } else {
-                K key;
-                synchronized (data) {
-                    Iterator<K> keys = data.keySet().iterator();
-                    key = keys.next();
-                }
-                return poll(key);
+                key = lru.getFirst();
             }
         }
+        return poll(key);
+    }
+    /**
+     * Retrieves and removes one item from the multi map. The item is from
+     * the most recently used key set.
+     * @return the item removed from the map
+     */
+    public V pop() {
+        K key;
+        synchronized (size) {
+            if (size.get() == 0) {
+                return null;
+            } else {
+                key = lru.getLast();
+            }
+        }
+        return pop(key);
     }
 
     /**
-     * Retrieves the least recently used item in the queue for the given key.
+     * Retrieves the least recently used item in the deque for the given key.
      *
      * @param key the key to poll an item
      * @return the least recently used item for the key
@@ -94,14 +113,45 @@ public class ConcurrentMultiHashMap<K, V> {
         if (!data.containsKey(key)) {
             return null;
         } else {
-            ConcurrentLinkedQueue<V> queue = data.get(key);
+            ConcurrentLinkedDeque<V> queue = data.get(key);
             V ret;
             synchronized (size) {
+                if (queue == null || queue.isEmpty()) {
+                    throw new NoSuchElementException("no items under key " + key);
+                }
                 size.decrementAndGet();
                 ret = queue.poll();
+                if (queue.isEmpty()) {
+                    data.remove(key);
+                    lru.remove(key);
+                }
             }
-            if (queue.isEmpty()) {
-                data.remove(key);
+            return ret;
+        }
+    }
+
+    /**
+     * Retrieves the most recently used item in the deque for the given key.
+     *
+     * @param key the key to poll an item
+     * @return the most recently used item for the key
+     */
+    public V pop(K key) {
+        if (!data.containsKey(key)) {
+            return null;
+        } else {
+            ConcurrentLinkedDeque<V> queue = data.get(key);
+            V ret;
+            synchronized (size) {
+                if (queue == null || queue.isEmpty()) {
+                    throw new NoSuchElementException("no items under key " + key);
+                }
+                size.decrementAndGet();
+                ret = queue.pop();
+                if (queue.isEmpty()) {
+                    data.remove(key);
+                    lru.remove(key);
+                }
             }
             return ret;
         }
@@ -161,16 +211,17 @@ public class ConcurrentMultiHashMap<K, V> {
         if (!data.containsKey(key)) {
             return false;
         }
-        ConcurrentLinkedQueue<V> queue = data.get(key);
+        ConcurrentLinkedDeque<V> queue = data.get(key);
         boolean removed;
         synchronized (size) {
             removed = queue.remove(value);
             if (removed) {
                 size.decrementAndGet();
             }
-        }
-        if (queue.isEmpty()) {
-            data.remove(key);
+            if (queue.isEmpty()) {
+                data.remove(key);
+                lru.remove(key);
+            }
         }
         return removed;
     }

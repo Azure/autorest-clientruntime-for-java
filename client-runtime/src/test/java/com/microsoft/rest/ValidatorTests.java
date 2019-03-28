@@ -73,7 +73,6 @@ public class ValidatorTests {
 
     @Test
     public void validateList() throws Exception {
-        System.out.println("Validate List Test");
         ListWrapper body = new ListWrapper();
         try {
             body.list = null;

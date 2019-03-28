@@ -74,7 +74,10 @@ public final class Validator {
             return;
         }
         for (Field field : c.getDeclaredFields()) {
-            field.setAccessible(true);
+            // Skip private and default fields
+            if (!field.trySetAccessible()) {
+                continue;
+            }
             int mod = field.getModifiers();
             // Skip static fields since we don't have any, skip final fields since users can't modify them
             if (Modifier.isFinal(mod) || Modifier.isStatic(mod)) {

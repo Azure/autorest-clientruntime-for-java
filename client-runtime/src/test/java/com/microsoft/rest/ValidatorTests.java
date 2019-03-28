@@ -73,6 +73,7 @@ public class ValidatorTests {
 
     @Test
     public void validateList() throws Exception {
+        System.out.println("Validate List Test");
         ListWrapper body = new ListWrapper();
         try {
             body.list = null;
@@ -82,6 +83,7 @@ public class ValidatorTests {
             Assert.assertTrue(ex.getMessage().contains("list is required"));
         }
         body.list = new ArrayList<StringWrapper>();
+        Validator.validate(body.list); // warns illegal access
         Validator.validate(body); // pass
         StringWrapper wrapper = new StringWrapper();
         wrapper.value = "valid";

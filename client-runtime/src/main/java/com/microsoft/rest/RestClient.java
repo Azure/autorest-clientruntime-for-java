@@ -23,6 +23,7 @@ import okhttp3.Authenticator;
 import okhttp3.ConnectionPool;
 import okhttp3.Dispatcher;
 import okhttp3.Interceptor;
+import okhttp3.JavaNetAuthenticator;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
 import okio.AsyncTimeout;
@@ -455,7 +456,7 @@ public final class RestClient {
          */
         public Builder withProxy(Proxy proxy) {
             httpClientBuilder.proxy(proxy);
-            return this;
+            return withProxyAuthenticator(new JavaNetAuthenticator());
         }
 
         /**

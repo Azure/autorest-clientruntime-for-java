@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ser.BeanSerializer;
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import com.fasterxml.jackson.databind.ser.ResolvableSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
@@ -79,7 +80,7 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
         module.setSerializerModifier(new BeanSerializerModifier() {
             @Override
             public JsonSerializer<?> modifySerializer(SerializationConfig config, BeanDescription beanDesc, JsonSerializer<?> serializer) {
-                if (beanDesc.getBeanClass().getAnnotation(JsonFlatten.class) != null) {
+                if (BeanSerializer.class.isAssignableFrom(serializer.getClass())) {
                     return new FlatteningSerializer(beanDesc.getBeanClass(), serializer, mapper);
                 }
                 return serializer;

@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ser.BeanSerializer;
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import com.fasterxml.jackson.databind.ser.ResolvableSerializer;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
@@ -79,7 +80,7 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
         module.setSerializerModifier(new BeanSerializerModifier() {
             @Override
             public JsonSerializer<?> modifySerializer(SerializationConfig config, BeanDescription beanDesc, JsonSerializer<?> serializer) {
-                if (beanDesc.getBeanClass().getAnnotation(JsonFlatten.class) != null) {
+                if (BeanSerializer.class.isAssignableFrom(serializer.getClass())) {
                     return new FlatteningSerializer(beanDesc.getBeanClass(), serializer, mapper);
                 }
                 return serializer;
@@ -177,13 +178,7 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
                 ObjectNode node = resCurrent;
                 String key = field.getKey();
                 JsonNode outNode = resCurrent.get(key);
-                if (key.matches(".*[^\\\\]\\\\..+")) {
-                    // Handle escaped map key
-                    //
-                    String originalKey = key.replaceAll("\\\\.", ".");
-                    resCurrent.remove(key);
-                    resCurrent.put(originalKey, outNode);
-                } else if (key.matches(".+[^\\\\]\\..+")) {
+                if (key.matches(".+[^\\\\]\\..+")) {
                     // Handle flattening properties
                     //
                     String[] values = key.split("((?<!\\\\))\\.");
@@ -204,6 +199,12 @@ public class FlatteningSerializer extends StdSerializer<Object> implements Resol
                     node.set(values[values.length - 1], resCurrent.get(key));
                     resCurrent.remove(key);
                     outNode = node.get(values[values.length - 1]);
+                } else if (key.matches(".*[^\\\\]\\\\..+")) {
+                    // Handle escaped map key
+                    //
+                    String originalKey = key.replaceAll("\\\\.", ".");
+                    resCurrent.remove(key);
+                    resCurrent.put(originalKey, outNode);
                 }
                 if (field.getValue() instanceof ObjectNode) {
                     source.add((ObjectNode) field.getValue());

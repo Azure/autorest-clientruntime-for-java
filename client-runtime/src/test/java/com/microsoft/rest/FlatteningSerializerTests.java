@@ -15,6 +15,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,19 +59,292 @@ public class FlatteningSerializerTests {
         Assert.assertEquals("{\"teacher\":{\"students\":{\"af.B/D\":{},\"af.B/C\":{}}},\"tags\":{\"foo.aa\":\"bar\",\"x.y\":\"zz\"},\"properties\":{\"name\":\"school1\"}}", serialized);
     }
 
+    /**
+     * Validates that decoding and encoding of a type with type id containing dot and can be done.
+     * For decoding and encoding base type will be used.
+     *
+     * @throws IOException
+     */
     @Test
-    public void canHandleTypeDotDiscriminator() throws IOException {
+    public void canHandleTypeWithTypeIdContainingDot0() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        // Serialize
+        //
         List<String> meals = new ArrayList<>();
         meals.add("carrot");
         meals.add("apple");
         //
-        FlattenableAnimal animal = new FlattenableRabbit().withMeals(meals);
-        JacksonAdapter adapter = new JacksonAdapter();
-        String serialized = adapter.serialize(animal);
+        AnimalWithTypeIdContainingDot animalToSerialize = new RabbitWithTypeIdContainingDot().withMeals(meals);
+        String serialized = adapter.serialize(animalToSerialize);
         //
         String[] results = {
-                "{\"meals\":[\"carrot\",\"apple\"],\"@odata.type\":\"#Favourite.Pet.FlattenableRabbit\"}",
-                "{\"@odata.type\":\"#Favourite.Pet.FlattenableRabbit\",\"meals\":[\"carrot\",\"apple\"]}"
+                "{\"meals\":[\"carrot\",\"apple\"],\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\"}",
+                "{\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\",\"meals\":[\"carrot\",\"apple\"]}"
+        };
+        boolean found = false;
+        for (String result : results) {
+            if (result.equals(serialized)) {
+                found = true;
+                break;
+            }
+        }
+         Assert.assertTrue(found);
+        // De-Serialize
+        //
+        AnimalWithTypeIdContainingDot animalDeserialized = adapter.deserialize(serialized, AnimalWithTypeIdContainingDot.class);
+        Assert.assertTrue(animalDeserialized instanceof RabbitWithTypeIdContainingDot);
+        RabbitWithTypeIdContainingDot rabbit = (RabbitWithTypeIdContainingDot) animalDeserialized;
+        Assert.assertNotNull(rabbit.meals());
+        Assert.assertEquals(rabbit.meals().size(), 2);
+    }
+
+    /**
+     * Validates that decoding and encoding of a type with type id containing dot and can be done.
+     * For decoding and encoding concrete type will be used.
+     *
+     * @throws IOException
+     */
+    @Test
+    public void canHandleTypeWithTypeIdContainingDot1() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        // Serialize
+        //
+        List<String> meals = new ArrayList<>();
+        meals.add("carrot");
+        meals.add("apple");
+        //
+        RabbitWithTypeIdContainingDot rabbitToSerialize = new RabbitWithTypeIdContainingDot().withMeals(meals);
+        String serialized = adapter.serialize(rabbitToSerialize);
+        //
+        String[] results = {
+                "{\"meals\":[\"carrot\",\"apple\"],\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\"}",
+                "{\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\",\"meals\":[\"carrot\",\"apple\"]}"
+        };
+        boolean found = false;
+        for (String result : results) {
+            if (result.equals(serialized)) {
+                found = true;
+                break;
+            }
+        }
+        Assert.assertTrue(found);
+        // De-Serialize
+        //
+        RabbitWithTypeIdContainingDot rabbitDeserialized = adapter.deserialize(serialized, RabbitWithTypeIdContainingDot.class);
+        Assert.assertTrue(rabbitDeserialized instanceof RabbitWithTypeIdContainingDot);
+        Assert.assertNotNull(rabbitDeserialized.meals());
+        Assert.assertEquals(rabbitDeserialized.meals().size(), 2);
+    }
+
+
+    /**
+     * Validates that decoding and encoding of a type with flattenable property and type id containing dot and can be done.
+     * For decoding and encoding base type will be used.
+     *
+     * @throws IOException
+     */
+    @Test
+    public void canHandleTypeWithFlattenablePropertyAndTypeIdContainingDot0() throws IOException {
+        AnimalWithTypeIdContainingDot animalToSerialize = new DogWithTypeIdContainingDot().withBreed("AKITA").withCuteLevel(10);
+        JacksonAdapter adapter = new JacksonAdapter();
+        // serialization
+        String serialized = adapter.serialize(animalToSerialize);
+        String[] results = {
+                "{\"breed\":\"AKITA\",\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\",\"properties\":{\"cuteLevel\":10}}",
+                "{\"breed\":\"AKITA\",\"properties\":{\"cuteLevel\":10},\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\"}",
+                "{\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\",\"breed\":\"AKITA\",\"properties\":{\"cuteLevel\":10}}",
+                "{\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\",\"properties\":{\"cuteLevel\":10},\"breed\":\"AKITA\"}",
+                "{\"properties\":{\"cuteLevel\":10},\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\",\"breed\":\"AKITA\"}",
+                "{\"properties\":{\"cuteLevel\":10},\"breed\":\"AKITA\",\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\"}",
+        };
+        boolean found = false;
+        for (String result : results) {
+            if (result.equals(serialized)) {
+                found = true;
+                break;
+            }
+        }
+        Assert.assertTrue(found);
+        // de-serialization
+        AnimalWithTypeIdContainingDot animalDeserialized = adapter.deserialize(serialized, AnimalWithTypeIdContainingDot.class);
+        Assert.assertTrue(animalDeserialized instanceof DogWithTypeIdContainingDot);
+        DogWithTypeIdContainingDot dogDeserialized = (DogWithTypeIdContainingDot) animalDeserialized;
+        Assert.assertNotNull(dogDeserialized);
+        Assert.assertEquals(dogDeserialized.breed(), "AKITA");
+        Assert.assertEquals(dogDeserialized.cuteLevel(), (Integer) 10);
+    }
+
+    /**
+     * Validates that decoding and encoding of a type with flattenable property and type id containing dot and can be done.
+     * For decoding and encoding concrete type will be used.
+     *
+     * @throws IOException
+     */
+    @Test
+    public void canHandleTypeWithFlattenablePropertyAndTypeIdContainingDot1() throws IOException {
+        DogWithTypeIdContainingDot dogToSerialize = new DogWithTypeIdContainingDot().withBreed("AKITA").withCuteLevel(10);
+        JacksonAdapter adapter = new JacksonAdapter();
+        // serialization
+        String serialized = adapter.serialize(dogToSerialize);
+        String[] results = {
+                "{\"breed\":\"AKITA\",\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\",\"properties\":{\"cuteLevel\":10}}",
+                "{\"breed\":\"AKITA\",\"properties\":{\"cuteLevel\":10},\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\"}",
+                "{\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\",\"breed\":\"AKITA\",\"properties\":{\"cuteLevel\":10}}",
+                "{\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\",\"properties\":{\"cuteLevel\":10},\"breed\":\"AKITA\"}",
+                "{\"properties\":{\"cuteLevel\":10},\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\",\"breed\":\"AKITA\"}",
+                "{\"properties\":{\"cuteLevel\":10},\"breed\":\"AKITA\",\"@odata.type\":\"#Favourite.Pet.DogWithTypeIdContainingDot\"}",
+        };
+        boolean found = false;
+        for (String result : results) {
+            if (result.equals(serialized)) {
+                found = true;
+                break;
+            }
+        }
+        Assert.assertTrue(found);
+        // de-serialization
+        DogWithTypeIdContainingDot dogDeserialized = adapter.deserialize(serialized, DogWithTypeIdContainingDot.class);
+        Assert.assertNotNull(dogDeserialized);
+        Assert.assertEquals(dogDeserialized.breed(), "AKITA");
+        Assert.assertEquals(dogDeserialized.cuteLevel(), (Integer) 10);
+    }
+
+    /**
+     * Validates that decoding and encoding of a array of type with type id containing dot and can be done.
+     * For decoding and encoding base type will be used.
+     *
+     * @throws IOException
+     */
+    @Test
+    public void canHandleArrayOfTypeWithTypeIdContainingDot0() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        // Serialize
+        //
+        List<String> meals = new ArrayList<>();
+        meals.add("carrot");
+        meals.add("apple");
+        //
+        AnimalWithTypeIdContainingDot animalToSerialize = new RabbitWithTypeIdContainingDot().withMeals(meals);
+        List<AnimalWithTypeIdContainingDot> animalsToSerialize = new ArrayList<>();
+        animalsToSerialize.add(animalToSerialize);
+        String serialized = adapter.serialize(animalsToSerialize);
+        String[] results = {
+                "[{\"meals\":[\"carrot\",\"apple\"],\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\"}]",
+                "[{\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\",\"meals\":[\"carrot\",\"apple\"]}]",
+        };
+        boolean found = false;
+        for (String result : results) {
+            if (result.equals(serialized)) {
+                found = true;
+                break;
+            }
+        }
+        Assert.assertTrue(found);
+        // De-serialize
+        //
+        List<AnimalWithTypeIdContainingDot> animalsDeserialized = adapter.deserialize(serialized, new ParameterizedType() {
+            @Override
+            public Type[] getActualTypeArguments() {
+                return new Type[] { AnimalWithTypeIdContainingDot.class };
+            }
+
+            @Override
+            public Type getRawType() {
+                return List.class;
+            }
+
+            @Override
+            public Type getOwnerType() {
+                return null;
+            }
+        });
+        Assert.assertNotNull(animalsDeserialized);
+        Assert.assertEquals(1, animalsDeserialized.size());
+        AnimalWithTypeIdContainingDot animalDeserialized = animalsDeserialized.get(0);
+        Assert.assertTrue(animalDeserialized instanceof RabbitWithTypeIdContainingDot);
+        RabbitWithTypeIdContainingDot rabbitDeserialized = (RabbitWithTypeIdContainingDot) animalDeserialized;
+        Assert.assertNotNull(rabbitDeserialized.meals());
+        Assert.assertEquals(rabbitDeserialized.meals().size(), 2);
+    }
+
+    /**
+     * Validates that decoding and encoding of a array of type with type id containing dot and can be done.
+     * For decoding and encoding concrete type will be used.
+     *
+     * @throws IOException
+     */
+    @Test
+    public void canHandleArrayOfTypeWithTypeIdContainingDot1() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        // Serialize
+        //
+        List<String> meals = new ArrayList<>();
+        meals.add("carrot");
+        meals.add("apple");
+        //
+        RabbitWithTypeIdContainingDot rabbitToSerialize = new RabbitWithTypeIdContainingDot().withMeals(meals);
+        List<RabbitWithTypeIdContainingDot> rabbitsToSerialize = new ArrayList<>();
+        rabbitsToSerialize.add(rabbitToSerialize);
+        String serialized = adapter.serialize(rabbitsToSerialize);
+        String[] results = {
+                "[{\"meals\":[\"carrot\",\"apple\"],\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\"}]",
+                "[{\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\",\"meals\":[\"carrot\",\"apple\"]}]",
+        };
+        boolean found = false;
+        for (String result : results) {
+            if (result.equals(serialized)) {
+                found = true;
+                break;
+            }
+        }
+        Assert.assertTrue(found);
+        // De-serialize
+        //
+        List<RabbitWithTypeIdContainingDot> rabbitsDeserialized = adapter.deserialize(serialized, new ParameterizedType() {
+            @Override
+            public Type[] getActualTypeArguments() {
+                return new Type[] { RabbitWithTypeIdContainingDot.class };
+            }
+
+            @Override
+            public Type getRawType() {
+                return List.class;
+            }
+
+            @Override
+            public Type getOwnerType() {
+                return null;
+            }
+        });
+        Assert.assertNotNull(rabbitsDeserialized);
+        Assert.assertEquals(1, rabbitsDeserialized.size());
+        RabbitWithTypeIdContainingDot rabbitDeserialized = rabbitsDeserialized.get(0);
+        Assert.assertNotNull(rabbitDeserialized.meals());
+        Assert.assertEquals(rabbitDeserialized.meals().size(), 2);
+    }
+
+
+    /**
+     * Validates that decoding and encoding of a composed type with type id containing dot and can be done.
+     *
+     * @throws IOException
+     */
+    @Test
+    public void canHandleComposedTypeWithTypeIdContainingDot0() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        // serialization
+        //
+        List<String> meals = new ArrayList<>();
+        meals.add("carrot");
+        meals.add("apple");
+        AnimalWithTypeIdContainingDot animalToSerialize = new RabbitWithTypeIdContainingDot().withMeals(meals);
+        FlattenableAnimalInfo animalInfoToSerialize = new FlattenableAnimalInfo().withAnimal(animalToSerialize);
+        List<FlattenableAnimalInfo> animalsInfoSerialized = ImmutableList.of(animalInfoToSerialize);
+        AnimalShelter animalShelterToSerialize = new AnimalShelter().withAnimalsInfo(animalsInfoSerialized);
+        String serialized = adapter.serialize(animalShelterToSerialize);
+        String[] results = {
+                "{\"properties\":{\"animalsInfo\":[{\"animal\":{\"meals\":[\"carrot\",\"apple\"],\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\"}}]}}",
+                "{\"properties\":{\"animalsInfo\":[{\"animal\":{\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\",\"meals\":[\"carrot\",\"apple\"]}}]}}",
         };
 
         boolean found = false;
@@ -80,78 +355,49 @@ public class FlatteningSerializerTests {
             }
         }
         Assert.assertTrue(found);
+        // de-serialization
         //
-        animal = adapter.deserialize(serialized, FlattenableAnimal.class);
-        Assert.assertTrue(animal instanceof FlattenableRabbit);
-        FlattenableRabbit rabbit = (FlattenableRabbit) animal;
-        Assert.assertNotNull(rabbit.meals());
-        Assert.assertEquals(rabbit.meals().size(), 2);
+        AnimalShelter shelterDeserialized = adapter.deserialize(serialized, AnimalShelter.class);
+        Assert.assertNotNull(shelterDeserialized.animalsInfo());
+        Assert.assertEquals(shelterDeserialized.animalsInfo().size(), 1);
+        FlattenableAnimalInfo animalsInfoDeserialized = shelterDeserialized.animalsInfo().get(0);
+        Assert.assertTrue(animalsInfoDeserialized.animal() instanceof RabbitWithTypeIdContainingDot);
+        AnimalWithTypeIdContainingDot animalDeserialized = animalsInfoDeserialized.animal();
+        Assert.assertTrue(animalDeserialized instanceof RabbitWithTypeIdContainingDot);
+        RabbitWithTypeIdContainingDot rabbitDeserialized = (RabbitWithTypeIdContainingDot) animalDeserialized;
+        Assert.assertNotNull(rabbitDeserialized);
+        Assert.assertNotNull(rabbitDeserialized.meals());
+        Assert.assertEquals(rabbitDeserialized.meals().size(), 2);
     }
 
     @Test
-    public void Foo2() throws IOException {
-        Map<Integer, Integer> d = new HashMap<>();
-        d.put(88, 99);
-        JacksonAdapter adapter = new JacksonAdapter();
-        adapter.serialize(d);
-    }
-
-    @Test
-    public void canHandlePropertyTypeWithDotDiscriminator() throws IOException {
-        //
-        List<String> meals = new ArrayList<>();
-        meals.add("carrot");
-        meals.add("apple");
-
-        FlattenableAnimal animal = new FlattenableRabbit().withMeals(meals);
-        FlattenableAnimalInfo transformOutput = new FlattenableAnimalInfo().withAnimal(animal);
-        List<FlattenableAnimalInfo> animalsInfo = ImmutableList.of(transformOutput);
-        AnimalShelter shelter = new AnimalShelter().withAnimalsInfo(animalsInfo);
-        JacksonAdapter adapter = new JacksonAdapter();
-        String serialized = adapter.serialize(shelter);
-        System.out.println(serialized);
-        //
-//        JacksonAdapter adapter = new JacksonAdapter();
-//        String serialized = adapter.serialize(animal);
-//        Assert.assertEquals(serialized, "{\"@odata.type\":\"#Favourite.Pet.FlattenableRabbit\",\"meals\":[\"carrot\",\"apple\"]}");
-//        //
-//        animal = adapter.deserialize(serialized, FlattenableAnimal.class);
-//        Assert.assertTrue(animal instanceof FlattenableRabbit);
-//        FlattenableRabbit rabbit = (FlattenableRabbit) animal;
-//        Assert.assertNotNull(rabbit.meals());
-//        Assert.assertEquals(rabbit.meals().size(), 2);
-    }
-
-    @Test
-    public void shouldSkipDiscriminator6() throws IOException {
-        List<String> codecs = new ArrayList<>();
-        codecs.add("A");
-        codecs.add("B");
-        codecs.add("C");
-
-        FlattenableAnimal preset = new FlattenableRabbit().withMeals(codecs);
-        FlattenableAnimalInfo transformOutput = new FlattenableAnimalInfo().withAnimal(preset);
-        List<FlattenableAnimalInfo> transformOutputs = ImmutableList.of(transformOutput);
-        AnimalShelter inner = new AnimalShelter().withAnimalsInfo(transformOutputs);
-        //
+    public void canHandleEscapedProperties() throws IOException {
+        FlattenedProduct productToSerialize = new FlattenedProduct();
+        productToSerialize.withProductName("drink");
+        productToSerialize.withPType("chai");
         JacksonAdapter adapter = new JacksonAdapter();
         // serialization
-        String serialized = adapter.serialize(inner);
-        System.out.println(serialized);
+        //
+        String serialized = adapter.serialize(productToSerialize);
+        String[] results = {
+                "{\"properties\":{\"p.name\":\"drink\",\"type\":\"chai\"}}",
+                "{\"properties\":{\"type\":\"chai\",\"p.name\":\"drink\"}}",
+        };
 
-        AnimalShelter t = adapter.deserialize(serialized, AnimalShelter.class);
-        // Assert.assertTrue(p instanceof FlattenableRabbit);
-    }
-
-    @Test
-    public void Foo() throws IOException {
-        FlattenedProduct p = new FlattenedProduct();
-        p.withPname("wwwww");
-        p.withFlattenedProductType("chai");
-        JacksonAdapter adapter = new JacksonAdapter();
-        // serialization
-        String serialized = adapter.serialize(p);
-        System.out.println(serialized);
+        boolean found = false;
+        for (String result : results) {
+            if (result.equals(serialized)) {
+                found = true;
+                break;
+            }
+        }
+        Assert.assertTrue(found);
+        // de-serialization
+        //
+        FlattenedProduct productDeserialized = adapter.deserialize(serialized, FlattenedProduct.class);
+        Assert.assertNotNull(productDeserialized);
+        Assert.assertEquals(productDeserialized.productName(), "drink");
+        Assert.assertEquals(productDeserialized.productType, "chai");
     }
 
     @JsonFlatten
@@ -217,98 +463,28 @@ public class FlatteningSerializerTests {
 
     @JsonFlatten
     public static class FlattenedProduct {
-        /**
-         * The pname property.
-         */
+        // Flattened and escaped property
         @JsonProperty(value = "properties.p\\.name")
-        private String pname;
+        private String productName;
 
-        /**
-         * The flattenedProductType property.
-         */
         @JsonProperty(value = "properties.type")
-        private String flattenedProductType;
+        private String productType;
 
-        /**
-         * Possible values include: 'Succeeded', 'Failed', 'canceled', 'Accepted',
-         * 'Creating', 'Created', 'Updating', 'Updated', 'Deleting', 'Deleted',
-         * 'OK'.
-         */
-        @JsonProperty(value = "properties.provisioningStateValues", access = JsonProperty.Access.WRITE_ONLY)
-        private String provisioningStateValues;
-
-        /**
-         * The provisioningState property.
-         */
-        @JsonProperty(value = "properties.provisioningState")
-        private String provisioningState;
-
-        /**
-         * Get the pname value.
-         *
-         * @return the pname value
-         */
-        public String pname() {
-            return this.pname;
+        public String productName() {
+            return this.productName;
         }
 
-        /**
-         * Set the pname value.
-         *
-         * @param pname the pname value to set
-         * @return the FlattenedProduct object itself.
-         */
-        public FlattenedProduct withPname(String pname) {
-            this.pname = pname;
+        public FlattenedProduct withProductName(String productName) {
+            this.productName = productName;
             return this;
         }
 
-        /**
-         * Get the flattenedProductType value.
-         *
-         * @return the flattenedProductType value
-         */
-        public String flattenedProductType() {
-            return this.flattenedProductType;
+        public String productType() {
+            return this.productType;
         }
 
-        /**
-         * Set the flattenedProductType value.
-         *
-         * @param flattenedProductType the flattenedProductType value to set
-         * @return the FlattenedProduct object itself.
-         */
-        public FlattenedProduct withFlattenedProductType(String flattenedProductType) {
-            this.flattenedProductType = flattenedProductType;
-            return this;
-        }
-
-        /**
-         * Get possible values include: 'Succeeded', 'Failed', 'canceled', 'Accepted', 'Creating', 'Created', 'Updating', 'Updated', 'Deleting', 'Deleted', 'OK'.
-         *
-         * @return the provisioningStateValues value
-         */
-        public String provisioningStateValues() {
-            return this.provisioningStateValues;
-        }
-
-        /**
-         * Get the provisioningState value.
-         *
-         * @return the provisioningState value
-         */
-        public String provisioningState() {
-            return this.provisioningState;
-        }
-
-        /**
-         * Set the provisioningState value.
-         *
-         * @param provisioningState the provisioningState value to set
-         * @return the FlattenedProduct object itself.
-         */
-        public FlattenedProduct withProvisioningState(String provisioningState) {
-            this.provisioningState = provisioningState;
+        public FlattenedProduct withPType(String productType) {
+            this.productType = productType;
             return this;
         }
     }

@@ -21,14 +21,13 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializer;
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.jsontype.TypeDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.reflect.TypeToken;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Iterator;
-import java.util.Map;
 
 /**
  * Custom serializer for deserializing complex types with wrapped properties.
@@ -71,6 +70,7 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
             @Override
             public JsonDeserializer<?> modifyDeserializer(DeserializationConfig config, BeanDescription beanDesc, JsonDeserializer<?> deserializer) {
                 if (BeanDeserializer.class.isAssignableFrom(deserializer.getClass())) {
+                    // Apply flattening deserializer on all POJO types.
                     return new FlatteningDeserializer(beanDesc.getBeanClass(), deserializer, mapper);
                 } else {
                     return deserializer;
@@ -82,69 +82,58 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
 
     @SuppressWarnings("unchecked")
     @Override
-    public Object deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
-        // This method will be called by Jackson for each Json object in the input wire stream
-        // it is trying to deserialize. The below variable 'currentJsonNode' will hold the
-        // JsonNode corresponds to current Json object this method is called to handle.
+    public Object deserializeWithType(JsonParser jp, DeserializationContext cxt, TypeDeserializer tDeserializer) throws IOException {
+        // This method will be called by Jackson for each "Json object with TypeId" in the input wire stream
+        // it is trying to deserialize.
+        // The below variable 'currentJsonNode' will hold the JsonNode corresponds to current
+        // Json object this method is called to handle.
         //
         JsonNode currentJsonNode = mapper.readTree(jp);
         final Class<?> tClass = this.defaultDeserializer.handledType();
         for (Class<?> c : TypeToken.of(tClass).getTypes().classes().rawTypes()) {
-            // Ignore checks for Object type.
             if (c.isAssignableFrom(Object.class)) {
                 continue;
-            }
-            //
-            for (Field classField : c.getDeclaredFields()) {
-                handleJsonTypeInfoForField(classField, currentJsonNode);
-                handleFlatteningForField(classField, currentJsonNode);
-            }
-        }
-        JsonParser parser = new JsonFactory().createParser(currentJsonNode.toString());
-        parser.nextToken();
-        return defaultDeserializer.deserialize(parser, ctxt);
-    }
-
-    @Override
-    public void resolve(DeserializationContext ctxt) throws JsonMappingException {
-        ((ResolvableDeserializer) defaultDeserializer).resolve(ctxt);
-    }
-
-    /**
-     * Given a field of a POJO class and JsonNode corresponds to the same POJO class,
-     * check field Type has discriminator defined via {@link JsonTypeInfo} if so
-     * find the nested child JsonNode in given JsonNode corresponds to the field and
-     * escape the discriminator key in it.
-     *
-     * @param classField the field in a POJO class
-     * @param jsonNode the json node corresponds to POJO class that field belongs to
-     */
-    private static void handleJsonTypeInfoForField(Field classField, JsonNode jsonNode) {
-        final JsonProperty jsonProperty = classField.getAnnotation(JsonProperty.class);
-        if (jsonProperty != null) {
-            final JsonTypeInfo typeInfo = classField.getType().getAnnotation(com.fasterxml.jackson.annotation.JsonTypeInfo.class);
-            if (typeInfo != null) {
-                String discriminatorKey = typeInfo.property();
-                if (discriminatorKey != null && discriminatorKey != "" && discriminatorKey.contains(".")) {
-                    JsonNode childJsonNode = findNestedNode(jsonNode, jsonProperty.value());
-                    if (childJsonNode != null) {
-                        final String discriminatorKeyOnWire = unescapeEscapedDotsInKey(discriminatorKey);
-                        Iterator<Map.Entry<String, JsonNode>> jsonFields = childJsonNode.fields();
-                        while (jsonFields.hasNext()) {
-                            Map.Entry<String, JsonNode> jsonField = jsonFields.next();
-                            String fieldKey = jsonField.getKey();
-                            if (discriminatorKeyOnWire.equalsIgnoreCase(fieldKey)) {
-                                JsonNode discriminatorValue = ((ObjectNode) childJsonNode).remove(fieldKey);
-                                if (discriminatorValue != null) {
-                                    ((ObjectNode) childJsonNode).put(discriminatorKey, discriminatorValue);
-                                }
-                                break;
-                            }
+            } else {
+                final JsonTypeInfo typeInfo = c.getAnnotation(com.fasterxml.jackson.annotation.JsonTypeInfo.class);
+                if (typeInfo != null) {
+                    String typeId = typeInfo.property();
+                    if (containsDot(typeId)) {
+                        final String typeIdOnWire = unescapeEscapedDots(typeId);
+                        JsonNode typeIdValue = ((ObjectNode) currentJsonNode).remove(typeIdOnWire);
+                        if (typeIdValue != null) {
+                            ((ObjectNode) currentJsonNode).put(typeId, typeIdValue);
                         }
                     }
                 }
             }
         }
+        return tDeserializer.deserializeTypedFromAny(newJsonParserForNode(currentJsonNode), cxt);
+    }
+
+    @Override
+    public Object deserialize(JsonParser jp, DeserializationContext cxt) throws IOException {
+        // This method will be called by Jackson for each "Json object" in the input wire stream
+        // it is trying to deserialize.
+        // The below variable 'currentJsonNode' will hold the JsonNode corresponds to current
+        // Json object this method is called to handle.
+        //
+        JsonNode currentJsonNode = mapper.readTree(jp);
+        final Class<?> tClass = this.defaultDeserializer.handledType();
+        for (Class<?> c : TypeToken.of(tClass).getTypes().classes().rawTypes()) {
+            if (c.isAssignableFrom(Object.class)) {
+                continue;
+            } else {
+                for (Field classField : c.getDeclaredFields()) {
+                    handleFlatteningForField(classField, currentJsonNode);
+                }
+            }
+        }
+        return this.defaultDeserializer.deserialize(newJsonParserForNode(currentJsonNode), cxt);
+    }
+
+    @Override
+    public void resolve(DeserializationContext cxt) throws JsonMappingException {
+        ((ResolvableDeserializer) this.defaultDeserializer).resolve(cxt);
     }
 
     /**
@@ -155,6 +144,7 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
      * @param classField the field in a POJO class
      * @param jsonNode the json node corresponds to POJO class that field belongs to
      */
+    @SuppressWarnings("unchecked")
     private static void handleFlatteningForField(Field classField, JsonNode jsonNode) {
         final JsonProperty jsonProperty = classField.getAnnotation(JsonProperty.class);
         if (jsonProperty != null) {
@@ -176,9 +166,9 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
      * @return nested json node located using given composed key
      */
     private static JsonNode findNestedNode(JsonNode jsonNode, String composedKey) {
-        String [] jsonNodeKeys = splitKeyByFlatteningDots(composedKey);
+        String[] jsonNodeKeys = splitKeyByFlatteningDots(composedKey);
         for (String jsonNodeKey : jsonNodeKeys) {
-            jsonNode = jsonNode.get(unescapeEscapedDotsInKey(jsonNodeKey));
+            jsonNode = jsonNode.get(unescapeEscapedDots(jsonNodeKey));
             if (jsonNode == null) {
                 return null;
             }
@@ -215,8 +205,30 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
      * @param key the key unescape
      * @return unescaped key
      */
-    private static String unescapeEscapedDotsInKey(String key) {
+    private static String unescapeEscapedDots(String key) {
         // Replace '\.' with '.'
         return key.replace("\\.", ".");
+    }
+
+    /**
+     * Checks the given string contains 0 or more dots.
+     *
+     * @param str the string to check
+     * @return true if at least one dot found
+     */
+    private static boolean containsDot(String str) {
+       return str != null && str != "" && str.contains(".");
+    }
+
+    /**
+     * Create a JsonParser for a given json node.
+     * @param jsonNode the json node
+     * @return the json parser
+     * @throws IOException
+     */
+    private static JsonParser newJsonParserForNode(JsonNode jsonNode) throws IOException {
+        JsonParser parser = new JsonFactory().createParser(jsonNode.toString());
+        parser.nextToken();
+        return parser;
     }
 }

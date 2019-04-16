@@ -8,9 +8,9 @@ public class FlattenableAnimalInfo {
     private String home;
 
     @JsonProperty(value = "animal", required = true)
-    private FlattenableAnimal animal;
+    private AnimalWithTypeIdContainingDot animal;
 
-    public String relativePriority() {
+    public String home() {
         return this.home;
     }
 
@@ -19,11 +19,11 @@ public class FlattenableAnimalInfo {
         return this;
     }
 
-    public FlattenableAnimal home() {
+    public AnimalWithTypeIdContainingDot animal() {
         return this.animal;
     }
 
-    public FlattenableAnimalInfo withAnimal(FlattenableAnimal animal) {
+    public FlattenableAnimalInfo withAnimal(AnimalWithTypeIdContainingDot animal) {
         this.animal = animal;
         return this;
     }

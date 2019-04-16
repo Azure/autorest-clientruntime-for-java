@@ -7,8 +7,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@odata\\.type")
-@JsonTypeName("#Favourite.Pet.FlattenableRabbit")
-public class FlattenableRabbit extends FlattenableAnimal {
+@JsonTypeName("#Favourite.Pet.RabbitWithTypeIdContainingDot")
+public class RabbitWithTypeIdContainingDot extends AnimalWithTypeIdContainingDot {
     @JsonProperty(value = "tailLength")
     private Integer tailLength;
 
@@ -19,7 +19,7 @@ public class FlattenableRabbit extends FlattenableAnimal {
         return this.tailLength;
     }
 
-    public FlattenableRabbit withTailLength(Integer tailLength) {
+    public RabbitWithTypeIdContainingDot withTailLength(Integer tailLength) {
         this.tailLength = tailLength;
         return this;
     }
@@ -28,8 +28,8 @@ public class FlattenableRabbit extends FlattenableAnimal {
         return this.meals;
     }
 
-    public FlattenableRabbit withMeals(List<String> codecs) {
-        this.meals = codecs;
+    public RabbitWithTypeIdContainingDot withMeals(List<String> meals) {
+        this.meals = meals;
         return this;
     }
 }

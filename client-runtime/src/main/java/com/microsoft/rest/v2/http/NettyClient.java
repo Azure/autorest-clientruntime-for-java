@@ -423,7 +423,14 @@ public final class NettyClient extends HttpClient {
 
         void emitError(Throwable throwable) {
             while (true) {
-                LOGGER.warn("Error emitted on channel {}. Message: {}", channel.id(), throwable.getMessage());
+                if (throwable == null) {
+                    throwable = new IOException("Unknown error in Netty client");
+                }
+                if (channel != null) {
+                    LOGGER.warn("Error emitted on channel {}. Message: {}", channel.id(), throwable.getMessage());
+                } else {
+                    LOGGER.warn("Error emitted before channel is created. Message: {}", throwable.getMessage());
+                }
                 LOGGER.debug("Stack trace: ", new Exception());
                 channelPool.dump();
                 int s = state.get();
@@ -436,22 +443,22 @@ public final class NettyClient extends HttpClient {
                 } else if (s == ACQUIRED_CONTENT_SUBSCRIBED) {
                     if (transition(ACQUIRED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
                         LOGGER.debug("Channel disposed after content is subscribed");
-                        closeAndReleaseChannel();
                         content.onError(throwable);
+                        closeAndReleaseChannel();
                         break;
                     }
                 } else if (s == ACQUIRED_CONTENT_NOT_SUBSCRIBED) {
                     if (transition(ACQUIRED_CONTENT_NOT_SUBSCRIBED, CHANNEL_RELEASED)) {
                         LOGGER.debug("Channel disposed before content is subscribed");
-                        closeAndReleaseChannel();
                         responseEmitter.onError(throwable);
+                        closeAndReleaseChannel();
                         break;
                     }
                 } else if (s == ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED) {
                     if (transition(ACQUIRED_DISPOSED_CONTENT_SUBSCRIBED, CHANNEL_RELEASED)) {
                         LOGGER.debug("Channel disposed after content is subscribed with response emitter disposed");
-                        closeAndReleaseChannel();
                         content.onError(throwable);
+                        closeAndReleaseChannel();
                         break;
                     }
                 } else if (s == ACQUIRED_DISPOSED_CONTENT_NOT_SUBSCRIBED) {

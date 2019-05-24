@@ -50,7 +50,9 @@ final class CloudErrorDeserializer extends JsonDeserializer<CloudError> {
 
     @Override
     public CloudError deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        p.setCodec(mapper);
         JsonNode errorNode = p.readValueAsTree();
+
         if (errorNode == null) {
             return null;
         }

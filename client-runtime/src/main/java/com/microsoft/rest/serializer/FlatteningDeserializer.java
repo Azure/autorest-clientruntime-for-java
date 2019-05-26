@@ -118,7 +118,7 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
         // Json object this method is called to handle.
         //
         JsonNode currentJsonNode = mapper.readTree(jp);
-        if (currentJsonNode.isNull()){
+        if (currentJsonNode.isNull()) {
             currentJsonNode = mapper.getNodeFactory().objectNode();
         }
         final Class<?> tClass = this.defaultDeserializer.handledType();

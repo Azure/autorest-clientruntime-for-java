@@ -60,6 +60,32 @@ public class FlatteningSerializerTests {
     }
 
     /**
+     * Validates decoding and encoding of a type with type id containing dot and no additional properties
+     * For decoding and encoding base type will be used.
+     *
+     * @throws IOException
+     */
+    @Test
+    public void canHandleTypeWithTypeIdContainingDotAndNoProperties() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+
+        String rabbitSerialized = "{\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\"}";
+        String shelterSerialized = "{\"properties\":{\"animalsInfo\":[{\"animal\":{\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\"}},{\"animal\":{\"@odata.type\":\"#Favourite.Pet.RabbitWithTypeIdContainingDot\"}}]}}";
+
+        AnimalWithTypeIdContainingDot rabbitDeserialized = adapter.deserialize(rabbitSerialized, AnimalWithTypeIdContainingDot.class);
+        Assert.assertTrue(rabbitDeserialized instanceof RabbitWithTypeIdContainingDot);
+        Assert.assertNotNull(rabbitDeserialized);
+
+        AnimalShelter shelterDeserialized = adapter.deserialize(shelterSerialized, AnimalShelter.class);
+        Assert.assertTrue(shelterDeserialized instanceof AnimalShelter);
+        Assert.assertEquals(2, shelterDeserialized.animalsInfo().size());
+        for (FlattenableAnimalInfo animalInfo: shelterDeserialized.animalsInfo()) {
+            Assert.assertTrue(animalInfo.animal() instanceof RabbitWithTypeIdContainingDot);
+            Assert.assertNotNull(animalInfo.animal());
+        }
+    }
+
+    /**
      * Validates that decoding and encoding of a type with type id containing dot and can be done.
      * For decoding and encoding base type will be used.
      *

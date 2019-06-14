@@ -317,7 +317,7 @@ public class MSICredentials extends AzureTokenCredentials {
         sleep(timeToSleep);
         return (timeToSleep != timeToWaitinMs);
     }
-	
+
     private static void sleep(long millis) {
         try {
             Thread.sleep(millis);

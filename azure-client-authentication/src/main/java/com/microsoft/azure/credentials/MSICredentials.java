@@ -20,6 +20,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +35,7 @@ public class MSICredentials extends AzureTokenCredentials {
     //
     private final List<Integer> retrySlots = new ArrayList<>(Arrays.asList(new Integer[] {1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765}));
     private int maxRetry = retrySlots.size();
+    private int customTimeout = -1;
     private final Lock lock = new ReentrantLock();
     private final ConcurrentHashMap<String, MSIToken> cache = new ConcurrentHashMap<>();
     //
@@ -124,6 +126,17 @@ public class MSICredentials extends AzureTokenCredentials {
         return this;
     }
 
+    /**
+     * Specify a maximum timeout for the time taken to get the token across
+     * the various retries.
+     * @param timeoutInMs timeout in milliseconds.
+     * @return MSICredentials
+     */
+    public MSICredentials withCustomTimeout(int timeoutInMs) {
+        this.customTimeout = timeoutInMs;
+        return this;
+    }
+
 
     @Override
     public String getToken(String tokenAudience) throws IOException {
@@ -205,6 +218,7 @@ public class MSICredentials extends AzureTokenCredentials {
     private MSIToken retrieveTokenFromIDMSWithRetry(String tokenAudience) throws IOException {
         StringBuilder payload = new StringBuilder();
         final int imdsUpgradeTimeInMs = 70 * 1000;
+        boolean hasTimedout = false;
 
         //
         try {
@@ -241,6 +255,7 @@ public class MSICredentials extends AzureTokenCredentials {
             //
             HttpURLConnection connection = null;
             //
+            long startTime = Calendar.getInstance().getTime().getTime();
             try {
                 connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
@@ -253,6 +268,9 @@ public class MSICredentials extends AzureTokenCredentials {
             } catch (Exception exception) {
                 int responseCode = connection.getResponseCode();
                 if (responseCode == 410 || responseCode == 429 || responseCode == 404 || (responseCode >= 500 && responseCode <= 599)) {
+                    if (hasTimedout) {
+                        throw new RuntimeException("Couldn't acquire access token from IMDS within the specified timeout : " + this.customTimeout + " milliseconds");
+                    }
                     int retryTimeoutInMs = retrySlots.get(new Random().nextInt(retry)) * 1000;
                     // Error code 410 indicates IMDS upgrade is in progress, which can take up to 70s
                     //
@@ -261,7 +279,7 @@ public class MSICredentials extends AzureTokenCredentials {
                     if (retry > maxRetry) {
                         break;
                     } else {
-                        sleep(retryTimeoutInMs);
+                        hasTimedout = sleep(retryTimeoutInMs, startTime);
                     }
                 } else {
                     throw new RuntimeException("Couldn't acquire access token from IMDS, verify your objectId, clientId or msiResourceId", exception);
@@ -279,7 +297,28 @@ public class MSICredentials extends AzureTokenCredentials {
         return null;
     }
 
-    private static void sleep(int millis) {
+    /**
+     * Sleep for timeToWait or time remaining until timeout reached.
+     * @param timeToWaitinMs Time to wait in milliseconds
+     * @param startTime Absolute tim in milliseconds
+     * @return true if we used the custom timeout.
+     */
+    private boolean sleep(int timeToWaitinMs, long startTime) {
+        long timeToSleep = 0;
+
+        if (this.customTimeout > -1) {
+            long timeRemainingToTimeout = (startTime + this.customTimeout - Calendar.getInstance().getTime().getTime());
+            timeRemainingToTimeout = (timeToWaitinMs < timeRemainingToTimeout) ? timeToWaitinMs : timeRemainingToTimeout;
+            timeToSleep = (timeRemainingToTimeout > 0) ? timeRemainingToTimeout : 0;
+        } else {
+            timeToSleep = timeToWaitinMs;
+        }
+
+        sleep(timeToSleep);
+        return (timeToSleep != timeToWaitinMs);
+    }
+
+    private static void sleep(long millis) {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException ex) {

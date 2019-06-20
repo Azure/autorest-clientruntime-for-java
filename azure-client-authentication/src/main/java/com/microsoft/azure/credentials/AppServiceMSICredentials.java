@@ -25,7 +25,6 @@ public class AppServiceMSICredentials extends AzureTokenCredentials {
     private final String endpoint;
     private final String secret;
     private final AzureJacksonAdapter adapter;
-    private String objectId;
     private String clientId;
 
     /**
@@ -56,19 +55,6 @@ public class AppServiceMSICredentials extends AzureTokenCredentials {
     }
 
     /**
-     * Specifies the object id associated with a user assigned managed service identity
-     * resource that should be used to retrieve the access token.
-     *
-     * @param objectId Object ID of the identity to use when authenticating to Azure AD.
-     * @return AppServiceMSICredentials
-     */
-    public AppServiceMSICredentials withObjectId(String objectId) {
-        this.objectId = objectId;
-        this.clientId = null;
-        return this;
-    }
-
-    /**
      * Specifies the application id (client id) associated with a user assigned managed service identity
      * resource that should be used to retrieve the access token.
      *
@@ -77,7 +63,6 @@ public class AppServiceMSICredentials extends AzureTokenCredentials {
      */
     public AppServiceMSICredentials withClientId(String clientId) {
         this.clientId = clientId;
-        this.objectId = null;
         return this;
     }
 
@@ -88,9 +73,6 @@ public class AppServiceMSICredentials extends AzureTokenCredentials {
         if (this.clientId != null && !this.clientId.isEmpty()) {
             urlString = String.format("%s?resource=%s&clientid=%s&api-version=2017-09-01", this.endpoint,
                     resource, this.clientId);
-        } else if (this.objectId != null && !this.objectId.isEmpty()) {
-            urlString = String.format("%s?resource=%s&objectid=%s&api-version=2017-09-01", this.endpoint,
-                    resource, this.objectId);
         } else {
             urlString = String.format("%s?resource=%s&api-version=2017-09-01", this.endpoint,
                     resource);

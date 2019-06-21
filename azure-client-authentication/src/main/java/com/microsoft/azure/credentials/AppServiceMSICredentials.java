@@ -25,6 +25,7 @@ public class AppServiceMSICredentials extends AzureTokenCredentials {
     private final String endpoint;
     private final String secret;
     private final AzureJacksonAdapter adapter;
+    private String clientId;
 
     /**
      * Creates an MSI credential for app services.
@@ -53,9 +54,30 @@ public class AppServiceMSICredentials extends AzureTokenCredentials {
         this.adapter = new AzureJacksonAdapter();
     }
 
+    /**
+     * Specifies the application id (client id) associated with a user assigned managed service identity
+     * resource that should be used to retrieve the access token.
+     *
+     * @param clientId application id (client id) of the identity to use when authenticating to Azure AD.
+     * @return AppServiceMSICredentials
+     */
+    public AppServiceMSICredentials withClientId(String clientId) {
+        this.clientId = clientId;
+        return this;
+    }
+
     @Override
     public String getToken(String resource) throws IOException {
-        String urlString = String.format("%s?resource=%s&api-version=2017-09-01", this.endpoint, resource);
+        String urlString = null;
+
+        if (this.clientId != null && !this.clientId.isEmpty()) {
+            urlString = String.format("%s?resource=%s&clientid=%s&api-version=2017-09-01", this.endpoint,
+                    resource, this.clientId);
+        } else {
+            urlString = String.format("%s?resource=%s&api-version=2017-09-01", this.endpoint,
+                    resource);
+        }
+
         URL url = new URL(urlString);
         HttpURLConnection connection = null;
 

@@ -36,7 +36,6 @@ public class DelegatedTokenCredentials extends AzureTokenCredentials {
     private String redirectUrl;
     private String authorizationCode;
     private ApplicationTokenCredentials applicationCredentials;
-    private RefreshTokenClient refreshTokenClient;
 
     /**
      * Initializes a new instance of the DelegatedTokenCredentials.
@@ -49,7 +48,6 @@ public class DelegatedTokenCredentials extends AzureTokenCredentials {
         this.applicationCredentials = applicationCredentials;
         this.tokens = new ConcurrentHashMap<>();
         this.redirectUrl = redirectUrl;
-        this.refreshTokenClient = new RefreshTokenClient(applicationCredentials.environment().activeDirectoryEndpoint(), proxy());
     }
 
     /**
@@ -142,7 +140,7 @@ public class DelegatedTokenCredentials extends AzureTokenCredentials {
         }
         // Refresh
         if (shouldRefresh) {
-            authenticationResult = acquireAccessTokenFromRefreshToken(resource, authenticationResult.getRefreshToken(), authenticationResult.isMultipleResourceRefreshToken());
+            authenticationResult = acquireAccessTokenFromRefreshToken(resource, authenticationResult.getRefreshToken());
         }
         // If refresh fails or not refreshable, acquire new token
         if (authenticationResult == null) {
@@ -199,12 +197,19 @@ public class DelegatedTokenCredentials extends AzureTokenCredentials {
     }
 
     // Refresh tokens are currently not used since we don't know if the refresh token has expired
-    private AuthenticationResult acquireAccessTokenFromRefreshToken(String resource, String refreshToken, boolean isMultipleResourceRefreshToken) throws IOException {
+    private AuthenticationResult acquireAccessTokenFromRefreshToken(String resource, String refreshToken) throws IOException {
+        String authorityUrl = this.environment().activeDirectoryEndpoint() + this.domain();
         ExecutorService executor = Executors.newSingleThreadExecutor();
+        AuthenticationContext context = new AuthenticationContext(authorityUrl, false, executor);
+        if (proxy() != null) {
+            context.setProxy(proxy());
+        }
         try {
-            return refreshTokenClient.refreshToken(domain(), clientId(), resource, refreshToken, isMultipleResourceRefreshToken);
+            return context.acquireTokenByRefreshToken(refreshToken,
+                    new ClientCredential(applicationCredentials.clientId(), applicationCredentials.clientSecret()),
+                    resource, null).get();
         } catch (Exception e) {
-            return null;
+            throw new IOException(e.getMessage(), e);
         } finally {
             executor.shutdown();
         }

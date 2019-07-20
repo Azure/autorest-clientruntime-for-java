@@ -19,7 +19,7 @@ import java.util.Map;
  * Class for testing serialization.
  */
 @JsonFlatten
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "$type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "$type", defaultImpl = Foo.class)
 @JsonTypeName("foo")
 @JsonSubTypes({
         @JsonSubTypes.Type(name = "foochild", value = FooChild.class)

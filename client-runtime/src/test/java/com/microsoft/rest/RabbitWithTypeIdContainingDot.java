@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.List;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@odata\\.type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@odata\\.type", defaultImpl = RabbitWithTypeIdContainingDot.class)
 @JsonTypeName("#Favourite.Pet.RabbitWithTypeIdContainingDot")
 public class RabbitWithTypeIdContainingDot extends AnimalWithTypeIdContainingDot {
     @JsonProperty(value = "tailLength")

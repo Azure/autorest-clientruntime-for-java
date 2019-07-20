@@ -397,6 +397,170 @@ public class FlatteningSerializerTests {
     }
 
     @Test
+    public void canHandleComposedSpecificPolymorphicTypeWithTypeId() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        //
+        // -- Validate vector property
+        //
+        String serializedCollectionWithTypeId = "{\"turtlesSet1\":[{\"age\":100,\"size\":10,\"@odata.type\":\"#Favourite.Pet.TurtleWithTypeIdContainingDot\"},{\"age\":200,\"size\":20,\"@odata.type\":\"#Favourite.Pet.TurtleWithTypeIdContainingDot\"}]}";
+        // de-serialization
+        //
+        ComposeTurtles composedTurtleDeserialized = adapter.deserialize(serializedCollectionWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet1());
+        Assert.assertEquals(2, composedTurtleDeserialized.turtlesSet1().size());
+        //
+        adapter.serialize(composedTurtleDeserialized);
+        //
+        // -- Validate scalar property
+        //
+        String serializedScalarWithTypeId = "{\"turtlesSet1Lead\":{\"age\":100,\"size\":10,\"@odata.type\":\"#Favourite.Pet.TurtleWithTypeIdContainingDot\"}}";
+        // de-serialization
+        //
+        composedTurtleDeserialized = adapter.deserialize(serializedScalarWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet1Lead());
+        Assert.assertEquals(10 , (long) composedTurtleDeserialized.turtlesSet1Lead().size());
+        Assert.assertEquals(100 , (long) composedTurtleDeserialized.turtlesSet1Lead().age());
+        //
+        adapter.serialize(composedTurtleDeserialized);
+    }
+
+    @Test
+    public void canHandleComposedSpecificPolymorphicTypeWithoutTypeId() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        //
+        // -- Validate vector property
+        //
+        String serializedCollectionWithTypeId = "{\"turtlesSet1\":[{\"age\":100,\"size\":10 },{\"age\":200,\"size\":20 }]}";
+        // de-serialization
+        //
+        ComposeTurtles composedTurtleDeserialized = adapter.deserialize(serializedCollectionWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet1());
+        Assert.assertEquals(2, composedTurtleDeserialized.turtlesSet1().size());
+        //
+        adapter.serialize(composedTurtleDeserialized);
+        //
+        // -- Validate scalar property
+        //
+        String serializedScalarWithTypeId = "{\"turtlesSet1Lead\":{\"age\":100,\"size\":10 }}";
+        // de-serialization
+        //
+        composedTurtleDeserialized = adapter.deserialize(serializedScalarWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet1Lead());
+        Assert.assertEquals(100 , (long) composedTurtleDeserialized.turtlesSet1Lead().age());
+        //
+        adapter.serialize(composedTurtleDeserialized);
+    }
+
+    @Test
+    public void canHandleComposedSpecificPolymorphicTypeWithAndWithoutTypeId() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        //
+        // -- Validate vector property
+        //
+        String serializedCollectionWithTypeId = "{\"turtlesSet1\":[{\"age\":100,\"size\":10,\"@odata.type\":\"#Favourite.Pet.TurtleWithTypeIdContainingDot\"},{\"age\":200,\"size\":20 }]}";
+        // de-serialization
+        //
+        ComposeTurtles composedTurtleDeserialized = adapter.deserialize(serializedCollectionWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet1());
+        Assert.assertEquals(2, composedTurtleDeserialized.turtlesSet1().size());
+        //
+        adapter.serialize(composedTurtleDeserialized);
+    }
+
+    @Test
+    public void canHandleComposedGenericPolymorphicTypeWithTypeId() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        //
+        // -- Validate vector property
+        //
+        String serializedCollectionWithTypeId = "{\"turtlesSet2\":[{\"age\":100,\"size\":10,\"@odata.type\":\"#Favourite.Pet.TurtleWithTypeIdContainingDot\"},{\"age\":200,\"size\":20,\"@odata.type\":\"#Favourite.Pet.TurtleWithTypeIdContainingDot\"}]}";
+        // de-serialization
+        //
+        ComposeTurtles composedTurtleDeserialized = adapter.deserialize(serializedCollectionWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet2());
+        Assert.assertEquals(2, composedTurtleDeserialized.turtlesSet2().size());
+        //
+        Assert.assertTrue(composedTurtleDeserialized.turtlesSet2().get(0) instanceof TurtleWithTypeIdContainingDot);
+        Assert.assertTrue(composedTurtleDeserialized.turtlesSet2().get(1) instanceof TurtleWithTypeIdContainingDot);
+        //
+        adapter.serialize(composedTurtleDeserialized);
+        //
+        // -- Validate scalar property
+        //
+        String serializedScalarWithTypeId = "{\"turtlesSet2Lead\":{\"age\":100,\"size\":10,\"@odata.type\":\"#Favourite.Pet.TurtleWithTypeIdContainingDot\"}}";
+        // de-serialization
+        //
+        composedTurtleDeserialized = adapter.deserialize(serializedScalarWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet2Lead());
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet2Lead() instanceof TurtleWithTypeIdContainingDot);
+        Assert.assertEquals(10 , (long) ((TurtleWithTypeIdContainingDot) composedTurtleDeserialized.turtlesSet2Lead()).size());
+        Assert.assertEquals(100 , (long) composedTurtleDeserialized.turtlesSet2Lead().age());
+        //
+        adapter.serialize(composedTurtleDeserialized);
+    }
+
+    @Test
+    public void canHandleComposedGenericPolymorphicTypeWithoutTypeId() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        //
+        // -- Validate vector property
+        //
+        String serializedCollectionWithTypeId = "{\"turtlesSet2\":[{\"age\":100,\"size\":10 },{\"age\":200,\"size\":20 }]}";
+        // de-serialization
+        //
+        ComposeTurtles composedTurtleDeserialized = adapter.deserialize(serializedCollectionWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet2());
+        Assert.assertEquals(2, composedTurtleDeserialized.turtlesSet2().size());
+        //
+        Assert.assertFalse(composedTurtleDeserialized.turtlesSet2().get(0) instanceof TurtleWithTypeIdContainingDot);
+        Assert.assertTrue(composedTurtleDeserialized.turtlesSet2().get(0) instanceof NonEmptyAnimalWithTypeIdContainingDot);
+        Assert.assertFalse(composedTurtleDeserialized.turtlesSet2().get(1) instanceof TurtleWithTypeIdContainingDot);
+        Assert.assertTrue(composedTurtleDeserialized.turtlesSet2().get(1) instanceof NonEmptyAnimalWithTypeIdContainingDot);
+        //
+        // -- Validate scalar property
+        //
+        adapter.serialize(composedTurtleDeserialized);
+        //
+        String serializedScalarWithTypeId = "{\"turtlesSet2Lead\":{\"age\":100,\"size\":10 }}";
+        // de-serialization
+        //
+        composedTurtleDeserialized = adapter.deserialize(serializedScalarWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet2Lead());
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet2Lead() instanceof NonEmptyAnimalWithTypeIdContainingDot);
+        //
+        adapter.serialize(composedTurtleDeserialized);
+    }
+
+    @Test
+    public void canHandleComposedGenericPolymorphicTypeWithAndWithoutTypeId() throws IOException {
+        JacksonAdapter adapter = new JacksonAdapter();
+        //
+        // -- Validate vector property
+        //
+        String serializedCollectionWithTypeId = "{\"turtlesSet2\":[{\"age\":100,\"size\":10,\"@odata.type\":\"#Favourite.Pet.TurtleWithTypeIdContainingDot\"},{\"age\":200,\"size\":20 }]}";
+        // de-serialization
+        //
+        ComposeTurtles composedTurtleDeserialized = adapter.deserialize(serializedCollectionWithTypeId, ComposeTurtles.class);
+        Assert.assertNotNull(composedTurtleDeserialized);
+        Assert.assertNotNull(composedTurtleDeserialized.turtlesSet2());
+        Assert.assertEquals(2, composedTurtleDeserialized.turtlesSet2().size());
+        //
+        Assert.assertTrue(composedTurtleDeserialized.turtlesSet2().get(0) instanceof TurtleWithTypeIdContainingDot);
+        Assert.assertTrue(composedTurtleDeserialized.turtlesSet2().get(1) instanceof NonEmptyAnimalWithTypeIdContainingDot);
+        //
+        adapter.serialize(composedTurtleDeserialized);
+    }
+
+    @Test
     public void canHandleEscapedProperties() throws IOException {
         FlattenedProduct productToSerialize = new FlattenedProduct();
         productToSerialize.withProductName("drink");

@@ -14,7 +14,7 @@ import com.microsoft.rest.serializer.JsonFlatten;
  * Class for testing serialization.
  */
 @JsonFlatten
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "$type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "$type", defaultImpl = FooChild.class)
 @JsonTypeName("foochild")
 public class FooChild extends Foo {
 }

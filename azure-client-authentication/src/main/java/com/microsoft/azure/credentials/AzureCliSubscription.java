@@ -121,7 +121,7 @@ final class AzureCliSubscription {
                         shouldRefresh = token.isMRRT();
                     }
                     if (shouldRefresh) {
-                        AuthenticationResult authenticationResult = acquireAccessTokenFromRefreshToken(resource, token.refreshToken(), token.isMRRT());
+                        AuthenticationResult authenticationResult = acquireAccessTokenFromRefreshToken(resource, token.refreshToken());
                         if (authenticationResult == null) {
                             return null;
                         }

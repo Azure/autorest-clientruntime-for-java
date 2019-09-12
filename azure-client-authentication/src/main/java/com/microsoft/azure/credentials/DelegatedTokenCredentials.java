@@ -196,7 +196,6 @@ public class DelegatedTokenCredentials extends AzureTokenCredentials {
         }
     }
 
-    // Refresh tokens are currently not used since we don't know if the refresh token has expired
     private AuthenticationResult acquireAccessTokenFromRefreshToken(String resource, String refreshToken) throws IOException {
         String authorityUrl = this.environment().activeDirectoryEndpoint() + this.domain();
         ExecutorService executor = Executors.newSingleThreadExecutor();

@@ -100,7 +100,8 @@ public final class AzureCliCredentials extends AzureTokenCredentials {
      * @return the active directory application client id
      */
     public String clientId() {
-        return subscriptions.get(defaultSubscriptionId()).clientId();
+        AzureCliSubscription subscription = this.subscriptions.get(defaultSubscriptionId());
+        return subscription.isServicePrincipal() ? subscription.servicePrincipal().clientId() : subscription.clientId();
     }
 
     /**

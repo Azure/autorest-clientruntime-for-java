@@ -22,3 +22,9 @@ hs_err_pid*
 .idea
 *.iml
 .DS_Store
+
+# Eclipse/VSCode Java files
+.settings/
+.project
+.factorypath
+.classpath

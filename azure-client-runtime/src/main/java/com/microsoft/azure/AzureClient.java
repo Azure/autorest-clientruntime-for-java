@@ -508,6 +508,37 @@ public final class AzureClient extends AzureServiceClient {
     }
 
     /**
+     * Handles an initial response from a POST or DELETE operation response by polling
+     * the status of the operation asynchronously, calling the user provided callback
+     * when the operation terminates.
+     *
+     * @param observable  the initial observable from the POST or DELETE operation.
+     * @param lroOptions long running operation options.
+     * @param <T>       the return type of the caller
+     * @param <THeader> the type of the response header
+     * @param resourceType the java.lang.reflect.Type of the resource.
+     * @param headerType the type of the response header
+     * @return          the task describing the asynchronous polling.
+     */
+    public <T, THeader> Observable<ServiceResponseWithHeaders<T, THeader>> getPostOrDeleteResultWithHeadersAsync(Observable<Response<ResponseBody>> observable, final LongRunningOperationOptions lroOptions, Type resourceType, final Class<THeader> headerType) {
+        Observable<ServiceResponse<T>> bodyResponse = getPostOrDeleteResultAsync(observable, lroOptions, resourceType);
+        return bodyResponse
+                .flatMap(new Func1<ServiceResponse<T>, Observable<ServiceResponseWithHeaders<T, THeader>>>() {
+                    @Override
+                    public Observable<ServiceResponseWithHeaders<T, THeader>> call(ServiceResponse<T> serviceResponse) {
+                        try {
+                            return Observable
+                                    .just(new ServiceResponseWithHeaders<>(serviceResponse.body(),
+                                            restClient().serializerAdapter().<THeader>deserialize(restClient().serializerAdapter().serialize(serviceResponse.response().headers()), headerType),
+                                            serviceResponse.response()));
+                        } catch (IOException e) {
+                            return Observable.error(e);
+                        }
+                    }
+                });
+    }
+
+    /**
      * Given a polling state representing state of a LRO operation, this method returns {@link Single} object,
      * when subscribed to it, a single poll will be performed and emits the latest polling state. A poll will be
      * performed only if the current polling state is not in terminal state.

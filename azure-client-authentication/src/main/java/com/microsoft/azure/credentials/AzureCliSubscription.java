@@ -89,6 +89,10 @@ final class AzureCliSubscription {
         return user.name;
     }
 
+    AzureCliToken servicePrincipal() {
+        return servicePrincipalToken;
+    }
+
     synchronized AzureTokenCredentials credentialInstance() {
         if (credentialInstance != null) {
             return credentialInstance;

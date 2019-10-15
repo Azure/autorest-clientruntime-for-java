@@ -44,6 +44,9 @@ final class AzureCliSubscription {
     }
 
     String clientId() {
+        if (isServicePrincipal()) {
+            return servicePrincipalToken.clientId();
+        }
         return clientId;
     }
 

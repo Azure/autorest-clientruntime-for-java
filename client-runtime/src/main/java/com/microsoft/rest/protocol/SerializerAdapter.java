@@ -67,5 +67,5 @@ public interface SerializerAdapter<T> {
      * @return the deserialized object.
      * @throws IOException exception in deserialization
      */
-    <U> U deserialize(String value, final Type type) throws IOException;
+    <U> U deserialize(String value, Type type) throws IOException;
 }

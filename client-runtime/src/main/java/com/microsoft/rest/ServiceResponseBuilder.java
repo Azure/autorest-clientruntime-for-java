@@ -240,7 +240,7 @@ public final class ServiceResponseBuilder<T, E extends RestException> implements
      * @param throwOnGet404 true if to throw; false to simply return null. Default is false.
      * @return the response builder itself
      */
-    public ServiceResponseBuilder withThrowOnGet404(boolean throwOnGet404) {
+    public ServiceResponseBuilder<T, E> withThrowOnGet404(boolean throwOnGet404) {
         this.throwOnGet404 = throwOnGet404;
         return this;
     }

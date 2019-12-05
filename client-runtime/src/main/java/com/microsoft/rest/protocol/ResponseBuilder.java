@@ -31,7 +31,7 @@ public interface ResponseBuilder<T, E extends RestException> {
      * @param type the type to deserialize.
      * @return the same builder instance.
      */
-    ResponseBuilder<T, E> register(int statusCode, final Type type);
+    ResponseBuilder<T, E> register(int statusCode, Type type);
 
     /**
      * Register a destination type for errors with models.
@@ -39,7 +39,7 @@ public interface ResponseBuilder<T, E extends RestException> {
      * @param type the type to deserialize.
      * @return the same builder instance.
      */
-    ResponseBuilder<T, E> registerError(final Class<? extends RestException> type);
+    ResponseBuilder<T, E> registerError(Class<? extends RestException> type);
 
     /**
      * Build a ServiceResponse instance from a REST call response and a
@@ -129,6 +129,6 @@ public interface ResponseBuilder<T, E extends RestException> {
          * @param serializerAdapter the serializer adapter to deserialize the response
          * @return a response builder instance
          */
-        <T, E extends RestException> ResponseBuilder<T, E> newInstance(final SerializerAdapter<?> serializerAdapter);
+        <T, E extends RestException> ResponseBuilder<T, E> newInstance(SerializerAdapter<?> serializerAdapter);
     }
 }

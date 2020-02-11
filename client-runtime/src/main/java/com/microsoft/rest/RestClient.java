@@ -20,11 +20,14 @@ import com.microsoft.rest.protocol.SerializerAdapter;
 import com.microsoft.rest.retry.RetryHandler;
 import com.microsoft.rest.retry.RetryStrategy;
 import okhttp3.Authenticator;
+import okhttp3.CipherSuite;
 import okhttp3.ConnectionPool;
+import okhttp3.ConnectionSpec;
 import okhttp3.Dispatcher;
 import okhttp3.Interceptor;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
+import okhttp3.TlsVersion;
 import okio.AsyncTimeout;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
@@ -32,6 +35,7 @@ import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.Proxy;
+import java.util.Arrays;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -181,6 +185,10 @@ public final class RestClient {
         private boolean useHttpClientThreadPool;
         /** The connection pool in use for OkHttp. */
         private ConnectionPool connectionPool;
+        /** The tls versions in use for OkHttp. */
+        private TlsVersion[] tlsVersions;
+        /** The cipher suites in use for OkHttp. */
+        private CipherSuite[] cipherSuites;
 
         /**
          * Creates an instance of the builder with a base URL to the service.
@@ -199,6 +207,8 @@ public final class RestClient {
             this.responseBuilderFactory = restClient.builder.responseBuilderFactory;
             this.serializerAdapter = restClient.builder.serializerAdapter;
             this.useHttpClientThreadPool = restClient.builder.useHttpClientThreadPool;
+            this.tlsVersions = restClient.builder.tlsVersions;
+            this.cipherSuites = restClient.builder.cipherSuites;
             if (restClient.builder.credentials != null) {
                 this.credentials = restClient.builder.credentials;
             }
@@ -480,6 +490,26 @@ public final class RestClient {
         }
 
         /**
+         * Sets tls versions for OkHttp client.
+         * @param tlsVersions the tls versions to use
+         * @return the builder itself for chaining
+         */
+        public Builder withTlsVersions(TlsVersion... tlsVersions) {
+            this.tlsVersions = tlsVersions;
+            return this;
+        }
+
+        /**
+         * Sets cipher suites for OkHttp client.
+         * @param cipherSuites the cipher suites to use
+         * @return the builder itself for chaining
+         */
+        public Builder withCipherSuites(CipherSuite... cipherSuites) {
+            this.cipherSuites = cipherSuites;
+            return this;
+        }
+
+        /**
          * Build a RestClient with all the current configurations.
          *
          * @return a {@link RestClient}.
@@ -523,6 +553,17 @@ public final class RestClient {
             }
             if (dispatcher != null) {
                 httpClientBuilder = httpClientBuilder.dispatcher(dispatcher);
+            }
+
+            if (this.tlsVersions != null || this.cipherSuites != null) {
+                ConnectionSpec.Builder connectionSpecBuilder = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS);
+                if (this.tlsVersions != null && this.tlsVersions.length > 0) {
+                    connectionSpecBuilder.tlsVersions(this.tlsVersions);
+                }
+                if (this.cipherSuites != null && this.cipherSuites.length > 0) {
+                    connectionSpecBuilder.cipherSuites(this.cipherSuites);
+                }
+                this.httpClientBuilder.connectionSpecs(Arrays.asList(connectionSpecBuilder.build(), ConnectionSpec.CLEARTEXT));
             }
 
             OkHttpClient httpClient = httpClientBuilder

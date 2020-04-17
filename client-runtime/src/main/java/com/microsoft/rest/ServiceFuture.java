@@ -25,6 +25,7 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
      * The Retrofit method invocation.
      */
     private Subscription subscription;
+    private boolean valueSet = false;
 
     protected ServiceFuture() {
     }
@@ -43,7 +44,7 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
             .subscribe(new Action1<ServiceResponse<T>>() {
                 @Override
                 public void call(ServiceResponse<T> t) {
-                    serviceFuture.set(t.body());
+                    serviceFuture.valueSet = serviceFuture.set(t.body());
                 }
             }, new Action1<Throwable>() {
                 @Override
@@ -72,7 +73,7 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
                         if (callback != null) {
                             callback.success(t.body());
                         }
-                        serviceFuture.set(t.body());
+                        serviceFuture.valueSet = serviceFuture.set(t.body());
                     }
                 }, new Action1<Throwable>() {
                     @Override
@@ -104,7 +105,7 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
                         if (callback != null) {
                             callback.success(t);
                         }
-                        serviceFuture.set(t);
+                        serviceFuture.valueSet = serviceFuture.set(t);
                     }
                 }, new Action1<Throwable>() {
                     @Override
@@ -134,7 +135,7 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
                 if (callback != null) {
                     callback.success(value);
                 }
-                serviceFuture.set(value);
+                serviceFuture.valueSet = serviceFuture.set(value);
             }
         }, new Action1<Throwable>() {
             @Override
@@ -167,7 +168,7 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
                     if (callback != null) {
                         callback.success(t.body());
                     }
-                    serviceFuture.set(t.body());
+                    serviceFuture.valueSet = serviceFuture.set(t.body());
                 }
             }, new Action1<Throwable>() {
                 @Override
@@ -200,7 +201,7 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
      * @return true if successfully reported; false otherwise.
      */
     public boolean success(T result) {
-        return set(result);
+        return valueSet = set(result);
     }
 
     @Override
@@ -211,6 +212,6 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
 
     @Override
     public boolean isCancelled() {
-        return subscription.isUnsubscribed();
+        return !valueSet && subscription.isUnsubscribed();
     }
 }

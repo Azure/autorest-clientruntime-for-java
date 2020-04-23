@@ -201,7 +201,8 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
      * @return true if successfully reported; false otherwise.
      */
     public boolean success(T result) {
-        return valueSet = set(result);
+        valueSet = set(result);
+        return valueSet;
     }
 
     @Override

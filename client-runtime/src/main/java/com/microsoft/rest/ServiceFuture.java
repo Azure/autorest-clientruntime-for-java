@@ -25,7 +25,7 @@ public class ServiceFuture<T> extends AbstractFuture<T> {
      * The Retrofit method invocation.
      */
     private Subscription subscription;
-    private boolean valueSet = false;
+    private volatile boolean valueSet = false;
 
     protected ServiceFuture() {
     }

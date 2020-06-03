@@ -17,6 +17,7 @@ import rx.Observable;
 import rx.Single;
 import rx.exceptions.Exceptions;
 import rx.functions.Func1;
+import rx.functions.Func2;
 import rx.schedulers.Schedulers;
 
 import java.io.IOException;
@@ -248,6 +249,19 @@ public final class AzureClient extends AzureServiceClient {
                             }
                         });
                     }
+                }).retryWhen(new Func1<Observable<? extends Throwable>, Observable<?>>() {
+                    @Override
+                    public Observable<?> call(Observable<? extends Throwable> observable) {
+                        return observable.zipWith(Observable.range(1, 5), new Func2<Throwable, Integer, Integer>() {
+                            @Override
+                            public Integer call(Throwable throwable, Integer integer) {
+                                if (throwable instanceof CloudException) {
+                                    throw Exceptions.propagate(throwable);
+                                }
+                                return integer;
+                            }
+                        });
+                    }
                 }).takeUntil(new Func1<PollingState<T>, Boolean>() {
                     @Override
                     public Boolean call(PollingState<T> tPollingState) {
@@ -466,6 +480,19 @@ public final class AzureClient extends AzureServiceClient {
                             public Observable<Long> call(Void aVoid) {
                                 return Observable.timer(pollingState.delayInMilliseconds(),
                                         TimeUnit.MILLISECONDS, Schedulers.immediate());
+                            }
+                        });
+                    }
+                }).retryWhen(new Func1<Observable<? extends Throwable>, Observable<?>>() {
+                    @Override
+                    public Observable<?> call(Observable<? extends Throwable> observable) {
+                        return observable.zipWith(Observable.range(1, 5), new Func2<Throwable, Integer, Integer>() {
+                            @Override
+                            public Integer call(Throwable throwable, Integer integer) {
+                                if (throwable instanceof CloudException) {
+                                    throw Exceptions.propagate(throwable);
+                                }
+                                return integer;
                             }
                         });
                     }

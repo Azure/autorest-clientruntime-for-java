@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
 public class ApplicationTokenCredentials extends AzureTokenCredentials {
     /** A mapping from resource endpoint to its cached access token. */
     private final ConcurrentHashMap<String, AuthenticationResult> tokens;
-    /** A mapping from resource endpoint to its current authentication futures. */
+    /** A mapping from resource endpoint to its current authentication locks. */
     private final ConcurrentHashMap<String, ReentrantLock> authenticationLocks;
     /** The active directory application client id. */
     private final String clientId;
@@ -176,7 +176,13 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
             try {
                 authenticationResult = tokens.get(resource);
                 if (authenticationResult == null || authenticationResult.getExpiresOnDate().before(new Date())) {
-                    tokens.put(resource, acquireAccessToken(resource).get(timeoutInSeconds, TimeUnit.SECONDS));
+                    ExecutorService executor = Executors.newSingleThreadExecutor();
+                    try {
+                        authenticationResult = acquireAccessToken(resource, executor).get(timeoutInSeconds(), TimeUnit.SECONDS);
+                        tokens.put(resource, authenticationResult);
+                    } finally {
+                        executor.shutdown();
+                    }
                 }
             } catch (Exception e) {
                 throw new IOException(e.getMessage(), e);
@@ -187,9 +193,8 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
         return authenticationResult.getAccessToken();
     }
 
-    private Future<AuthenticationResult> acquireAccessToken(String resource) throws IOException {
+    Future<AuthenticationResult> acquireAccessToken(String resource, ExecutorService executor) throws IOException {
         String authorityUrl = this.environment().activeDirectoryEndpoint() + this.domain();
-        ExecutorService executor = Executors.newSingleThreadExecutor();
         AuthenticationContext context = new AuthenticationContext(authorityUrl, false, executor);
         if (proxy() != null) {
             context.setProxy(proxy());
@@ -217,8 +222,6 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
             throw new AuthenticationException("Please provide either a non-null secret or a non-null certificate.");
         } catch (Exception e) {
             throw new IOException(e.getMessage(), e);
-        } finally {
-            executor.shutdown();
         }
     }
 

@@ -128,15 +128,15 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
         return clientId;
     }
 
-    String clientSecret() {
+    public String clientSecret() {
         return clientSecret;
     }
 
-    byte[] clientCertificate() {
+    public byte[] clientCertificate() {
         return clientCertificate;
     }
 
-    String clientCertificatePassword() {
+    public String clientCertificatePassword() {
         return clientCertificatePassword;
     }
 

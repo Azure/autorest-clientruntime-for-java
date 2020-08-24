@@ -27,6 +27,7 @@ import okhttp3.Dispatcher;
 import okhttp3.Interceptor;
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
 import okhttp3.TlsVersion;
 import okio.AsyncTimeout;
 import retrofit2.Retrofit;
@@ -36,6 +37,7 @@ import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.Proxy;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -189,6 +191,8 @@ public final class RestClient {
         private TlsVersion[] tlsVersions;
         /** The cipher suites in use for OkHttp. */
         private CipherSuite[] cipherSuites;
+        /** The protocols in use for OkHttp. */
+        private List<Protocol> protocols;
 
         /**
          * Creates an instance of the builder with a base URL to the service.
@@ -209,6 +213,7 @@ public final class RestClient {
             this.useHttpClientThreadPool = restClient.builder.useHttpClientThreadPool;
             this.tlsVersions = restClient.builder.tlsVersions;
             this.cipherSuites = restClient.builder.cipherSuites;
+            this.protocols = restClient.builder.protocols;
             if (restClient.builder.credentials != null) {
                 this.credentials = restClient.builder.credentials;
             }
@@ -510,6 +515,16 @@ public final class RestClient {
         }
 
         /**
+         * Sets protocols for OkHttp client.
+         * @param protocols the protocols used by OkHttp client to communicate with remote servers
+         * @return the builder itself for chaining
+         */
+        public Builder withProtocols(List<Protocol> protocols) {
+            this.protocols = protocols;
+            return this;
+        }
+
+        /**
          * Build a RestClient with all the current configurations.
          *
          * @return a {@link RestClient}.
@@ -564,6 +579,10 @@ public final class RestClient {
                     connectionSpecBuilder.cipherSuites(this.cipherSuites);
                 }
                 this.httpClientBuilder.connectionSpecs(Arrays.asList(connectionSpecBuilder.build(), ConnectionSpec.CLEARTEXT));
+            }
+
+            if (protocols != null) {
+                this.httpClientBuilder.protocols(protocols);
             }
 
             OkHttpClient httpClient = httpClientBuilder

@@ -14,13 +14,17 @@ import com.microsoft.rest.protocol.ResponseBuilder;
 import com.microsoft.rest.protocol.SerializerAdapter;
 import com.microsoft.rest.serializer.JacksonAdapter;
 import okhttp3.Interceptor;
+import okhttp3.Protocol;
+import okhttp3.Request;
 import okhttp3.Response;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import retrofit2.Converter;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -61,6 +65,7 @@ public class RestClientTests {
                 }
             })
             .withConnectionTimeout(100, TimeUnit.MINUTES)
+            .withProtocols(Arrays.asList(Protocol.HTTP_1_1))
             .build();
         RestClient newClient = restClient.newBuilder().build();
         Assert.assertEquals(restClient.retrofit().baseUrl().toString(), newClient.retrofit().baseUrl().toString());
@@ -78,6 +83,7 @@ public class RestClientTests {
         Assert.assertEquals(restClient.httpClient().interceptors().size(), newClient.httpClient().interceptors().size());
         Assert.assertEquals(restClient.httpClient().networkInterceptors().size(), newClient.httpClient().networkInterceptors().size());
         Assert.assertEquals(TimeUnit.MINUTES.toMillis(100), newClient.httpClient().connectTimeoutMillis());
+        Assert.assertEquals(Arrays.asList(Protocol.HTTP_1_1), newClient.httpClient().protocols());
     }
 
     @Test
@@ -166,5 +172,42 @@ public class RestClientTests {
             }
         }
         Assert.assertNotEquals(restClient.httpClient().connectTimeoutMillis(), newClient.httpClient().connectTimeoutMillis());
+    }
+
+    @Test
+    @Ignore("HTTP2 only works on java 9 or higher")
+    public void protocols() throws IOException {
+        Request request = new Request.Builder()
+                .url("https://httpbin.org/get")
+                .build();
+
+        RestClient restClientHttp1 = new RestClient.Builder()
+                .withBaseUrl("https://httpbin.org")
+                .withSerializerAdapter(new JacksonAdapter())
+                .withResponseBuilderFactory(new ServiceResponseBuilder.Factory())
+                .withProtocols(Arrays.asList(Protocol.HTTP_1_1))
+                .build();
+
+        Response response = restClientHttp1.httpClient().newCall(request).execute();
+        Assert.assertEquals(Protocol.HTTP_1_1, response.protocol());
+
+        RestClient restClientHttp2 = new RestClient.Builder()
+                .withBaseUrl("https://httpbin.org")
+                .withSerializerAdapter(new JacksonAdapter())
+                .withResponseBuilderFactory(new ServiceResponseBuilder.Factory())
+                .withProtocols(Arrays.asList(Protocol.HTTP_1_1, Protocol.HTTP_2))
+                .build();
+
+        response = restClientHttp2.httpClient().newCall(request).execute();
+        Assert.assertEquals(Protocol.HTTP_2, response.protocol());
+
+        RestClient restClientDefault = new RestClient.Builder()
+                .withBaseUrl("https://httpbin.org")
+                .withSerializerAdapter(new JacksonAdapter())
+                .withResponseBuilderFactory(new ServiceResponseBuilder.Factory())
+                .build();
+
+        response = restClientDefault.httpClient().newCall(request).execute();
+        Assert.assertEquals(Protocol.HTTP_2, response.protocol());
     }
 }

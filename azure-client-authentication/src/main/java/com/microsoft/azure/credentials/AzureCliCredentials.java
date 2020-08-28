@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +29,6 @@ import java.util.concurrent.locks.ReentrantLock;
 @Beta
 public final class AzureCliCredentials extends AzureTokenCredentials {
     private static final ObjectMapper MAPPER = new JacksonAdapter().serializer().setDateFormat(new SimpleDateFormat("yyyy-MM-dd hh:mm:ssssss"));
-
     /** A mapping from resource endpoint to its cached access token. */
     private Map<String, AzureCliSubscription> subscriptions;
     private File azureProfile;
@@ -123,7 +123,7 @@ public final class AzureCliCredentials extends AzureTokenCredentials {
      * @return the subscriptions the current account in Azure CLI has access to
      */
     public Map<String, AzureCliSubscription> subscriptions() {
-        return subscriptions;
+        return Collections.unmodifiableMap(subscriptions);
     }
 
     @Override

@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,6 +117,13 @@ public final class AzureCliCredentials extends AzureTokenCredentials {
      */
     public AzureEnvironment environment() {
         return subscriptions.get(defaultSubscriptionId()).environment();
+    }
+
+    /**
+     * @return the subscriptions the current account in Azure CLI has access to
+     */
+    public Map<String, AzureCliSubscription> subscriptions() {
+        return Collections.unmodifiableMap(subscriptions);
     }
 
     @Override

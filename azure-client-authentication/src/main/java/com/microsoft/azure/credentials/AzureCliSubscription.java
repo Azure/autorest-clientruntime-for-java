@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * An instance of this class represents a subscription record in azureProfiles.json.
  */
 @Beta
-final class AzureCliSubscription {
+public final class AzureCliSubscription {
     private String environmentName;
     private String id;
     private String name;
@@ -35,15 +35,15 @@ final class AzureCliSubscription {
     private Map<String, AzureCliToken> userTokens = new ConcurrentHashMap<>();
     private AzureCliToken servicePrincipalToken;
 
-    String id() {
+    public String id() {
         return id;
     }
 
-    boolean isDefault() {
+    public boolean isDefault() {
         return isDefault;
     }
 
-    String clientId() {
+    public String clientId() {
         if (isServicePrincipal()) {
             return servicePrincipalToken.clientId();
         }
@@ -64,7 +64,7 @@ final class AzureCliSubscription {
         return this;
     }
 
-    AzureEnvironment environment() {
+    public AzureEnvironment environment() {
         if (environmentName == null) {
             return null;
         } else if (environmentName.equalsIgnoreCase("AzureCloud")) {
@@ -80,15 +80,15 @@ final class AzureCliSubscription {
         }
     }
 
-    String tenant() {
+    public String tenant() {
         return tenantId;
     }
 
-    boolean isServicePrincipal() {
+    public boolean isServicePrincipal() {
         return user.type.equalsIgnoreCase("ServicePrincipal");
     }
 
-    String userName() {
+    public String userName() {
         return user.name;
     }
 

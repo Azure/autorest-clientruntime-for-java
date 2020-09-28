@@ -99,6 +99,17 @@ public class ValidatorTests {
     }
 
     @Test
+    public void validateListParameter() throws Exception {
+        ListWrapper body = new ListWrapper();
+        body.list = new ArrayList<StringWrapper>();
+        Validator.validate(body); // pass
+        StringWrapper wrapper = new StringWrapper();
+        wrapper.value = "valid";
+        body.list.add(wrapper);
+        Validator.validate(body.list); // pass
+    }
+
+    @Test
     public void validateMap() throws Exception {
         MapWrapper body = new MapWrapper();
         try {

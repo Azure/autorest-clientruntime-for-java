@@ -56,15 +56,29 @@ public final class Validator {
                 || parameterToken.isSupertypeOf(Period.class)) {
             return;
         }
-
-        Annotation skipParentAnnotation = parameterType.getAnnotation(SkipParentValidation.class);
-
-        if (skipParentAnnotation == null) {
-            for (Class<?> c : parameterToken.getTypes().classes().rawTypes()) {
-                validateClass(c, parameter);
+        if (TypeToken.of(List.class).isSupertypeOf(parameterType)) {
+            List<?> items = (List<?>) parameter;
+            for (Object item : items) {
+                Validator.validate(item);
             }
-        } else {
-            validateClass(parameterType, parameter);
+        }
+        else if (TypeToken.of(Map.class).isSupertypeOf(parameterType)) {
+            Map<?, ?> entries = (Map<?, ?>) parameter;
+            for (Map.Entry<?, ?> entry : entries.entrySet()) {
+                Validator.validate(entry.getKey());
+                Validator.validate(entry.getValue());
+            }
+        }
+        else {
+            Annotation skipParentAnnotation = parameterType.getAnnotation(SkipParentValidation.class);
+
+            if (skipParentAnnotation == null) {
+                for (Class<?> c : parameterToken.getTypes().classes().rawTypes()) {
+                    validateClass(c, parameter);
+                }
+            } else {
+                validateClass(parameterType, parameter);
+            }
         }
     }
 

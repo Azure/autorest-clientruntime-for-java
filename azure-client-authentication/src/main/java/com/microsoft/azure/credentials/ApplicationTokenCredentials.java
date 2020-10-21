@@ -203,20 +203,20 @@ public class ApplicationTokenCredentials extends AzureTokenCredentials {
             context.setSslSocketFactory(sslSocketFactory());
         }
         try {
-            if (clientSecret != null) {
+            if (clientSecret() != null) {
                 return context.acquireToken(
                         resource,
-                        new ClientCredential(this.clientId(), clientSecret),
+                        new ClientCredential(clientId(), clientSecret()),
                         null);
-            } else if (clientCertificate != null && clientCertificatePassword != null) {
+            } else if (clientCertificate() != null && clientCertificatePassword() != null) {
                 return context.acquireToken(
                         resource,
-                        AsymmetricKeyCredential.create(clientId, new ByteArrayInputStream(clientCertificate), clientCertificatePassword),
+                        AsymmetricKeyCredential.create(clientId(), new ByteArrayInputStream(clientCertificate()), clientCertificatePassword()),
                         null);
-            } else if (clientCertificate != null) {
+            } else if (clientCertificate() != null) {
                 return context.acquireToken(
                         resource,
-                        AsymmetricKeyCredential.create(clientId(), privateKeyFromPem(new String(clientCertificate)), publicKeyFromPem(new String(clientCertificate))),
+                        AsymmetricKeyCredential.create(clientId(), privateKeyFromPem(new String(clientCertificate())), publicKeyFromPem(new String(clientCertificate()))),
                         null);
             }
             throw new AuthenticationException("Please provide either a non-null secret or a non-null certificate.");

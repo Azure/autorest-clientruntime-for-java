@@ -232,6 +232,7 @@ public final class AzureClient extends AzureServiceClient {
     private <T> Observable<PollingState<T>> pollPutOrPatchAsync(final PollingState<T> pollingState, final Type resourceType) {
         pollingState.withResourceType(resourceType);
         pollingState.withSerializerAdapter(restClient().serializerAdapter());
+        final int retryCount = 5;
         return Observable.just(true)
                 .flatMap(new Func1<Boolean, Observable<PollingState<T>>>() {
                     @Override
@@ -252,10 +253,10 @@ public final class AzureClient extends AzureServiceClient {
                 }).retryWhen(new Func1<Observable<? extends Throwable>, Observable<?>>() {
                     @Override
                     public Observable<?> call(Observable<? extends Throwable> observable) {
-                        return observable.zipWith(Observable.range(1, 5), new Func2<Throwable, Integer, Integer>() {
+                        return observable.zipWith(Observable.range(1, retryCount), new Func2<Throwable, Integer, Integer>() {
                             @Override
                             public Integer call(Throwable throwable, Integer integer) {
-                                if (throwable instanceof CloudException) {
+                                if (throwable instanceof CloudException || integer == retryCount) {
                                     throw Exceptions.propagate(throwable);
                                 }
                                 return integer;
@@ -466,6 +467,7 @@ public final class AzureClient extends AzureServiceClient {
     private <T> Observable<PollingState<T>> pollPostOrDeleteAsync(final PollingState<T> pollingState, final Type resourceType) {
         pollingState.withResourceType(resourceType);
         pollingState.withSerializerAdapter(restClient().serializerAdapter());
+        final int retryCount = 5;
         return Observable.just(true)
                 .flatMap(new Func1<Boolean, Observable<PollingState<T>>>() {
                     @Override
@@ -486,10 +488,10 @@ public final class AzureClient extends AzureServiceClient {
                 }).retryWhen(new Func1<Observable<? extends Throwable>, Observable<?>>() {
                     @Override
                     public Observable<?> call(Observable<? extends Throwable> observable) {
-                        return observable.zipWith(Observable.range(1, 5), new Func2<Throwable, Integer, Integer>() {
+                        return observable.zipWith(Observable.range(1, retryCount), new Func2<Throwable, Integer, Integer>() {
                             @Override
                             public Integer call(Throwable throwable, Integer integer) {
-                                if (throwable instanceof CloudException) {
+                                if (throwable instanceof CloudException || integer == retryCount) {
                                     throw Exceptions.propagate(throwable);
                                 }
                                 return integer;

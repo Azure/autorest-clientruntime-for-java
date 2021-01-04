@@ -3,9 +3,11 @@ package com.microsoft.rest;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.microsoft.rest.serializer.JsonFlatten;
 
 import java.util.List;
 
+@JsonFlatten
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@odata\\.type", defaultImpl = RabbitWithTypeIdContainingDot.class)
 @JsonTypeName("#Favourite.Pet.RabbitWithTypeIdContainingDot")
 public class RabbitWithTypeIdContainingDot extends AnimalWithTypeIdContainingDot {

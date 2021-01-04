@@ -129,6 +129,17 @@ public final class AzureClient extends AzureServiceClient {
                 .flatMap(new Func1<PollingState<T>, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(PollingState<T> pollingState) {
+                        if (pollingState.isStatusTerminal()) {
+                            return Observable.just(pollingState);
+                        } else {
+                            // initial delay
+                            return Observable.just(pollingState).delaySubscription(pollingState.delayInMilliseconds(), TimeUnit.MILLISECONDS);
+                        }
+                    }
+                })
+                .flatMap(new Func1<PollingState<T>, Observable<PollingState<T>>>() {
+                    @Override
+                    public Observable<PollingState<T>> call(PollingState<T> pollingState) {
                         return pollPutOrPatchAsync(pollingState, resourceType);
                     }
                 })
@@ -369,6 +380,17 @@ public final class AzureClient extends AzureServiceClient {
     public <T> Observable<ServiceResponse<T>> getPostOrDeleteResultAsync(Observable<Response<ResponseBody>> observable, final LongRunningOperationOptions lroOptions, final Type resourceType) {
         return this.<T>beginPostOrDeleteAsync(observable, lroOptions, resourceType)
                 .toObservable()
+                .flatMap(new Func1<PollingState<T>, Observable<PollingState<T>>>() {
+                    @Override
+                    public Observable<PollingState<T>> call(PollingState<T> pollingState) {
+                        if (pollingState.isStatusTerminal()) {
+                            return Observable.just(pollingState);
+                        } else {
+                            // initial delay
+                            return Observable.just(pollingState).delaySubscription(pollingState.delayInMilliseconds(), TimeUnit.MILLISECONDS);
+                        }
+                    }
+                })
                 .flatMap(new Func1<PollingState<T>, Observable<PollingState<T>>>() {
                     @Override
                     public Observable<PollingState<T>> call(PollingState<T> pollingState) {

@@ -1,5 +1,8 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
+/**
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for
+ * license information.
+ */
 
 package com.microsoft.rest.serializer;
 
@@ -30,7 +33,7 @@ import java.lang.reflect.Field;
  * For example, a property with annotation @JsonProperty(value = "properties.name")
  * will be mapped to a top level "name" property in the POJO model.
  */
-final class FlatteningDeserializer extends StdDeserializer<Object> implements ResolvableDeserializer {
+public final class FlatteningDeserializer extends StdDeserializer<Object> implements ResolvableDeserializer {
     private static final long serialVersionUID = -2133095337545715498L;
 
     /**

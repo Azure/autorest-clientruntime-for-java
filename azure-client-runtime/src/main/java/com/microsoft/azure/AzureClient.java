@@ -133,7 +133,7 @@ public final class AzureClient extends AzureServiceClient {
                             return Observable.just(pollingState);
                         } else {
                             // initial delay
-                            return Observable.just(pollingState).delaySubscription(pollingState.delayInMilliseconds(), TimeUnit.MILLISECONDS);
+                            return Observable.just(pollingState).delaySubscription(pollingState.delayInMilliseconds(), TimeUnit.MILLISECONDS, Schedulers.immediate());
                         }
                     }
                 })

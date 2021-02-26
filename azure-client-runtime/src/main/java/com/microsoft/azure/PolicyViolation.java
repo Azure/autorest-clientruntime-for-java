@@ -9,6 +9,7 @@ package com.microsoft.azure;
 import java.io.IOException;
 
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,22 +23,24 @@ public class PolicyViolation extends TypedErrorInfo {
      * Policy violation error details.
      */
     private PolicyViolationErrorInfo policyErrorInfo;
-    
+
     /**
      * Initializes a new instance of PolicyViolation.
-     * @param type the error type
+     *
+     * @param type            the error type
      * @param policyErrorInfo the error details
-     * @throws JsonParseException if the policyErrorInfo has invalid content.
-     * @throws JsonMappingException if the policyErrorInfo's JSON does not match the expected schema. 
-     * @throws IOException if an IO error occurs.
+     * @throws JsonParseException   if the policyErrorInfo has invalid content.
+     * @throws JsonMappingException if the policyErrorInfo's JSON does not match the expected schema.
+     * @throws IOException          if an IO error occurs.
      */
     public PolicyViolation(String type, ObjectNode policyErrorInfo) throws JsonParseException, JsonMappingException, IOException {
         super(type, policyErrorInfo);
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+        ObjectMapper objectMapper = new ObjectMapper()
+                .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         this.policyErrorInfo = objectMapper.readValue(policyErrorInfo.toString(), PolicyViolationErrorInfo.class);
     }
-    
+
     /**
      * @return the policy violation error details.
      */

@@ -78,7 +78,9 @@ public class PolicyViolationErrorInfo {
      * The policy set definition display name.
      */
     private String policySetDefinitionDisplayName;
-    
+
+    private EvaluationDetails evaluationDetails;
+
     /**
      * @return the policy definition id.
      */
@@ -170,17 +172,48 @@ public class PolicyViolationErrorInfo {
         return policySetDefinitionDisplayName;
     }
 
+    public EvaluationDetails getEvaluationDetails() {
+        return evaluationDetails;
+    }
+
+    @Override
+    public String toString() {
+        return "PolicyViolationErrorInfo{"
+                + "policyDefinitionId='" + policyDefinitionId + '\''
+                + ", policySetDefinitionId='" + policySetDefinitionId + '\''
+                + ", policyDefinitionReferenceId='" + policyDefinitionReferenceId + '\''
+                + ", policySetDefinitionName='" + policySetDefinitionName + '\''
+                + ", policyDefinitionName='" + policyDefinitionName + '\''
+                + ", policyDefinitionEffect='" + policyDefinitionEffect + '\''
+                + ", policyAssignmentId='" + policyAssignmentId + '\''
+                + ", policyAssignmentName='" + policyAssignmentName + '\''
+                + ", policyAssignmentDisplayName='" + policyAssignmentDisplayName + '\''
+                + ", policyAssignmentScope='" + policyAssignmentScope + '\''
+                + ", policyAssignmentParameters=" + policyAssignmentParameters
+                + ", policyDefinitionDisplayName='" + policyDefinitionDisplayName + '\''
+                + ", policySetDefinitionDisplayName='" + policySetDefinitionDisplayName + '\''
+                + ", evaluationDetails=" + evaluationDetails
+                + '}';
+    }
+
     /**
      * An instance of this class provides policy parameter value.
      */
     public static class PolicyParameter {
         private JsonNode value;
-        
+
         /**
          * @return the parameter value.
          */
         public JsonNode getValue() {
             return value;
+        }
+
+        @Override
+        public String toString() {
+            return "PolicyParameter{"
+                    + "value=" + value
+                    + '}';
         }
     }
 }

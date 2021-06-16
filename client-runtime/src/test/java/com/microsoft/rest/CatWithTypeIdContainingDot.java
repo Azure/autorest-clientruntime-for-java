@@ -3,7 +3,9 @@ package com.microsoft.rest;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.microsoft.rest.serializer.JsonFlatten;
 
+@JsonFlatten
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@odata\\.type", defaultImpl = CatWithTypeIdContainingDot.class)
 @JsonTypeName("#Favourite.Pet.CatWithTypeIdContainingDot")
 public class CatWithTypeIdContainingDot extends AnimalWithTypeIdContainingDot {

@@ -17,7 +17,6 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.deser.BeanDeserializer;
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.fasterxml.jackson.databind.deser.ResolvableDeserializer;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
@@ -35,6 +34,8 @@ import java.lang.reflect.Field;
  * will be mapped to a top level "name" property in the POJO model.
  */
 public final class FlatteningDeserializer extends StdDeserializer<Object> implements ResolvableDeserializer {
+    private static final long serialVersionUID = -2133095337545715498L;
+
     /**
      * The default mapperAdapter for the current type.
      */
@@ -68,9 +69,12 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
         SimpleModule module = new SimpleModule();
         module.setDeserializerModifier(new BeanDeserializerModifier() {
             @Override
-            public JsonDeserializer<?> modifyDeserializer(DeserializationConfig config, BeanDescription beanDesc, JsonDeserializer<?> deserializer) {
-                if (BeanDeserializer.class.isAssignableFrom(deserializer.getClass())) {
-                    // Apply flattening deserializer on all POJO types.
+            public JsonDeserializer<?> modifyDeserializer(DeserializationConfig config,
+                                                          BeanDescription beanDesc,
+                                                          JsonDeserializer<?> deserializer) {
+                if (beanDesc.getBeanClass().getAnnotation(JsonFlatten.class) != null) {
+                    // Register 'FlatteningDeserializer' for complex type so that 'deserializeWithType'
+                    // will get called for complex types and it can analyze typeId discriminator.
                     return new FlatteningDeserializer(beanDesc.getBeanClass(), deserializer, mapper);
                 } else {
                     return deserializer;
@@ -82,27 +86,26 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
 
     @SuppressWarnings("unchecked")
     @Override
-    public Object deserializeWithType(JsonParser jp, DeserializationContext cxt, TypeDeserializer tDeserializer) throws IOException {
-        // This method will be called by Jackson for each "Json object with TypeId" in the input wire stream
-        // it is trying to deserialize.
-        // The below variable 'currentJsonNode' will hold the JsonNode corresponds to current
-        // Json object this method is called to handle.
+    public Object deserializeWithType(JsonParser jp,
+                                      DeserializationContext cxt,
+                                      TypeDeserializer tDeserializer) throws IOException {
+        // This method will be called from Jackson for each "Json object with TypeId" as it
+        // process the input data. This enable us to pre-process then give it to the next
+        // deserializer in the Jackson pipeline.
+        //
+        // The parameter 'jp' is the reader to read "Json object with TypeId"
         //
         JsonNode currentJsonNode = mapper.readTree(jp);
         final Class<?> tClass = this.defaultDeserializer.handledType();
         for (Class<?> c : TypeToken.of(tClass).getTypes().classes().rawTypes()) {
-            if (c.isAssignableFrom(Object.class)) {
-                continue;
-            } else {
-                final JsonTypeInfo typeInfo = c.getAnnotation(com.fasterxml.jackson.annotation.JsonTypeInfo.class);
-                if (typeInfo != null) {
-                    String typeId = typeInfo.property();
-                    if (containsDot(typeId)) {
-                        final String typeIdOnWire = unescapeEscapedDots(typeId);
-                        JsonNode typeIdValue = ((ObjectNode) currentJsonNode).remove(typeIdOnWire);
-                        if (typeIdValue != null) {
-                            ((ObjectNode) currentJsonNode).put(typeId, typeIdValue);
-                        }
+            final JsonTypeInfo typeInfo = c.getAnnotation(com.fasterxml.jackson.annotation.JsonTypeInfo.class);
+            if (typeInfo != null) {
+                String typeId = typeInfo.property();
+                if (containsDot(typeId)) {
+                    final String typeIdOnWire = unescapeEscapedDots(typeId);
+                    JsonNode typeIdValue = ((ObjectNode) currentJsonNode).remove(typeIdOnWire);
+                    if (typeIdValue != null) {
+                        ((ObjectNode) currentJsonNode).put(typeId, typeIdValue);
                     }
                 }
             }
@@ -114,8 +117,8 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
     public Object deserialize(JsonParser jp, DeserializationContext cxt) throws IOException {
         // This method will be called by Jackson for each "Json object" in the input wire stream
         // it is trying to deserialize.
-        // The below variable 'currentJsonNode' will hold the JsonNode corresponds to current
-        // Json object this method is called to handle.
+        //
+        // The parameter 'jp' is the reader to read "Json object with TypeId"
         //
         JsonNode currentJsonNode = mapper.readTree(jp);
         if (currentJsonNode.isNull()) {
@@ -152,15 +155,34 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
         final JsonProperty jsonProperty = classField.getAnnotation(JsonProperty.class);
         if (jsonProperty != null) {
             final String jsonPropValue = jsonProperty.value();
+            if (jsonNode.has(jsonPropValue)) {
+                // There is an additional property with it's key conflicting with the
+                // JsonProperty value, escape this additional property's key.
+                final String escapedJsonPropValue = jsonPropValue.replace(".", "\\.");
+                ((ObjectNode) jsonNode).set(escapedJsonPropValue, jsonNode.get(jsonPropValue));
+            }
             if (containsFlatteningDots(jsonPropValue)) {
+                // The jsonProperty value contains flattening dots, uplift the nested
+                // json node that this value resolving to the current level.
                 JsonNode childJsonNode = findNestedNode(jsonNode, jsonPropValue);
-                ((ObjectNode) jsonNode).put(jsonPropValue, childJsonNode);
+                ((ObjectNode) jsonNode).set(jsonPropValue, childJsonNode);
             }
         }
     }
 
     /**
-     * Given a json node, find a nested node using given composed key.
+     * Checks whether the given key has flattening dots in it.
+     * Flattening dots are dot '.' characters those are not preceded by slash '\'
+     *
+     * @param key the key
+     * @return true if the key has flattening dots, false otherwise.
+     */
+    private static boolean containsFlatteningDots(String key) {
+        return key.matches(".+[^\\\\]\\..+");
+    }
+
+    /**
+     * Given a json node, find a nested node in it identified by the given composed key.
      *
      * @param jsonNode the parent json node
      * @param composedKey a key combines multiple keys using flattening dots.
@@ -177,17 +199,6 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
             }
         }
         return jsonNode;
-    }
-
-    /**
-     * Checks whether the given key has flattening dots in it.
-     * Flattening dots are dot character '.' those are not preceded by slash '\'
-     *
-     * @param key the key
-     * @return true if the key has flattening dots, false otherwise.
-     */
-    private static boolean containsFlatteningDots(String key) {
-        return key.matches(".+[^\\\\]\\..+");
     }
 
     /**
@@ -220,14 +231,15 @@ public final class FlatteningDeserializer extends StdDeserializer<Object> implem
      * @return true if at least one dot found
      */
     private static boolean containsDot(String str) {
-       return str != null && str != "" && str.contains(".");
+        return str != null && !str.isEmpty() && str.contains(".");
     }
 
     /**
      * Create a JsonParser for a given json node.
+     *
      * @param jsonNode the json node
      * @return the json parser
-     * @throws IOException
+     * @throws IOException if underlying reader fails to read the json string
      */
     private static JsonParser newJsonParserForNode(JsonNode jsonNode) throws IOException {
         JsonParser parser = new JsonFactory().createParser(jsonNode.toString());

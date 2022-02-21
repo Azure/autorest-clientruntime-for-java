@@ -8,6 +8,8 @@ package com.microsoft.azure;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 public class ExpressionEvaluationDetails {
 
     private String expression;
@@ -20,6 +22,7 @@ public class ExpressionEvaluationDetails {
 
     private String result;
 
+    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> targetValue;
 
     public String getExpression() {

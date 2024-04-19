@@ -1,6 +1,12 @@
-[![Build Status](https://travis-ci.org/Azure/autorest-clientruntime-for-java.svg?branch=javavnext)](https://travis-ci.org/Azure/autorest-clientruntime-for-java)
+# It is highly recommended to use the new [Azure SDK for Java](https://github.com/Azure/azure-sdk-for-java)
 
-# AutoRest Client Runtimes for Java
+The AutoRest Client Runtime for Java library was used as a dependency of older Azure client libraries.
+
+If you find that this library is included in dependencies though another Azure client library, please see whether there is new Azure client library available [here](https://azure.github.io/azure-sdk/releases/latest/#java).
+
+If you are directly using this library, please consider using new [azure-core libraries](https://github.com/Azure/azure-sdk-for-java/tree/main/sdk/core), or [azure-identity libraries](https://github.com/Azure/azure-sdk-for-java/tree/main/sdk/identity).
+
+# AutoRest Client Runtime for Java
 The runtime libraries for [AutoRest](https://github.com/azure/autorest) generated Java clients. 
 
 ## Usage
@@ -34,7 +40,7 @@ The runtime libraries for [AutoRest](https://github.com/azure/autorest) generate
 ### Create a RestClient
 
 ```java
-// For Java genenerator
+// For Java generator
 RestClient simpleClient = new RestClient.Builder()
     .withBaseUrl("http://localhost")
     .withResponseBuilderFactory(new ServiceResponseBuilder.Factory())
